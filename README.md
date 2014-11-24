@@ -12,6 +12,6 @@ A quick summary and example command for each script are included below.
 calc_vaf_db_strand
 ------------------
 
-calc_vaf_db_strand.py calculates the variant allele fraction (VAF) at a given position while only considering read pairs for which the forward and reverse strand agree on the base call at the given position. Effectively, this suppresses errors due to incorrect base calling. 
+calc_vaf_db_strand.py calculates the variant allele fraction (VAF) at a given position while only considering read pairs for which the forward and reverse strand agree on the base call at the given position. Effectively, this suppresses errors due to incorrect base calling. This script was originally meant to calculate the VAF in amplicon sequencing data derived from circulating tumour DNA (ctDNA), where the forward and reverse strands are designed to overlap. 
 
     python calc_vaf_db_strand.py --in_bam input.sorted.bam --out_bam output.sorted.db_strand.bam --chromosome chr3 --position 38182641 --ref_allele T --mut_allele C
