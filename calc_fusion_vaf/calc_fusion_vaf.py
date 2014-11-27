@@ -15,6 +15,11 @@ Known Issues
     stable gene IDs. Therefore, Ensembl might return ambiguous
     genes. Another option is that the breakpoint position can be
     considered when unambiguously determining the gene from Ensembl.
+- BWA indexing is computationally expensive, so avoiding re-doing it
+    for nothing is an important feature. Now, the script raises an
+    error if the output reference file already exists, unless the
+    --force_overwrite option is specified. This behaviour can be
+    improved.
 """
 
 __author__ = 'Bruno Grande'
