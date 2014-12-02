@@ -1,0 +1,27 @@
+#!/bin/bash
+
+rmdup=""
+suffix="_L001_R1_001"
+output=""
+
+while getopts "hr:" opt; do
+    case "$opt" in
+	h)
+	    show_help
+	    exit 0
+	    ;;
+	r)  rmdup=".rmdup"
+	    ;;
+	s)  suffix=$OPTARG
+	    ;;
+    esac
+done
+
+for file in $@
+do
+    if [[ $file == *_R1_* ]]; then
+       output="$output $(basename $file ${suffix}.fastq.gz).sorted${rmdup}.bam.bai"
+    fi
+done
+
+echo $output
