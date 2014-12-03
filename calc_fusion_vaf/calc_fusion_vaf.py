@@ -6,6 +6,12 @@ calc_fusion_vaf.py
 Calculates the variant allele fraction (VAF) of a gene fusion
 based on Factera output.
 
+Assumptions
+-----------
+- The breakpoint in the fusion sequences is right in the middle,
+    which is what Factera does by default.
+- BWA and samtools should be located in the PATH environment variable.
+
 Known Issues
 ------------
 - Currently needs a reference genome to be specified. The feature
@@ -34,6 +40,7 @@ import os
 import shutil
 import subprocess
 import shlex
+import pysam
 
 
 def main():
@@ -49,32 +56,31 @@ def main():
                         help='Location of both FASTQ files (forward and reverse reads).')
     parser.add_argument('--factera_fusions', '-f', type=argparse.FileType('r'),
                         help='Detailed Factera fusions output file (*.fusions.txt).')
+    parser.add_argument('--window', '-w', type=int, default=1000,
+                        help=('Number of bases on each side of the breakpoint from which'
+                              'reads are extracted.'))
+    parser.add_argument('--min_overlap', '-mo', type=int, default=10,
+                        help=('Minimum number of overlapping bases for a spannning '
+                              'read.'))
     parser.add_argument('--output_dir', '-o',
                         help='Output directory for generated files.')
     parser.add_argument('--reference_fasta', '-r',
                         help=('Location of the reference genome FASTA file. If specified, '
                               'the reference will be included in the alignment in order to '
                               'reduce off-target alignments.'))
-    parser.add_argument('--bwa_dir', '-b', default='',
-                        help=('Directory in which the BWA binary is located. If not '
-                              'specified, this script will assume it\'s in the '
-                              'PATH environment variable.'))
-    parser.add_argument('--samtools_dir', '-t', default='',
-                        help=('Directory in which the samtools binary is located. If not '
-                              'specified, this script will assume it\'s in the '
-                              'PATH environment variable.'))
     parser.add_argument('--force_overwrite', '-fo', action='store_true',
                         help=('Specify this option in order to overwrite any existing '
                               'output files.'))
-    parser.add_argument('--log', '-l', type=str.upper, default='INFO',
-                        help='Enable debugging mode.')
+    parser.add_argument('--log', '-l', help='Specify log file. Otherwise, stderr.')
+    parser.add_argument('--threads', '-t', type=int, default=1, help='Number of threads used.')
     args = parser.parse_args()
-    defaultlevel = getattr(logging, 'INFO')
-    loglevel = getattr(logging, args.log, defaultlevel)
-    logging.basicConfig(
-        format='%(levelname)s: %(message)s', stream=sys.stderr, level=loglevel)
+    if args.log:
+        logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO,
+                            filename=args.log)
+    else:
+        logging.basicConfig(format='%(levelname)s: %(message)s', level=logging.INFO,
+                            stream=sys.stderr)
     logging.info('Initializing script...')
-    logging.debug('Value of args:\n%s', pformat(vars(args)))
 
     # Parse Factera output and locate relevant fusions
     logging.info('Extracting fusions of specified gene pair...')
@@ -88,7 +94,6 @@ def main():
                 row_dict['Region2'].lower() == args.gene_1)):
             row_dict['index'] = index
             g1_g2_fusions[index] = row_dict
-    logging.debug('Value of g1_g2_fusions:\n%s', pformat(g1_g2_fusions))
 
     # Extract sequences for fusions from Factera output
     logging.info('Extracting fusion sequences...')
@@ -101,7 +106,6 @@ def main():
         if seq_dict['index'] in fusion_indices:
             g1_g2_fusions[seq_dict['index']]['fusion_name'] = seq_dict['name']
             g1_g2_fusions[seq_dict['index']]['fusion_seq'] = seq_dict['seq']
-    logging.debug('Value of g1_g2_fusions:\n%s', pformat(g1_g2_fusions))
 
     # Generate reference FASTA file for alignment
     logging.info('Generating new reference FASTA file...')
@@ -126,32 +130,65 @@ def main():
     logging.info('Copying specified reference FASTA file to output directory...')
     shutil.copyfile(args.reference_fasta, new_reference_name)
     logging.info('Appending fusion sequences to new reference FASTA file...')
-    new_reference_out = open(new_reference_name, 'a')
-    for index, fusion in g1_g2_fusions.items():
-        fusion_fasta = '>{Region1}_{Region2}_{Break1}_{Break2}\n{fusion_seq}\n'.format(**fusion)
-        new_reference_out.write(fusion_fasta)
+    with open(new_reference_name, 'a') as new_reference_out:
+        for index, fusion in g1_g2_fusions.items():
+            fusion['fusion_ref_name'] = '{Region1}_{Region2}_{Break1}_{Break2}'.format(**fusion)
+            fusion_fasta = '>{fusion_ref_name}\n{fusion_seq}\n'.format(**fusion)
+            new_reference_out.write(fusion_fasta)
 
     # Run BWA MEM alignment against the new reference
     ## First, create a BWA index for the new reference
     logging.info('Creating BWA index for new reference genome...')
-    index_command = '{bwa_dir}/bwa index {new_reference_name}'.format(
-        new_reference_name=new_reference_name, **vars(args)
-    )
-    index_process = subprocess.Popen(shlex.split(index_command))
-    index_process.wait()
+    index_cmd = ['bwa', 'index', new_reference_name]
+    run_cmd(index_cmd)
     ## Second, align FASTQ files to new reference genome
+    ### Running BWA aln
     logging.info('Aligning FASTQ files to new reference genome...')
-    fastq_files = ' '.join(args.fastq)
-    align_command = '{bwa_dir}/bwa mem {new_reference_name} {fastq_files}'.format(
-        new_reference_name=new_reference_name, fastq_files=fastq_files, **vars(args)
-    )
-    output_bam_name = args.output_dir + '/' + args.sample_name + '.bam'
-    sam_to_bam_command = 'samtools view -bT -o {output_bam_name} {new_reference_name} -'.format(
-        new_reference_name=new_reference_name, output_bam_name=output_bam_name
-    )
-    align_process = subprocess.Popen(align_command, stdout=subprocess.PIPE)
-    sam_to_bam_process = subprocess.Popen(sam_to_bam_command, stdin=align_process.stdout)
-    sam_to_bam_process.wait()
+    align_cmd_prefix = ['bwa', 'aln', '-t', args.threads, '-f']
+    output_sai_1 = args.output_dir + '/' + args.sample_name + '.1.sai'
+    output_sai_2 = args.output_dir + '/' + args.sample_name + '.2.sai'
+    align_cmd_1 = align_cmd_prefix + [output_sai_1, new_reference_name, args.fastq[0]]
+    align_cmd_2 = align_cmd_prefix + [output_sai_2, new_reference_name, args.fastq[1]]
+    run_cmd(align_cmd_1)
+    run_cmd(align_cmd_2)
+    ### Running BWA sampe
+    output_sam = args.output_dir + '/' + args.sample_name + '.sam'
+    output_bam = args.output_dir + '/' + args.sample_name + '.bam'
+    sampe_cmd = [
+        'bwa', 'sampe', '-f', output_sam, new_reference_name, output_sai_1, output_sai_2,
+        args.fastq[0], args.fastq[1]
+    ]
+    run_cmd(sampe_cmd)
+    logging.info('Converting SAM file to BAM format...')
+    pysam.view('-S', '-b', '-o' + output_bam, output_sam)
+    logging.info('Sorting output BAM file...')
+    output_bam_sorted = args.output_dir + '/' + args.sample_name + '.sorted.bam'
+    pysam.sort('-f', output_bam, output_bam_sorted)
+    logging.info('Indexing sorted output BAM file...')
+    pysam.index(output_bam_sorted)
+
+    # Quantify support for fusion breakpoint
+    ## Iterate through each of the fusion references ("pseudo-chromosomes")
+    logging.info('Loading generated BAM file for analysis...')
+    output_bam_sorted = ('/Users/bgrande/Desktop/calc_fusion_vaf_test/'
+                         'ewings_sarcoma_test.sorted.bam')
+    bam_file = pysam.AlignmentFile(output_bam_sorted, 'rb')
+    fusion_lengths = dict(zip(bam_file.references, bam_file.lengths))
+    print fusion_lengths
+    total_spanning_reads = []
+    total_spanning_read_pairs = []
+    # for index, fusion in g1_g2_fusions.items():
+    #     # Extract reads in target window
+    #     middle = fusion_lengths[fusion['fusion_ref_name']] / 2
+    #     start = middle - args.window
+    #     end = middle + args.window
+    #     for read in bam_file.fetch(fusion['fusion_ref_name'], start, end):
+    #         # Check if read spans breakpoint
+    #         if (read.reference_start < middle - args.min_overlap and
+    #                 read.reference_end > middle + args.min_overlap):
+    #             total_spanning_reads.append(read)
+    #     print len(total_spanning_reads)
+    bam_file.close()
 
 
 def fasta_generator(file_object):
@@ -175,6 +212,21 @@ def fasta_generator(file_object):
             continue
         seq_dict['seq'] += line
     yield seq_dict
+
+
+def run_cmd(cmd_args):
+    """
+    Standardizes the way commands are run
+    """
+    # Ensure that all args are strings
+    cmd_args = [str(x) for x in cmd_args]
+    # Log the command being run
+    logging.info('Running command:\n {}'.format(' '.join(cmd_args)))
+    # Run the command
+    cmd_proc = subprocess.Popen(cmd_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    # Capture stdout and stderr, and output to log
+    stdout, stderr = cmd_proc.communicate()
+    logging.info(stderr)
 
 
 if __name__ == '__main__':
