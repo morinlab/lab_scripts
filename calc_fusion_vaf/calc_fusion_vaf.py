@@ -35,12 +35,11 @@ import argparse
 import csv
 import sys
 import logging
-from pprint import pformat
 import os
 import shutil
 import subprocess
-import shlex
 import pysam
+from collections import defaultdict
 
 
 def main():
@@ -161,9 +160,11 @@ def main():
     run_cmd(sampe_cmd)
     logging.info('Converting SAM file to BAM format...')
     pysam.view('-S', '-b', '-o' + output_bam, output_sam)
+    os.remove(output_sam)
     logging.info('Sorting output BAM file...')
     output_bam_sorted = args.output_dir + '/' + args.sample_name + '.sorted.bam'
     pysam.sort('-f', output_bam, output_bam_sorted)
+    os.remove(output_bam)
     logging.info('Indexing sorted output BAM file...')
     pysam.index(output_bam_sorted)
 
@@ -173,22 +174,78 @@ def main():
     output_bam_sorted = ('/Users/bgrande/Desktop/calc_fusion_vaf_test/'
                          'ewings_sarcoma_test.sorted.bam')
     bam_file = pysam.AlignmentFile(output_bam_sorted, 'rb')
+    spanning_reads_bam_name = args.output_dir + '/' + 'spanning_reads.bam'
+    spanning_reads_bam = pysam.AlignmentFile(spanning_reads_bam_name, 'wb',
+                                             template=bam_file)
+    non_spanning_reads_bam_name = args.output_dir + '/' + 'non_spanning_reads.bam'
+    non_spanning_reads_bam = pysam.AlignmentFile(non_spanning_reads_bam_name, 'wb',
+                                                 template=bam_file)
     fusion_lengths = dict(zip(bam_file.references, bam_file.lengths))
     print fusion_lengths
-    total_spanning_reads = []
-    total_spanning_read_pairs = []
-    # for index, fusion in g1_g2_fusions.items():
-    #     # Extract reads in target window
-    #     middle = fusion_lengths[fusion['fusion_ref_name']] / 2
-    #     start = middle - args.window
-    #     end = middle + args.window
-    #     for read in bam_file.fetch(fusion['fusion_ref_name'], start, end):
-    #         # Check if read spans breakpoint
-    #         if (read.reference_start < middle - args.min_overlap and
-    #                 read.reference_end > middle + args.min_overlap):
-    #             total_spanning_reads.append(read)
-    #     print len(total_spanning_reads)
+    total_spanning_reads = 0
+    total_spanning_read_pairs = 0
+    for index, fusion in g1_g2_fusions.items():
+        non_spanning_reads = defaultdict(list)
+        # Extract reads in target window
+        middle = fusion_lengths[fusion['fusion_ref_name']] / 2
+        start = middle - args.window
+        end = middle + args.window
+        logging.info('Counting up spanning reads...')
+        for read in bam_file.fetch(fusion['fusion_ref_name'], start, end):
+            # Debugging
+            if read.query_name == 'M00930:41:000000000-AAP68:1:1106:22863:16977':
+                print read
+                print read.is_reverse
+                print read.reference_start, read.query_alignment_start
+            # Check if read spans breakpoint
+            if (read.reference_start < middle - args.min_overlap and
+                    read.reference_end > middle + args.min_overlap):
+                total_spanning_reads += 1
+                spanning_reads_bam.write(read)
+            else:  # Cache non-spanning reads in dict according to read name
+                non_spanning_reads[read.query_name].append(read)
+        # Go through cached reads while only considered pairs
+        logging.info('Counting up spanning read pairs...')
+        for r1, r2 in ((x[0], x[1]) for x in non_spanning_reads.values() if len(x) == 2):
+            # Check if reads are on opposite strands
+            if (r1.is_reverse and not r2.is_reverse) or (not r1.is_reverse and r2.is_reverse):
+                # Figure out which read is on positive strand and vice versa
+                if r1.is_reverse:
+                    r_plus, r_minus = r2, r1
+                else:
+                    r_plus, r_minus = r1, r2
+                # Check if pointing each other, i.e. positive insert size
+                if r_plus.template_length > 0:
+                    # Check if breakpoint is between both reads, i.e. not spanning
+                    if ((r_plus.reference_start + 1 < middle - args.min_overlap) and
+                            (r_minus.reference_start + 1 + r_minus.reference_length >
+                             middle + args.min_overlap)):
+                        total_spanning_read_pairs += 1
+                        spanning_reads_bam.write(r1)
+                        spanning_reads_bam.write(r2)
+                        continue
+            non_spanning_reads_bam.write(r1)
+            non_spanning_reads_bam.write(r2)
+        for reads in (x for x in non_spanning_reads.values() if len(x) != 2):
+            for read in reads:
+                non_spanning_reads_bam.write(read)
+    print total_spanning_reads, total_spanning_read_pairs
     bam_file.close()
+    spanning_reads_bam.close()
+    non_spanning_reads_bam.close()
+    logging.info('Sorting spanning_reads BAM file...')
+    pysam.sort(spanning_reads_bam_name, spanning_reads_bam_name + '.sorted')
+    os.remove(spanning_reads_bam_name)
+    logging.info('Indexing spanning_reads BAM file...')
+    pysam.index(spanning_reads_bam_name + '.sorted.bam')
+    logging.info('Sorting non_spanning_reads BAM file...')
+    pysam.sort(non_spanning_reads_bam_name, non_spanning_reads_bam_name + '.sorted')
+    os.remove(non_spanning_reads_bam_name)
+    logging.info('Indexing non_spanning_reads BAM file...')
+    pysam.index(non_spanning_reads_bam_name + '.sorted.bam')
+
+    # Quantify support for wild-type alleles
+    pass
 
 
 def fasta_generator(file_object):
