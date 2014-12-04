@@ -101,157 +101,104 @@ def main():
     factera_fusionseqs = open(
         factera_outout_prefix + '.factera.fusionseqs.fa', 'r')
     fusion_indices = g1_g2_fusions.keys()
-    for seq_dict in fasta_generator(factera_fusionseqs):
+    for seq_dict in fasta_gen(factera_fusionseqs):
         if seq_dict['index'] in fusion_indices:
             g1_g2_fusions[seq_dict['index']]['fusion_name'] = seq_dict['name']
             g1_g2_fusions[seq_dict['index']]['fusion_seq'] = seq_dict['seq']
+            g1_g2_fusions[seq_dict['index']]['fusion_ref_name'] = (
+                '{Region1}_{Region2}_{Break1}_{Break2}'.format(**g1_g2_fusions[seq_dict['index']])
+            )
 
-    # Generate reference FASTA file for alignment
-    logging.info('Generating new reference FASTA file...')
-    ## Create output directory if doesn't exist
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
-    ## Check if reference already exists from previous run
-    ## to prevent overwrite
-    new_reference_name = args.output_dir + '/' + args.sample_name + '.new_reference.fa'
-    if os.path.exists(new_reference_name):
-        logging.warning('Output reference FASTA file already exists and presumably other '
-                        'output files as well. If --force_overwrite option enabled, these '
-                        'will be overwritten. If not, the script will terminate now.')
-        if not args.force_overwrite:
-            raise IOError('Output file(s) already exist.')
-    ## If the original reference genome isn't specified, create new reference
-    ## based on the fusion sequences and the wild-type gene sequences
-    ## ** Not implemented yet **
-    pass
-    ## If the original reference genome is specified, append the fusion
-    ## sequences to it in a new reference FASTA file
-    logging.info('Copying specified reference FASTA file to output directory...')
-    shutil.copyfile(args.reference_fasta, new_reference_name)
-    logging.info('Appending fusion sequences to new reference FASTA file...')
-    with open(new_reference_name, 'a') as new_reference_out:
-        for index, fusion in g1_g2_fusions.items():
-            fusion['fusion_ref_name'] = '{Region1}_{Region2}_{Break1}_{Break2}'.format(**fusion)
-            fusion_fasta = '>{fusion_ref_name}\n{fusion_seq}\n'.format(**fusion)
-            new_reference_out.write(fusion_fasta)
+    # # Generate reference FASTA file for alignment
+    # logging.info('Generating new reference FASTA file...')
+    # ## Create output directory if doesn't exist
+    # if not os.path.exists(args.output_dir):
+    #     os.makedirs(args.output_dir)
+    # ## Check if reference already exists from previous run
+    # ## to prevent overwrite
+    # new_reference_name = args.output_dir + '/' + args.sample_name + '.new_reference.fa'
+    # if os.path.exists(new_reference_name):
+    #     logging.warning('Output reference FASTA file already exists and presumably other '
+    #                     'output files as well. If --force_overwrite option enabled, these '
+    #                     'will be overwritten. If not, the script will terminate now.')
+    #     if not args.force_overwrite:
+    #         raise IOError('Output file(s) already exist.')
+    # ## If the original reference genome isn't specified, create new reference
+    # ## based on the fusion sequences and the wild-type gene sequences
+    # ## ** Not implemented yet **
+    # pass
+    # ## If the original reference genome is specified, append the fusion
+    # ## sequences to it in a new reference FASTA file
+    # logging.info('Copying specified reference FASTA file to output directory...')
+    # shutil.copyfile(args.reference_fasta, new_reference_name)
+    # logging.info('Appending fusion sequences to new reference FASTA file...')
+    # with open(new_reference_name, 'a') as new_reference_out:
+    #     for index, fusion in g1_g2_fusions.items():
+    #         fusion_fasta = '>{fusion_ref_name}\n{fusion_seq}\n'.format(**fusion)
+    #         new_reference_out.write(fusion_fasta)
 
-    # Run BWA MEM alignment against the new reference
-    ## First, create a BWA index for the new reference
-    logging.info('Creating BWA index for new reference genome...')
-    index_cmd = ['bwa', 'index', new_reference_name]
-    run_cmd(index_cmd)
-    ## Second, align FASTQ files to new reference genome
-    ### Running BWA aln
-    logging.info('Aligning FASTQ files to new reference genome...')
-    align_cmd_prefix = ['bwa', 'aln', '-t', args.threads, '-f']
-    output_sai_1 = args.output_dir + '/' + args.sample_name + '.1.sai'
-    output_sai_2 = args.output_dir + '/' + args.sample_name + '.2.sai'
-    align_cmd_1 = align_cmd_prefix + [output_sai_1, new_reference_name, args.fastq[0]]
-    align_cmd_2 = align_cmd_prefix + [output_sai_2, new_reference_name, args.fastq[1]]
-    run_cmd(align_cmd_1)
-    run_cmd(align_cmd_2)
-    ### Running BWA sampe
-    output_sam = args.output_dir + '/' + args.sample_name + '.sam'
-    output_bam = args.output_dir + '/' + args.sample_name + '.bam'
-    sampe_cmd = [
-        'bwa', 'sampe', '-f', output_sam, new_reference_name, output_sai_1, output_sai_2,
-        args.fastq[0], args.fastq[1]
-    ]
-    run_cmd(sampe_cmd)
-    logging.info('Converting SAM file to BAM format...')
-    pysam.view('-S', '-b', '-o' + output_bam, output_sam)
-    os.remove(output_sam)
-    logging.info('Sorting output BAM file...')
-    output_bam_sorted = args.output_dir + '/' + args.sample_name + '.sorted.bam'
-    pysam.sort('-f', output_bam, output_bam_sorted)
-    os.remove(output_bam)
-    logging.info('Indexing sorted output BAM file...')
-    pysam.index(output_bam_sorted)
+    # # Run BWA MEM alignment against the new reference
+    # ## First, create a BWA index for the new reference
+    # logging.info('Creating BWA index for new reference genome...')
+    # index_cmd = ['bwa', 'index', new_reference_name]
+    # run_cmd(index_cmd)
+    # ## Second, align FASTQ files to new reference genome
+    # ### Running BWA aln
+    # logging.info('Aligning FASTQ files to new reference genome...')
+    # align_cmd_prefix = ['bwa', 'aln', '-t', args.threads, '-f']
+    # output_sai_1 = args.output_dir + '/' + args.sample_name + '.1.sai'
+    # output_sai_2 = args.output_dir + '/' + args.sample_name + '.2.sai'
+    # align_cmd_1 = align_cmd_prefix + [output_sai_1, new_reference_name, args.fastq[0]]
+    # align_cmd_2 = align_cmd_prefix + [output_sai_2, new_reference_name, args.fastq[1]]
+    # run_cmd(align_cmd_1)
+    # run_cmd(align_cmd_2)
+    # ### Running BWA sampe
+    # output_sam = args.output_dir + '/' + args.sample_name + '.sam'
+    # output_bam = args.output_dir + '/' + args.sample_name + '.bam'
+    # sampe_cmd = [
+    #     'bwa', 'sampe', '-f', output_sam, new_reference_name, output_sai_1, output_sai_2,
+    #     args.fastq[0], args.fastq[1]
+    # ]
+    # run_cmd(sampe_cmd)
+    # os.remove(output_sai_1)
+    # os.remove(output_sai_2)
+    # logging.info('Converting SAM file to BAM format...')
+    # pysam.view('-S', '-b', '-o' + output_bam, output_sam)
+    # os.remove(output_sam)
+    # logging.info('Sorting output BAM file...')
+    # output_bam_sorted = args.output_dir + '/' + args.sample_name + '.sorted.bam'
+    # pysam.sort('-f', output_bam, output_bam_sorted)
+    # os.remove(output_bam)
+    # logging.info('Indexing sorted output BAM file...')
+    # pysam.index(output_bam_sorted)
 
-    # Quantify support for fusion breakpoint
-    ## Iterate through each of the fusion references ("pseudo-chromosomes")
+    # Quantify support for fusion alleles
     logging.info('Loading generated BAM file for analysis...')
+    ## Loading BAM file from path for now to avoid unnecessary computation
     output_bam_sorted = ('/Users/bgrande/Desktop/calc_fusion_vaf_test/'
                          'ewings_sarcoma_test.sorted.bam')
     bam_file = pysam.AlignmentFile(output_bam_sorted, 'rb')
-    spanning_reads_bam_name = args.output_dir + '/' + 'spanning_reads.bam'
-    spanning_reads_bam = pysam.AlignmentFile(spanning_reads_bam_name, 'wb',
-                                             template=bam_file)
-    non_spanning_reads_bam_name = args.output_dir + '/' + 'non_spanning_reads.bam'
-    non_spanning_reads_bam = pysam.AlignmentFile(non_spanning_reads_bam_name, 'wb',
-                                                 template=bam_file)
-    fusion_lengths = dict(zip(bam_file.references, bam_file.lengths))
-    print fusion_lengths
+    ## Extract chromosome lengths in order to calculate fusion middle point
+    chr_lengths = dict(zip(bam_file.references, bam_file.lengths))
     total_spanning_reads = 0
     total_spanning_read_pairs = 0
+    ## Iterate through each of the fusion references ("pseudo-chromosomes")
     for index, fusion in g1_g2_fusions.items():
-        non_spanning_reads = defaultdict(list)
-        # Extract reads in target window
-        middle = fusion_lengths[fusion['fusion_ref_name']] / 2
-        start = middle - args.window
-        end = middle + args.window
-        logging.info('Counting up spanning reads...')
-        for read in bam_file.fetch(fusion['fusion_ref_name'], start, end):
-            # Debugging
-            if read.query_name == 'M00930:41:000000000-AAP68:1:1106:22863:16977':
-                print read
-                print read.is_reverse
-                print read.reference_start, read.query_alignment_start
-            # Check if read spans breakpoint
-            if (read.reference_start < middle - args.min_overlap and
-                    read.reference_end > middle + args.min_overlap):
-                total_spanning_reads += 1
-                spanning_reads_bam.write(read)
-            else:  # Cache non-spanning reads in dict according to read name
-                non_spanning_reads[read.query_name].append(read)
-        # Go through cached reads while only considered pairs
-        logging.info('Counting up spanning read pairs...')
-        for r1, r2 in ((x[0], x[1]) for x in non_spanning_reads.values() if len(x) == 2):
-            # Check if reads are on opposite strands
-            if (r1.is_reverse and not r2.is_reverse) or (not r1.is_reverse and r2.is_reverse):
-                # Figure out which read is on positive strand and vice versa
-                if r1.is_reverse:
-                    r_plus, r_minus = r2, r1
-                else:
-                    r_plus, r_minus = r1, r2
-                # Check if pointing each other, i.e. positive insert size
-                if r_plus.template_length > 0:
-                    # Check if breakpoint is between both reads, i.e. not spanning
-                    if ((r_plus.reference_start + 1 < middle - args.min_overlap) and
-                            (r_minus.reference_start + 1 + r_minus.reference_length >
-                             middle + args.min_overlap)):
-                        total_spanning_read_pairs += 1
-                        spanning_reads_bam.write(r1)
-                        spanning_reads_bam.write(r2)
-                        continue
-            non_spanning_reads_bam.write(r1)
-            non_spanning_reads_bam.write(r2)
-        for reads in (x for x in non_spanning_reads.values() if len(x) != 2):
-            for read in reads:
-                non_spanning_reads_bam.write(read)
+        position = chr_lengths[fusion['fusion_ref_name']] / 2
+        spanning_reads, spanning_read_pairs = calc_cov_at_pos(bam_file, fusion['fusion_ref_name'],
+                                                              position)
+        total_spanning_reads += len(spanning_reads)
+        total_spanning_read_pairs += len(spanning_read_pairs)
     print total_spanning_reads, total_spanning_read_pairs
-    bam_file.close()
-    spanning_reads_bam.close()
-    non_spanning_reads_bam.close()
-    logging.info('Sorting spanning_reads BAM file...')
-    pysam.sort(spanning_reads_bam_name, spanning_reads_bam_name + '.sorted')
-    os.remove(spanning_reads_bam_name)
-    logging.info('Indexing spanning_reads BAM file...')
-    pysam.index(spanning_reads_bam_name + '.sorted.bam')
-    logging.info('Sorting non_spanning_reads BAM file...')
-    pysam.sort(non_spanning_reads_bam_name, non_spanning_reads_bam_name + '.sorted')
-    os.remove(non_spanning_reads_bam_name)
-    logging.info('Indexing non_spanning_reads BAM file...')
-    pysam.index(non_spanning_reads_bam_name + '.sorted.bam')
 
     # Quantify support for wild-type alleles
     pass
 
 
-def fasta_generator(file_object):
+def fasta_gen(file_object):
     """
     Generator for FASTA files, outputting a dictionary
-    for each sequence
+    for each sequence.
     """
     index = 0
     seq_dict = None
@@ -273,7 +220,7 @@ def fasta_generator(file_object):
 
 def run_cmd(cmd_args):
     """
-    Standardizes the way commands are run
+    Standardizes the way commands are run.
     """
     # Ensure that all args are strings
     cmd_args = [str(x) for x in cmd_args]
@@ -284,6 +231,47 @@ def run_cmd(cmd_args):
     # Capture stdout and stderr, and output to log
     stdout, stderr = cmd_proc.communicate()
     logging.info(stderr)
+
+
+def calc_cov_at_pos(aln_file, chromosome, pos, window=1000, min_overlap=10):
+    """
+    Calculates the number of reads and read pairs that span
+    a specified position within a given window.
+    Returns tuple of lists, (spanning_reads, spanning_read_pairs):
+    - spanning_reads contains spanning reads
+    - spanning_read_pairs contains tuples of read pairs
+    """
+    spanning_reads = []
+    spanning_read_pairs = []
+    non_spanning_reads = defaultdict(list)
+    # Extract reads from specified region from alignment file
+    start = pos - window
+    end = pos + window
+    for read in aln_file.fetch(chromosome, start, end):
+        # Check if read spans breakpoint
+        if (read.reference_start < pos - min_overlap and read.reference_end > pos + min_overlap):
+            spanning_reads.append(read)
+        else:
+            # If not, cache non-spanning reads in dict according to read name
+            non_spanning_reads[read.query_name].append(read)
+    # Go through cached reads while only considered pairs
+    for r1, r2 in ((x[0], x[1]) for x in non_spanning_reads.values() if len(x) == 2):
+        # Check if reads are on opposite strands
+        if (r1.is_reverse and not r2.is_reverse) or (not r1.is_reverse and r2.is_reverse):
+            # Figure out which read is on positive strand and vice versa
+            if r1.is_reverse:
+                r_plus, r_minus = r2, r1
+            else:
+                r_plus, r_minus = r1, r2
+            # Check if pointing each other, i.e. positive insert size
+            if r_plus.template_length > 0:
+                # Check if breakpoint is between both reads, i.e. not spanning
+                if ((r_plus.reference_start + 1 < pos - min_overlap) and
+                        (r_minus.reference_start + 1 + r_minus.reference_length >
+                         pos + min_overlap)):
+                    spanning_read_pairs.append((r1, r2))
+                    continue
+    return (spanning_reads, spanning_read_pairs)
 
 
 if __name__ == '__main__':
