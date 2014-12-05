@@ -240,13 +240,13 @@ def main():
     wildtype_support = float(wildtype_spanning_reads + wildtype_spanning_read_pairs)
 
     # Correct values based on whether reciprocal event is detected and
-    # print out calculated VAF
+    # output results (fusion and wild-type support as well as calculated VAF)
     if is_reciprocal:
         # If the reciprocal event is included, then the coverage for the
         # wild-type alleles needs to be doubled
         wildtype_support *= 2
     vaf = (fusion_support / (fusion_support + wildtype_support)) * 100
-    print """
+    results = """
     Final Results:
 
     The number of reads and read pairs supporting the
@@ -259,6 +259,9 @@ def main():
     VAF = {vaf} %
     """.format(fusion_support=int(fusion_support), wildtype_support=int(wildtype_support),
                vaf=int(round(vaf)), **vars(args))
+    print results
+    with open(args.output_dir + '/results.txt', 'w') as results_file:
+        results_file.write(results)
 
 
 def fasta_gen(file_object):
