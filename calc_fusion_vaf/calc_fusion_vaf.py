@@ -108,6 +108,14 @@ def main():
             g1_g2_fusions[seq_dict['index']]['fusion_ref_name'] = (
                 '{Region1}_{Region2}_{Break1}_{Break2}'.format(**g1_g2_fusions[seq_dict['index']])
             )
+    # Determine whether reciprocal fusion is included in Factera output
+    is_reciprocal = False
+    gene_pairs = [(fusion['Region1'].lower(), fusion['Region2'].lower())
+                  for fusion in g1_g2_fusions.values()]
+    is_reciprocal = (
+        (args.gene_1, args.gene_2) in gene_pairs and
+        (args.gene_2, args.gene_1) in gene_pairs
+    )
 
     # # Generate reference FASTA file for alignment
     # logging.info('Generating new reference FASTA file...')
@@ -180,18 +188,50 @@ def main():
     bam_file = pysam.AlignmentFile(output_bam_sorted, 'rb')
     ## Extract chromosome lengths in order to calculate fusion middle point
     chr_lengths = dict(zip(bam_file.references, bam_file.lengths))
-    total_spanning_reads = 0
-    total_spanning_read_pairs = 0
+    fusion_spanning_reads = 0
+    fusion_spanning_read_pairs = 0
     ## Iterate through each of the fusion references ("pseudo-chromosomes")
+    logging.info('Calculating coverage for fusion sequences...')
     for index, fusion in g1_g2_fusions.items():
         position = chr_lengths[fusion['fusion_ref_name']] / 2
-        spanning_reads, spanning_read_pairs = calc_cov_at_pos(bam_file, fusion['fusion_ref_name'],
-                                                              position)
-        total_spanning_reads += len(spanning_reads)
-        total_spanning_read_pairs += len(spanning_read_pairs)
-    print total_spanning_reads, total_spanning_read_pairs
+        spanning_reads, spanning_read_pairs = calc_cov_at_pos(
+            bam_file, fusion['fusion_ref_name'], position, args.window, args.min_overlap
+        )
+        fusion_spanning_reads += len(spanning_reads)
+        fusion_spanning_read_pairs += len(spanning_read_pairs)
+    print 'Support for fusion:', fusion_spanning_reads + fusion_spanning_read_pairs
 
     # Quantify support for wild-type alleles
+    logging.info('Calculating coverage for wild-type sequences...')
+    wildtype_spanning_reads = 0
+    wildtype_spanning_read_pairs = 0
+    ## Obtain all breakpoint from all fusions
+    all_breakpoints = []
+    for index, fusion in g1_g2_fusions.items():
+        all_breakpoints.append(tuple(fusion['Break1'].split(':')))
+    ## Initialize cache for "already considered" read names. This is to avoid counting
+    ## reads more than once for overlapping windows
+    rname_cache = set()
+    ## Iterate through breakpoints to obtain positions in wild-type genes
+    for chromosome, position in all_breakpoints:
+        spanning_reads, spanning_read_pairs = calc_cov_at_pos(
+            bam_file, chromosome, int(position), args.window, args.min_overlap
+        )
+        # Extract read names only, in order to remove previously considered reads
+        spanning_read_names = set([read.query_name for read in spanning_reads])
+        spanning_read_pair_names = set([read1.query_name for read1, read2 in spanning_read_pairs])
+        # Remove previously considered reads
+        spanning_read_names = spanning_read_names - rname_cache
+        spanning_read_pair_names = spanning_read_pair_names - rname_cache
+        # With previously considered reads removed, count remaining reads
+        wildtype_spanning_reads += len(spanning_read_names)
+        wildtype_spanning_read_pairs += len(spanning_read_pair_names)
+        # Add any new read names to rname_cache
+        rname_cache.update(spanning_read_names)
+        rname_cache.update(spanning_read_pair_names)
+    print 'Support for wild-type:', wildtype_spanning_reads + wildtype_spanning_read_pairs
+
+    # Correct values based on whether reciprocal event is detected
     pass
 
 
