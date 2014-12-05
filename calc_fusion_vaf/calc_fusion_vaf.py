@@ -11,6 +11,11 @@ Assumptions
 - The breakpoint in the fusion sequences is right in the middle,
     which is what Factera does by default.
 - BWA and samtools should be located in the PATH environment variable.
+- This was meant for capture-based sequencing data, where one of the
+    two genes in a fusion is targeted. This has implications for the
+    calculation of the VAF, where the coverage for the wild-type
+    alleles needs to be doubled since coverage for one of the genes
+    is missing.
 
 Known Issues
 ------------
@@ -47,9 +52,9 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--sample_name', '-s', default='calc_fusion_vaf',
                         help='Used as prefix for all generated files in the output directory.')
-    parser.add_argument('--gene_1', '-g1', type=str.lower,
+    parser.add_argument('--gene_1', '-g1', type=str.upper,
                         help='First gene involved in the fusion.')
-    parser.add_argument('--gene_2', '-g2', type=str.lower,
+    parser.add_argument('--gene_2', '-g2', type=str.upper,
                         help='Second gene involved in the fusion.')
     parser.add_argument('--fastq', '-i', nargs=2,
                         help='Location of both FASTQ files (forward and reverse reads).')
@@ -87,10 +92,10 @@ def main():
         args.factera_fusions, delimiter='\t')
     g1_g2_fusions = dict()
     for index, row_dict in enumerate(factera_fusions_reader):
-        if ((row_dict['Region1'].lower() == args.gene_1 and
-                row_dict['Region2'].lower() == args.gene_2) or
-            (row_dict['Region1'].lower() == args.gene_2 and
-                row_dict['Region2'].lower() == args.gene_1)):
+        if ((row_dict['Region1'].upper() == args.gene_1 and
+                row_dict['Region2'].upper() == args.gene_2) or
+            (row_dict['Region1'].upper() == args.gene_2 and
+                row_dict['Region2'].upper() == args.gene_1)):
             row_dict['index'] = index
             g1_g2_fusions[index] = row_dict
 
@@ -110,75 +115,75 @@ def main():
             )
     # Determine whether reciprocal fusion is included in Factera output
     is_reciprocal = False
-    gene_pairs = [(fusion['Region1'].lower(), fusion['Region2'].lower())
+    gene_pairs = [(fusion['Region1'].upper(), fusion['Region2'].upper())
                   for fusion in g1_g2_fusions.values()]
     is_reciprocal = (
         (args.gene_1, args.gene_2) in gene_pairs and
         (args.gene_2, args.gene_1) in gene_pairs
     )
 
-    # # Generate reference FASTA file for alignment
-    # logging.info('Generating new reference FASTA file...')
-    # ## Create output directory if doesn't exist
-    # if not os.path.exists(args.output_dir):
-    #     os.makedirs(args.output_dir)
-    # ## Check if reference already exists from previous run
-    # ## to prevent overwrite
-    # new_reference_name = args.output_dir + '/' + args.sample_name + '.new_reference.fa'
-    # if os.path.exists(new_reference_name):
-    #     logging.warning('Output reference FASTA file already exists and presumably other '
-    #                     'output files as well. If --force_overwrite option enabled, these '
-    #                     'will be overwritten. If not, the script will terminate now.')
-    #     if not args.force_overwrite:
-    #         raise IOError('Output file(s) already exist.')
-    # ## If the original reference genome isn't specified, create new reference
-    # ## based on the fusion sequences and the wild-type gene sequences
-    # ## ** Not implemented yet **
-    # pass
-    # ## If the original reference genome is specified, append the fusion
-    # ## sequences to it in a new reference FASTA file
-    # logging.info('Copying specified reference FASTA file to output directory...')
-    # shutil.copyfile(args.reference_fasta, new_reference_name)
-    # logging.info('Appending fusion sequences to new reference FASTA file...')
-    # with open(new_reference_name, 'a') as new_reference_out:
-    #     for index, fusion in g1_g2_fusions.items():
-    #         fusion_fasta = '>{fusion_ref_name}\n{fusion_seq}\n'.format(**fusion)
-    #         new_reference_out.write(fusion_fasta)
+    # Generate reference FASTA file for alignment
+    logging.info('Generating new reference FASTA file...')
+    ## Create output directory if doesn't exist
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
+    ## Check if reference already exists from previous run
+    ## to prevent overwrite
+    new_reference_name = args.output_dir + '/' + args.sample_name + '.new_reference.fa'
+    if os.path.exists(new_reference_name):
+        logging.warning('Output reference FASTA file already exists and presumably other '
+                        'output files as well. If --force_overwrite option enabled, these '
+                        'will be overwritten. If not, the script will terminate now.')
+        if not args.force_overwrite:
+            raise IOError('Output file(s) already exist.')
+    ## If the original reference genome isn't specified, create new reference
+    ## based on the fusion sequences and the wild-type gene sequences
+    ## ** Not implemented yet **
+    pass
+    ## If the original reference genome is specified, append the fusion
+    ## sequences to it in a new reference FASTA file
+    logging.info('Copying specified reference FASTA file to output directory...')
+    shutil.copyfile(args.reference_fasta, new_reference_name)
+    logging.info('Appending fusion sequences to new reference FASTA file...')
+    with open(new_reference_name, 'a') as new_reference_out:
+        for index, fusion in g1_g2_fusions.items():
+            fusion_fasta = '>{fusion_ref_name}\n{fusion_seq}\n'.format(**fusion)
+            new_reference_out.write(fusion_fasta)
 
-    # # Run BWA MEM alignment against the new reference
-    # ## First, create a BWA index for the new reference
-    # logging.info('Creating BWA index for new reference genome...')
-    # index_cmd = ['bwa', 'index', new_reference_name]
-    # run_cmd(index_cmd)
-    # ## Second, align FASTQ files to new reference genome
-    # ### Running BWA aln
-    # logging.info('Aligning FASTQ files to new reference genome...')
-    # align_cmd_prefix = ['bwa', 'aln', '-t', args.threads, '-f']
-    # output_sai_1 = args.output_dir + '/' + args.sample_name + '.1.sai'
-    # output_sai_2 = args.output_dir + '/' + args.sample_name + '.2.sai'
-    # align_cmd_1 = align_cmd_prefix + [output_sai_1, new_reference_name, args.fastq[0]]
-    # align_cmd_2 = align_cmd_prefix + [output_sai_2, new_reference_name, args.fastq[1]]
-    # run_cmd(align_cmd_1)
-    # run_cmd(align_cmd_2)
-    # ### Running BWA sampe
-    # output_sam = args.output_dir + '/' + args.sample_name + '.sam'
-    # output_bam = args.output_dir + '/' + args.sample_name + '.bam'
-    # sampe_cmd = [
-    #     'bwa', 'sampe', '-f', output_sam, new_reference_name, output_sai_1, output_sai_2,
-    #     args.fastq[0], args.fastq[1]
-    # ]
-    # run_cmd(sampe_cmd)
-    # os.remove(output_sai_1)
-    # os.remove(output_sai_2)
-    # logging.info('Converting SAM file to BAM format...')
-    # pysam.view('-S', '-b', '-o' + output_bam, output_sam)
-    # os.remove(output_sam)
-    # logging.info('Sorting output BAM file...')
-    # output_bam_sorted = args.output_dir + '/' + args.sample_name + '.sorted.bam'
-    # pysam.sort('-f', output_bam, output_bam_sorted)
-    # os.remove(output_bam)
-    # logging.info('Indexing sorted output BAM file...')
-    # pysam.index(output_bam_sorted)
+    # Run BWA MEM alignment against the new reference
+    ## First, create a BWA index for the new reference
+    logging.info('Creating BWA index for new reference genome...')
+    index_cmd = ['bwa', 'index', new_reference_name]
+    run_cmd(index_cmd)
+    ## Second, align FASTQ files to new reference genome
+    ### Running BWA aln
+    logging.info('Aligning FASTQ files to new reference genome...')
+    align_cmd_prefix = ['bwa', 'aln', '-t', args.threads, '-f']
+    output_sai_1 = args.output_dir + '/' + args.sample_name + '.1.sai'
+    output_sai_2 = args.output_dir + '/' + args.sample_name + '.2.sai'
+    align_cmd_1 = align_cmd_prefix + [output_sai_1, new_reference_name, args.fastq[0]]
+    align_cmd_2 = align_cmd_prefix + [output_sai_2, new_reference_name, args.fastq[1]]
+    run_cmd(align_cmd_1)
+    run_cmd(align_cmd_2)
+    ### Running BWA sampe
+    output_sam = args.output_dir + '/' + args.sample_name + '.sam'
+    output_bam = args.output_dir + '/' + args.sample_name + '.bam'
+    sampe_cmd = [
+        'bwa', 'sampe', '-f', output_sam, new_reference_name, output_sai_1, output_sai_2,
+        args.fastq[0], args.fastq[1]
+    ]
+    run_cmd(sampe_cmd)
+    os.remove(output_sai_1)
+    os.remove(output_sai_2)
+    logging.info('Converting SAM file to BAM format...')
+    pysam.view('-S', '-b', '-o' + output_bam, output_sam)
+    os.remove(output_sam)
+    logging.info('Sorting output BAM file...')
+    output_bam_sorted = args.output_dir + '/' + args.sample_name + '.sorted.bam'
+    pysam.sort('-f', output_bam, output_bam_sorted)
+    os.remove(output_bam)
+    logging.info('Indexing sorted output BAM file...')
+    pysam.index(output_bam_sorted)
 
     # Quantify support for fusion alleles
     logging.info('Loading generated BAM file for analysis...')
@@ -199,7 +204,6 @@ def main():
         )
         fusion_spanning_reads += len(spanning_reads)
         fusion_spanning_read_pairs += len(spanning_read_pairs)
-    print 'Support for fusion:', fusion_spanning_reads + fusion_spanning_read_pairs
 
     # Quantify support for wild-type alleles
     logging.info('Calculating coverage for wild-type sequences...')
@@ -209,6 +213,7 @@ def main():
     all_breakpoints = []
     for index, fusion in g1_g2_fusions.items():
         all_breakpoints.append(tuple(fusion['Break1'].split(':')))
+        all_breakpoints.append(tuple(fusion['Break2'].split(':')))
     ## Initialize cache for "already considered" read names. This is to avoid counting
     ## reads more than once for overlapping windows
     rname_cache = set()
@@ -229,10 +234,31 @@ def main():
         # Add any new read names to rname_cache
         rname_cache.update(spanning_read_names)
         rname_cache.update(spanning_read_pair_names)
-    print 'Support for wild-type:', wildtype_spanning_reads + wildtype_spanning_read_pairs
 
-    # Correct values based on whether reciprocal event is detected
-    pass
+    # Add up support
+    fusion_support = float(fusion_spanning_reads + fusion_spanning_read_pairs)
+    wildtype_support = float(wildtype_spanning_reads + wildtype_spanning_read_pairs)
+
+    # Correct values based on whether reciprocal event is detected and
+    # print out calculated VAF
+    if is_reciprocal:
+        # If the reciprocal event is included, then the coverage for the
+        # wild-type alleles needs to be doubled
+        wildtype_support *= 2
+    vaf = (fusion_support / (fusion_support + wildtype_support)) * 100
+    print """
+    Final Results:
+
+    The number of reads and read pairs supporting the
+    fusion and wild-type alleles are (after correction):
+    Fusion = {fusion_support}
+    Wild-type = {wildtype_support}
+
+    The variant allele fraction (VAF) for the gene fusion
+    between {gene_1} and {gene_2} is:
+    VAF = {vaf} %
+    """.format(fusion_support=int(fusion_support), wildtype_support=int(wildtype_support),
+               vaf=int(round(vaf)), **vars(args))
 
 
 def fasta_gen(file_object):
