@@ -24,9 +24,6 @@ Known Issues
     seems to be broken under certain conditions.
 """
 
-__author__ = 'Bruno Grande'
-__contact__ = 'bgrande@sfu.ca'
-
 import argparse
 import csv
 import sys
@@ -185,6 +182,8 @@ def main():
             logging.warning('Converted BAM file already exists. Skipping...')
         else:
             logging.info('Converting SAM file to BAM format...')
+            # No space between -o and output_bam as workaround, see link below
+            # https://groups.google.com/d/topic/pysam-user-group/ooHgIiNVe4c/discussion
             pysam.view('-S', '-b', '-o' + output_bam, output_sam)
         ## Sorting converted BAM file
         if os.path.exists(output_bam_sorted):
