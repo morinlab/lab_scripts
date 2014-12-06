@@ -3,19 +3,17 @@
 """
 calc_fusion_vaf.py
 ==================
-Calculates the variant allele fraction (VAF) of a gene fusion
-based on Factera output.
+This script calculates the variant allele fraction (VAF) of fusions
+called by Factera. It does so by appending the fusion sequences to
+the reference genome and realigning the reads to this new reference.
+Then, reads supporting the fusion and wild-type alleles are counted
+and a VAF is calculated.
 
 Assumptions
 -----------
 - The breakpoint in the fusion sequences is right in the middle,
     which is what Factera does by default.
-- BWA should be located in the PATH environment variable.
-- This was meant for capture-based sequencing data, where one of the
-    two genes in a fusion is targeted. This has implications for the
-    calculation of the VAF, where the coverage for the wild-type
-    alleles needs to be doubled since coverage for one of the genes
-    is missing.
+- BWA is assumed to be located in the PATH environment variable.
 
 Known Issues
 ------------
@@ -69,11 +67,12 @@ def main():
     log_format = '%(asctime)s - %(levelname)s: %(message)s'
     date_format = '%Y/%m/%d %I:%M:%S %p'  # 2010/12/12 11:46:36 AM
     if args.log:
-        logging.basicConfig(
-            format=log_format, level=logging.INFO, datefmt=date_format, filename=args.log)
+        logging.basicConfig(format=log_format, level=logging.INFO, datefmt=date_format,
+                            filename=args.log)
     else:
         logging.basicConfig(
-            format=log_format, level=logging.INFO, datefmt=date_format, stream=sys.stderr)
+            format=log_format, level=logging.INFO, datefmt=date_format,
+            stream=sys.stderr)
     logging.info('Initializing script...')
 
     # Check if final output file already exists
@@ -232,7 +231,7 @@ def main():
         fusion_total_support = fusion_spanning_reads + fusion_spanning_read_pairs
         wildtype_total_support = wildtype_spanning_reads + wildtype_spanning_read_pairs
         if wildtype_total_support != 0:
-            # The min() serves to cap the VAF at 1.0, just to be safe
+            # The min serves to cap the VAF at 1.0, just to be safe
             variant_allele_fraction = min(round(
                 float(fusion_total_support) / float(wildtype_total_support), 3), 1.0)
         else:
