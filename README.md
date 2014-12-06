@@ -19,6 +19,6 @@ calc_vaf_db_strand.py calculates the variant allele fraction (VAF) at a given po
 calc_fusion_vaf
 ---------------
 
-calc_fusion_vaf.py calculates the variant allele fraction (VAF) of fusions called by Factera. It does so by appending the fusion sequences to the reference genome and realigning the reads to this new reference. Then, reads supporting the fusion and wild-type alleles are counted and a VAF is calculated.
+calc_fusion_vaf.py calculates the variant allele fraction (VAF) of fusions called by Factera. It does so by appending the fusion sequences to the reference genome and realigning the reads to this new reference. Then, reads supporting the fusion and wild-type alleles are counted and a VAF is calculated. Moreover, if a certain gene was targeted like in a capture-based approach, there's the option of only considering fusions involving this gene (_e.g._ `--gene EWSR1`).
 
     python calc_fusion_vaf.py --output_dir ./fusion_vaf/ --threads 4 hg19.fa ewings_sarcoma.R1.fastq.gz ewings_sarcoma.R2.fastq.gz ./factera_output/ewings_sarcoma.factera.fusions.txt
