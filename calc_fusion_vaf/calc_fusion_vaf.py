@@ -232,7 +232,8 @@ def main():
         if wildtype_total_support != 0:
             # The min serves to cap the VAF at 1.0, just to be safe
             variant_allele_fraction = min(round(
-                float(fusion_total_support) / float(wildtype_total_support), 3), 1.0)
+                float(fusion_total_support) / float(fusion_total_support +
+                                                    wildtype_total_support), 3), 1.0)
         else:
             variant_allele_fraction = 'N/A'
         # Compile results
@@ -267,6 +268,8 @@ def main():
         os.remove(output_sam)
     if os.path.exists(output_bam):
         os.remove(output_bam)
+    if os.path.exists(output_bam_sorted):
+        os.remove(output_bam_sorted)
 
 
 def fasta_gen(file_object):
