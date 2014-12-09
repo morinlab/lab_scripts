@@ -14,14 +14,14 @@ Assumptions
 - The breakpoint in the fusion sequences is right in the middle,
     which is what Factera does by default.
 - BWA is assumed to be located in the PATH environment variable.
+- Pysam 0.8.0 or less is needed, because v0.8.1 moves to
+    samtools 1.1 and there's an issue with rmdup in this version.
 
 Known Issues
 ------------
 - Currently, reads that span the edges of the window are included.
     I believe it would be better if the reads need to be entirely
     within the window.
-- Duplicates aren't being removed, because rmdup in samtools 1.1
-    seems to be broken under certain conditions.
 """
 
 import argparse
@@ -125,10 +125,10 @@ def main():
     output_sam = args.output_dir + '/bwa_sampe.sam'
     output_bam = args.output_dir + '/bwa_sampe.bam'
     output_bam_sorted = args.output_dir + '/bwa_sampe.sorted.bam'
-    # output_bam_sorted_rmdup = args.output_dir + '/bwa_sampe.sorted.rmdup.bam'
+    output_bam_sorted_rmdup = args.output_dir + '/bwa_sampe.sorted.rmdup.bam'
     ## Check if final output BAM file and index exist
     if (os.path.exists(output_bam_sorted)
-            and os.path.exists(output_bam_sorted + '.bai')):
+            and os.path.exists(output_bam_sorted_rmdup + '.bai')):
         logging.warning('Final output BAM file and index already exist. Skipping alignment...')
     else:
         # Generate new reference genome with fusions
@@ -192,21 +192,21 @@ def main():
             logging.info('Sorting converted BAM file...')
             pysam.sort('-f', output_bam, output_bam_sorted)
         # ## Removing duplicates
-        # if os.path.exists(output_bam_sorted_rmdup):
-        #     logging.warning('Duplicates already removed. Skipping...')
-        # else:
-        #     logging.info('Removing duplicates from BAM file...')
-        #     pysam.rmdup(output_bam_sorted, output_bam_sorted_rmdup)
+        if os.path.exists(output_bam_sorted_rmdup):
+            logging.warning('Duplicates already removed. Skipping...')
+        else:
+            logging.info('Removing duplicates from BAM file...')
+            pysam.rmdup(output_bam_sorted, output_bam_sorted_rmdup)
         ## Indexing sorted BAM file
         if os.path.exists(output_bam_sorted + '.bai'):
             logging.warning('Index for sorted BAM file already exists. Skipping...')
         else:
             logging.info('Indexing sorted output BAM file...')
-            pysam.index(output_bam_sorted)
+            pysam.index(output_bam_sorted_rmdup)
 
     # Quantify support for fusion alleles
     logging.info('Loading generated BAM file for analysis...')
-    bam_file = pysam.AlignmentFile(output_bam_sorted, 'rb')
+    bam_file = pysam.Samfile(output_bam_sorted_rmdup, 'rb')
     ## Extract chromosome lengths in order to calculate fusion middle point
     chr_lengths = dict(zip(bam_file.references, bam_file.lengths))
     ## Calculate coverage values for each fusion and wild-type alleles
@@ -329,11 +329,11 @@ def calc_cov_at_pos(aln_file, chromosome, pos, window=2000, min_overlap=10):
     end = max(pos + window / 2, start + 1)
     for read in aln_file.fetch(chromosome, start, end):
         # Check if read spans breakpoint
-        if (read.reference_start < pos - min_overlap and read.reference_end > pos + min_overlap):
+        if (read.pos < pos - min_overlap and read.aend > pos + min_overlap):
             spanning_reads.append(read)
         else:
             # If not, cache non-spanning reads in dict according to read name
-            non_spanning_reads[read.query_name].append(read)
+            non_spanning_reads[read.qname].append(read)
     # Go through cached reads while only considered pairs
     for r1, r2 in ((x[0], x[1]) for x in non_spanning_reads.values() if len(x) == 2):
         # Check if reads are on opposite strands
@@ -344,10 +344,10 @@ def calc_cov_at_pos(aln_file, chromosome, pos, window=2000, min_overlap=10):
             else:
                 r_plus, r_minus = r1, r2
             # Check if pointing each other, i.e. positive insert size
-            if r_plus.template_length > 0:
+            if r_plus.isize > 0:
                 # Check if breakpoint is between both reads, i.e. not spanning
-                if ((r_plus.reference_start + 1 < pos - min_overlap) and
-                        (r_minus.reference_start + 1 + r_minus.reference_length >
+                if ((r_plus.pos + 1 < pos - min_overlap) and
+                        (r_minus.pos + 1 + r_minus.alen >
                          pos + min_overlap)):
                     spanning_read_pairs.append((r1, r2))
                     continue
