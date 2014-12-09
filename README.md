@@ -23,7 +23,7 @@ calc_fusion_vaf
 
 ### Requirements
 
-- Pysam 0.8.0 (for now, pysam 0.8.1 does not work)
+- Pysam 0.8.0 (installed by running `pip install pysam==0.8.0`)
 
 ### Description
 
