@@ -20,10 +20,10 @@ import pysam
 def main():
     # Parse command line arguments
     parser = argparse.ArgumentParser()
-    parser.add_argument('input_vcf', help='Input VCF file to be filtered')
+    parser.add_argument('input_vcf', help='Input VCF file')
     parser.add_argument('input_bam', help='BAM file matched to input VCF file')
-    parser.add_argument('--output_vcf', help='Output VCF file containing filter')
-    parser.add_argument('--read_cutoff', required=True, dest='read_cutoff',
+    parser.add_argument('--output_vcf', help='Filtered VCF file (default: *.filtered.vcf)')
+    parser.add_argument('--read_cutoff', default=10,
                         help='Minimum number of unique read IDs required to keep a variant')
     args = parser.parse_args()
 
