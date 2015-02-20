@@ -5,13 +5,13 @@
 # Align illumina reads
 
 %.bam: %_L001_R1_001.fastq.gz %_L001_R2_001.fastq.gz 
-	bwa mem $(GENOME) $*_L001_R1_001.fastq.gz $*_L001_R2_001.fastq.gz | samtools view -bS -o $@ -
+	bwa mem -t 4 $(GENOME) $*_L001_R1_001.fastq.gz $*_L001_R2_001.fastq.gz | samtools view -bS -o $@ -
 
 ##################################################
 # Convert to sorted and indexed BAM file
 
 %.sorted.bam: %.bam
-	samtools sort $< $*.sorted
+	samtools sort -@ 4 $< $*.sorted
 	rm $<
 
 %.sorted.bam.bai: %.sorted.bam
@@ -23,4 +23,4 @@
 %.sorted.rmdup.bam.bai: %.sorted.rmdup.bam
 	samtools index $*.sorted.rmdup.bam
 
-.PRECIOUS: %.sorted.bam  
+.PRECIOUS: %.sorted.bam %.sorted.rmdup.bam
