@@ -9,5 +9,5 @@ This script calculates useful statistics for capture-based experiments. As input
 
 ### Requirements
 
-- pysam (v0.8.1 or later)
-- [cancer_api|https://github.com/brunogrande/cancer_api]
+- pysam==0.8.1
+- [cancer_api](https://github.com/brunogrande/cancer_api)
