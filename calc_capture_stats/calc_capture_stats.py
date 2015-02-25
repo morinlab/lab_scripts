@@ -23,6 +23,8 @@ import cancer_api
 import pysam
 from collections import OrderedDict
 
+__version__ = "1.1.0"
+
 
 def main():
 
@@ -45,10 +47,16 @@ def main():
     stats = OrderedDict()
 
     # Define helper functions
-    def count_interval_reads(bam_file, interval):
-        """Counts the number of reads in a given interval in a BAM file."""
+    def count_interval_reads(bam_file, interval, viewed_reads={}):
+        """Counts the number of reads in a given interval in a BAM file.
+        Adds viewed reads to dictionary to avoid double-counting of reads.
+        """
         reads_iterator = inbam.fetch(interval.chrom, interval.start_pos, interval.end_pos)
-        num_reads = len([1 for r in reads_iterator])
+        read_qnames = [r.query_name for r in reads_iterator
+                       if r.query_name not in viewed_reads and not r.is_duplicate]
+        num_reads = len(read_qnames)
+        for qname in read_qnames:
+            viewed_reads[qname] = 1
         return num_reads
 
     # Calculate overall coverage
@@ -70,9 +78,10 @@ def main():
     # Calculate on-target coverage
     target_length = 0
     target_num_mapped = 0
+    viewed_reads = {}
     for interval in inbed:
         target_length += interval.length
-        target_num_mapped += count_interval_reads(inbam, interval)
+        target_num_mapped += count_interval_reads(inbam, interval, viewed_reads)
     target_cov = read_length * target_num_mapped / float(target_length)
     stats["Target_Coverage"] = round(target_cov, 2)
 
