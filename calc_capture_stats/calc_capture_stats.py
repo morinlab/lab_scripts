@@ -13,12 +13,14 @@ Notably, it calculates:
 Inputs:
 - BAM file (sorted, rmduped and indexed; only one read length)
 - A set of intervals (BED file)
+- A set of excluded intervals (optional; BED file)
 
 Output:
 - Simple TSV file with stats
 """
 
 import argparse
+import re
 import cancer_api
 import pysam
 from collections import OrderedDict
@@ -61,7 +63,15 @@ def main():
 
     # Calculate overall coverage
     read_length = inbam.head(1).next().query_length
-    genome_num_mapped = inbam.mapped
+    # Using flagstat in order to not count duplicate reads
+    total_index = 0
+    dups_index = 3
+    flagstat_regex = r"(\d+).*"
+    flagstat = pysam.flagstat(inbam.filename)
+    num_total = int(re.match(flagstat_regex, flagstat[total_index]).group(1))
+    num_dups = int(re.match(flagstat_regex, flagstat[dups_index]).group(1))
+    genome_num_mapped = num_total - num_dups
+    # Calculate genome length
     genome_length = sum(inbam.lengths)
     if excl_bed:
         # Correct for excluded regions
@@ -73,7 +83,7 @@ def main():
         genome_num_mapped -= excl_num_mapped
         genome_length -= excl_length
     genome_cov = read_length * genome_num_mapped / float(genome_length)
-    stats["Genome_Coverage"] = round(genome_cov, 2)
+    stats["Genome_Coverage"] = round(genome_cov, 3)
 
     # Calculate on-target coverage
     target_length = 0
@@ -83,15 +93,15 @@ def main():
         target_length += interval.length
         target_num_mapped += count_interval_reads(inbam, interval, viewed_reads)
     target_cov = read_length * target_num_mapped / float(target_length)
-    stats["Target_Coverage"] = round(target_cov, 2)
+    stats["Target_Coverage"] = round(target_cov, 3)
 
     # Calculate percent on-target
     percent_on_target = target_num_mapped / float(genome_num_mapped) * 100
-    stats["Percent_Reads_On_Target"] = round(percent_on_target, 2)
+    stats["Percent_Reads_On_Target"] = round(percent_on_target, 3)
 
     # Calculate percent fold enrichment
     percent_fold_enrichment = target_cov / genome_cov * 100
-    stats["Percent_Fold_Enrichment"] = round(percent_fold_enrichment, 2)
+    stats["Percent_Fold_Enrichment"] = round(percent_fold_enrichment, 3)
 
     # Write out stats to file
     with open(output, "w") as outfile:
