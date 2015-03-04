@@ -42,7 +42,7 @@ def main():
 
     parser = argparse.ArgumentParser(description="Split FASTQ files into smaller ones.")
     parser.add_argument("fastq", nargs="+", help="FASTQ file(s) (single- or paired-end)")
-    parser.add_argument("--num_reads", "-n", type=int,
+    parser.add_argument("--num_reads", "-n", type=int, default=75000000,
                         help="Number of reads per output FASTQ file")
     parser.add_argument("--output_prefix", default="./split_fastq", help="Output directory and "
                         "prefix for smaller FASTQ files. For example, /path/sample produces "
