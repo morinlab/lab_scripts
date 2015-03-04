@@ -1,6 +1,14 @@
 Release History
 ===============
 
+1.0.3
+-----
+
+**Bugfixes**
+
+- When FASTQ read count is less than num_reads, no longer creates chunk_0
+
+
 1.0.2
 -----
 

@@ -26,7 +26,7 @@ import os
 import logging
 import cancer_api
 
-__version__ = "v1.0.2"
+__version__ = "v1.0.3"
 
 # MIN_SPILLOVER indicates the minimum fraction (between 0 and 1) of num_reads
 # that is required to create a new chunk. This is mostly meant to prevent the
@@ -140,7 +140,8 @@ def main():
 
         # Handle remaining reads
         # Check if the number of remaining reads is above the MIN_SPILLOVER
-        if len(current_chunk.outfastq.storelist) >= MIN_SPILLOVER * num_reads:
+        if (len(current_chunk.outfastq.storelist) >= MIN_SPILLOVER * num_reads or
+                current_chunk.counter == 1):
             # If so, write out reads to current chunk
             logging.info("Writing out chunk #{}".format(current_chunk.counter))
             current_chunk.outfastq.write()
