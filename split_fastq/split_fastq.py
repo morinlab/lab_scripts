@@ -26,7 +26,7 @@ import os
 import logging
 import cancer_api
 
-__version__ = "v1.0.1"
+__version__ = "v1.0.2"
 
 # MIN_SPILLOVER indicates the minimum fraction (between 0 and 1) of num_reads
 # that is required to create a new chunk. This is mostly meant to prevent the
@@ -44,6 +44,8 @@ def main():
     parser.add_argument("fastq", nargs="+", help="FASTQ file(s) (single- or paired-end)")
     parser.add_argument("--num_reads", "-n", type=int, default=75000000,
                         help="Number of reads per output FASTQ file")
+    parser.add_argument("--num_buffer", "-b", type=int, default=5000000,
+                        help="Number of reads kept in buffer before flushing to disk")
     parser.add_argument("--output_prefix", default="./split_fastq", help="Output directory and "
                         "prefix for smaller FASTQ files. For example, /path/sample produces "
                         "FASTQ files named /path/sample_chunk1.fastq.gz, etc.")
@@ -107,7 +109,7 @@ def main():
             self.outfastq = cancer_api.files.FastqFile.new(
                 self.outfastq_template.format(**vars(self)))
 
-    def split_fastq(fastq_filepath, num_reads, output_prefix):
+    def split_fastq(fastq_filepath, output_prefix, num_reads, num_buffer):
         """Helper function for actually splitting FASTQ files.
         Simplifies the control flow depending on if one or two
         FASTQ files are specified.
@@ -124,8 +126,13 @@ def main():
             if num_accum < num_reads:
                 num_accum += 1
                 current_chunk.outfastq.add_obj(read)
+                # Check if buffer limit reached
+                if num_accum % num_buffer == 0:
+                    logging.info("Flushing buffer to disk for chunk #{}".format(
+                        current_chunk.counter))
+                    current_chunk.outfastq.write()
             else:
-                logging.info("Writing out chunk #{}".format(current_chunk.counter))
+                logging.info("Wrapping up chunk #{}".format(current_chunk.counter))
                 current_chunk.outfastq.write()
                 intervals.append(str(current_chunk.suffix))
                 current_chunk.next()
@@ -152,10 +159,10 @@ def main():
 
     # Run split_fastq on FASTQ file(s)
     logging.info("Splitting first FASTQ file")
-    intervals = split_fastq(fastq1_filepath, args.num_reads, output_prefix)
+    intervals = split_fastq(fastq1_filepath, output_prefix, args.num_reads, args.num_buffer)
     if fastq2_filepath:
         logging.info("Splitting second FASTQ file")
-        split_fastq(fastq2_filepath, args.num_reads, output_prefix)
+        split_fastq(fastq2_filepath, output_prefix, args.num_reads, args.num_buffer)
 
     # Create interval_file, if applicable
     if args.interval_file:
