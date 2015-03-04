@@ -1,6 +1,14 @@
 Release History
 ===============
 
+1.1.2
+-----
+
+**Features and Enhancements**
+
+- Added option to disable compression (useful for tests, because gzipped files include metadata)
+
+
 1.1.1
 -----
 
