@@ -16,9 +16,7 @@ Outputs:
 
 Known Issues
 ------------
-- If only one chunk is generated, the script should
-    just link to the original FASTQ files in order to
-    prevent needless file duplication.
+- None
 """
 
 import argparse
@@ -26,7 +24,7 @@ import os
 import logging
 import cancer_api
 
-__version__ = "v1.0.3"
+__version__ = "v1.1.0"
 
 # MIN_SPILLOVER indicates the minimum fraction (between 0 and 1) of num_reads
 # that is required to create a new chunk. This is mostly meant to prevent the
@@ -81,14 +79,14 @@ def main():
     # Define helper classes and functions
     class Chunk(object):
         """Convenience class for managing chunks"""
-        def __init__(self, infastq, output_prefix):
+        def __init__(self, infastq, output_prefix, read_type):
             """Initialize first chunk"""
             self.infastq = infastq
             self.filename = infastq.filename
             self.output_prefix = output_prefix
+            self.read_type = read_type
             self.counter = 0
-            self.suffix_template = "_chunk{counter}.fastq.gz"
-            self.outfastq_template = "{output_prefix}{suffix}"
+            self.outfastq_template = "{output_prefix}_chunk{counter}_{read_type}.fastq.gz"
             self.next()
 
         def next(self):
@@ -105,11 +103,15 @@ def main():
 
         def init_outfastq(self):
             """Initialize outfastq based on current state"""
-            self.suffix = self.suffix_template.format(counter=self.counter)
             self.outfastq = cancer_api.files.FastqFile.new(
                 self.outfastq_template.format(**vars(self)))
 
-    def split_fastq(fastq_filepath, output_prefix, num_reads, num_buffer):
+        def chunk_name(self):
+            """Generate chunk name."""
+            prefix = "{output_prefix}_chunk{counter}".format(**vars(self))
+            return os.path.abspath(prefix)
+
+    def split_fastq(fastq_filepath, output_prefix, num_reads, num_buffer, read_type=""):
         """Helper function for actually splitting FASTQ files.
         Simplifies the control flow depending on if one or two
         FASTQ files are specified.
@@ -117,7 +119,7 @@ def main():
         """
         # Setup
         infastq = cancer_api.files.FastqFile.open(fastq_filepath)
-        current_chunk = Chunk(infastq, output_prefix)
+        current_chunk = Chunk(infastq, output_prefix, read_type)
         intervals = []
         num_accum = 0
 
@@ -134,18 +136,21 @@ def main():
             else:
                 logging.info("Wrapping up chunk #{}".format(current_chunk.counter))
                 current_chunk.outfastq.write()
-                intervals.append(str(current_chunk.suffix))
+                intervals.append(str(current_chunk.chunk_name()))
                 current_chunk.next()
                 num_accum = 0
 
         # Handle remaining reads
+        # If the current_chunk is still at chunk1, just symlink
+        if current_chunk.counter == 1:
+            os.symlink(infastq.filepath, current_chunk.outfastq.filepath)
+            intervals.append(str(current_chunk.chunk_name()))
         # Check if the number of remaining reads is above the MIN_SPILLOVER
-        if (len(current_chunk.outfastq.storelist) >= MIN_SPILLOVER * num_reads or
-                current_chunk.counter == 1):
+        elif len(current_chunk.outfastq.storelist) >= MIN_SPILLOVER * num_reads:
             # If so, write out reads to current chunk
             logging.info("Writing out chunk #{}".format(current_chunk.counter))
             current_chunk.outfastq.write()
-            intervals.append(str(current_chunk.suffix))
+            intervals.append(str(current_chunk.chunk_name()))
         else:
             # Otherwise, write reads to previous chunk
             storelist = current_chunk.outfastq.storelist
@@ -160,10 +165,12 @@ def main():
 
     # Run split_fastq on FASTQ file(s)
     logging.info("Splitting first FASTQ file")
-    intervals = split_fastq(fastq1_filepath, output_prefix, args.num_reads, args.num_buffer)
+    intervals = split_fastq(fastq1_filepath, output_prefix, args.num_reads, args.num_buffer,
+                            read_type="R1")
     if fastq2_filepath:
         logging.info("Splitting second FASTQ file")
-        split_fastq(fastq2_filepath, output_prefix, args.num_reads, args.num_buffer)
+        split_fastq(fastq2_filepath, output_prefix, args.num_reads, args.num_buffer,
+                    read_type="R2")
 
     # Create interval_file, if applicable
     if args.interval_file:

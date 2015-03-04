@@ -1,6 +1,20 @@
 Release History
 ===============
 
+1.1.0
+-----
+
+**Features and Enhancements**
+
+- When one chunk is created, the output FASTQ is simply symlinked to the input FASTQ
+
+**Bugfixes**
+
+- When only one FASTQ file is created, now outputs a chunk name in interval file
+- Chunk names include absolute paths instead of relative
+- Now properly handles either one or two input FASTQ files (regarding output file names)
+
+
 1.0.3
 -----
 
