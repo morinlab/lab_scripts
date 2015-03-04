@@ -1,6 +1,14 @@
 Release History
 ===============
 
+1.1.1
+-----
+
+**Bugfixes**
+
+- Fixed bug when only given one FASTQ file
+
+
 1.1.0
 -----
 

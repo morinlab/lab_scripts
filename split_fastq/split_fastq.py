@@ -24,7 +24,7 @@ import os
 import logging
 import cancer_api
 
-__version__ = "v1.1.0"
+__version__ = "v1.1.1"
 
 # MIN_SPILLOVER indicates the minimum fraction (between 0 and 1) of num_reads
 # that is required to create a new chunk. This is mostly meant to prevent the
@@ -60,6 +60,7 @@ def main():
     # Check if one or two FASTQ files
     if len(args.fastq) == 1:
         fastq1_filepath = args.fastq[0]
+        fastq2_filepath = None
     elif len(args.fastq) == 2:
         fastq1_filepath = args.fastq[0]
         fastq2_filepath = args.fastq[1]
