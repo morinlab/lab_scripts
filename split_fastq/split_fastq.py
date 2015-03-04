@@ -11,7 +11,7 @@ Inputs:
 - FASTQ file(s) (single- or paired-end)
 
 Outputs:
-- Output directory into which all smaller FASTq files
+- Output directory into which all smaller FASTQ files
     will be stored
 
 Known Issues
@@ -26,7 +26,7 @@ import os
 import logging
 import cancer_api
 
-__version__ = "v1.0.0"
+__version__ = "v1.0.1"
 
 # MIN_SPILLOVER indicates the minimum fraction (between 0 and 1) of num_reads
 # that is required to create a new chunk. This is mostly meant to prevent the
@@ -39,12 +39,14 @@ def main():
     # ========================================================================================== #
     # Argument parsing
     # ========================================================================================== #
+
     parser = argparse.ArgumentParser(description="Split FASTQ files into smaller ones.")
     parser.add_argument("fastq", nargs="+", help="FASTQ file(s) (single- or paired-end)")
     parser.add_argument("--num_reads", "-n", type=int,
                         help="Number of reads per output FASTQ file")
-    parser.add_argument("--output_dir", default=".",
-                        help="Output directory for smaller FASTQ files")
+    parser.add_argument("--output_prefix", default="./split_fastq", help="Output directory and "
+                        "prefix for smaller FASTQ files. For example, /path/sample produces "
+                        "FASTQ files named /path/sample_chunk1.fastq.gz, etc.")
     parser.add_argument("--interval_file", help="Output intervals (for use in Pipeline Factory)")
     args = parser.parse_args()
 
@@ -65,9 +67,10 @@ def main():
         raise ValueError("Did not receive one or two FASTQ files.")
 
     # Check if output_dir exists; if not, create it
-    if not os.path.exists(args.output_dir):
+    output_prefix = args.output_prefix
+    output_dir = os.path.dirname(args.output_prefix)
+    if not os.path.exists(output_dir):
         os.mkdir(args.output_dir)
-    output_dir = args.output_dir
 
     # ========================================================================================== #
     # Split FASTQ files
@@ -76,13 +79,14 @@ def main():
     # Define helper classes and functions
     class Chunk(object):
         """Convenience class for managing chunks"""
-        def __init__(self, infastq, output_dir):
+        def __init__(self, infastq, output_prefix):
             """Initialize first chunk"""
             self.infastq = infastq
             self.filename = infastq.filename
-            self.output_dir = output_dir
+            self.output_prefix = output_prefix
             self.counter = 0
-            self.outfastq_template = "{output_dir}/{filename}_chunk{counter}.fastq.gz"
+            self.suffix_template = "_chunk{counter}.fastq.gz"
+            self.outfastq_template = "{output_prefix}{suffix}"
             self.next()
 
         def next(self):
@@ -99,10 +103,11 @@ def main():
 
         def init_outfastq(self):
             """Initialize outfastq based on current state"""
+            self.suffix = self.suffix_template.format(counter=self.counter)
             self.outfastq = cancer_api.files.FastqFile.new(
                 self.outfastq_template.format(**vars(self)))
 
-    def split_fastq(fastq_filepath, num_reads, output_dir):
+    def split_fastq(fastq_filepath, num_reads, output_prefix):
         """Helper function for actually splitting FASTQ files.
         Simplifies the control flow depending on if one or two
         FASTQ files are specified.
@@ -110,7 +115,7 @@ def main():
         """
         # Setup
         infastq = cancer_api.files.FastqFile.open(fastq_filepath)
-        current_chunk = Chunk(infastq, output_dir)
+        current_chunk = Chunk(infastq, output_prefix)
         intervals = []
         num_accum = 0
 
@@ -122,7 +127,7 @@ def main():
             else:
                 logging.info("Writing out chunk #{}".format(current_chunk.counter))
                 current_chunk.outfastq.write()
-                intervals.append(str(current_chunk.counter))
+                intervals.append(str(current_chunk.suffix))
                 current_chunk.next()
                 num_accum = 0
 
@@ -132,7 +137,7 @@ def main():
             # If so, write out reads to current chunk
             logging.info("Writing out chunk #{}".format(current_chunk.counter))
             current_chunk.outfastq.write()
-            intervals.append(str(current_chunk.counter))
+            intervals.append(str(current_chunk.suffix))
         else:
             # Otherwise, write reads to previous chunk
             storelist = current_chunk.outfastq.storelist
@@ -147,10 +152,10 @@ def main():
 
     # Run split_fastq on FASTQ file(s)
     logging.info("Splitting first FASTQ file")
-    intervals = split_fastq(fastq1_filepath, args.num_reads, output_dir)
+    intervals = split_fastq(fastq1_filepath, args.num_reads, output_prefix)
     if fastq2_filepath:
         logging.info("Splitting second FASTQ file")
-        split_fastq(fastq2_filepath, args.num_reads, output_dir)
+        split_fastq(fastq2_filepath, args.num_reads, output_prefix)
 
     # Create interval_file, if applicable
     if args.interval_file:
