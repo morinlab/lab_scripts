@@ -26,6 +26,8 @@ import os
 import logging
 import cancer_api
 
+__version__ = "v1.0.0"
+
 # MIN_SPILLOVER indicates the minimum fraction (between 0 and 1) of num_reads
 # that is required to create a new chunk. This is mostly meant to prevent the
 # creation of small FASTQ files with only very few reads.
