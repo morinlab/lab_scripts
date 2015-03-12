@@ -36,7 +36,7 @@ def main():
 	parser_files.add_argument('-i', '--segfiles', nargs='+', type=str, required=True, help='A space separated list of *_segs.txt files')
 	parser_files.add_argument('-out', '--outdir', nargs=1, type=str, required=True, help='Output directory for the processed bed files')
 	parser_files.add_argument('-outfile1', '--outfile1', nargs=1, type=str, required=False, default=["cn_fullcomparison_gene.txt"], help='Specify the output file for the consolidated list of matches to the genes.')
-        parser_files.add_argument('-outfile2', '--outfile2', nargs=1, type=str, required=False, default=["cn_counts_gene.txt"], help='Specify the output file for the counts of matches to the genes.')
+	parser_files.add_argument('-outfile2', '--outfile2', nargs=1, type=str, required=False, default=["cn_counts_gene.txt"], help='Specify the output file for the counts of matches to the genes.')
 
 	#Parse command line arguments
 	args = parser.parse_args()
@@ -47,9 +47,8 @@ def main():
 		for i in range(0,num_beds):
 			mybedlist.append(args.bedfiles[i])
 
-		fullcomparison, countscomparison = getbedintersect(input_genelist," ".join(mybedlist))
-		file=open(args.outfile1[0],"w"); file.write(fullcomparison); file.close()
-		file=open(args.outfile2[0],"w"); file.write(fullcomparison); file.close()
+		fullcomparison, countscomparison = getbedintersect(input_genelist," ".join(mybedlist),args.outfile1[0],args.outfile2[0],num_beds)
+
 		
 	if args.subcommand == 'in_seg':
 		input_genelist=args.genebed[0]
@@ -68,15 +67,13 @@ def main():
 			os.system(mycmd)
 			mybedlist.append(outfile)
 
-		fullcomparison, countscomparison = getbedintersect(input_genelist," ".join(mybedlist))
-                file=open(args.outfile1[0],"w"); file.write(fullcomparison); file.close()
-                file=open(args.outfile2[0],"w"); file.write(fullcomparison); file.close()
-		print "Your bed files are in: ", outdir
+		fullcomparison, countscomparison = getbedintersect(input_genelist," ".join(mybedlist),args.outfile1[0],args.outfile2[0],num_segs)
+ 		print "Your bed files are in: ", outdir
 
 	print "The consolidated results are at: ", args.outfile1[0]
 	print "The compact result counts are at: ", args.outfile2[0]
 	
-def getbedintersect(genebed,listofbeds):
+def getbedintersect(genebed,listofbeds,out1,out2,numfiles):
 	bedstring= listofbeds #" ".join(listofbeds)
 	mycmd_consolidated = "".join(["bedtools intersect -wo -filenames -a ",genebed," -b ", listofbeds])
 	mycmd_counts = "".join(["bedtools intersect -c -a ", genebed, " -b ", listofbeds])
@@ -84,6 +81,8 @@ def getbedintersect(genebed,listofbeds):
 	counts = commands.getoutput(mycmd_counts)
 #	consolidated = pybedtools.BedTool(genebed).intersect(listofbeds,wo=True,filenames=True)
 #	counts = pybedtools.BedTool(genebed).intersect(listofbeds,c=True)
+	file=open(out1,"w"); file.write("\t".join(["gene_chr","gene_start","gene_end","gene_name","cn_file","cn_chr","cn_start","cn_end","cn_state","bases_overlap"])); file.write("\n"); file.write(consolidated); file.close()
+	file=open(out2,"w"); file.write("\t".join(["gene_chr","gene_start","gene_end","gene_name","number_of_matched_samples"])); file.write("\n"); file.write(counts); file.write("".join(["\nTotal files are ",str(numfiles),"\n"])); file.close()
 	return (consolidated,counts)
 
 
