@@ -1,6 +1,14 @@
 Release History
 ===============
 
+1.1.3
+-----
+
+**Features and Enhancements**
+
+- Now using output_dir instead of output_prefix
+- Interval file only lists chunks instead of file prefixes
+
 1.1.2
 -----
 

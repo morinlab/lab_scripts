@@ -1,0 +1,266 @@
+print "Blah" 
+#BEDTOOLS FUNCTION DEFINITIONS
+BED.COLS <- c("chr","start","end")
+#~~~~# Code from Rosemary McCloskey
+## FUNCTION DEFINITIONS FOR BED FILE ANALYSIS 
+# write a data frame to a BED file
+# data frame must have the columns "chr", "start", and "end"
+# return the file name written to
+write.bed <- function (bed.df, bed.file=tempfile()) {
+  stopifnot(colnames(bed.df)[1:length(BED.COLS)] == BED.COLS)
+  write.table(bed.df, bed.file, col.names=F, row.name=F, sep="\t", quote=F)
+  bed.file
+}
+
+# run a bedtools command 
+# bed files should both have chr, start, end as their first three columns
+bedtools <- function (command, bed.a, bed.b, args="") {
+  bed.file.a <- write.bed(bed.a)
+  cmd <- paste("bedtools", command, args)
+  if (command == "sort") {
+    bed.file.a <- write.bed(bed.a)
+    cmd <- paste(cmd,"-i", bed.file.a)
+  } else{
+    if (!is.null(bed.b)) {
+      bed.file.b <- write.bed(bed.b)
+      cmd <- paste(cmd, "-a", bed.file.a, "-b", bed.file.b)
+    } else {
+      cmd <- paste(cmd, "-i", bed.file.a)
+    }
+  }
+  cat("Running", cmd, "... ")
+  output <- paste(system(cmd, intern=T), collapse="\n")
+  cat("done\n")
+  if (output == "") return (NULL)
+  res <- read.table(textConnection(output))
+  if (ncol(res) == 3)
+    setNames(res, BED.COLS)
+  else if (ncol(res) == ncol(bed.a))
+    setNames(res, colnames(bed.a))
+  else if (ncol(res) == ncol(bed.a) + ncol(bed.b))
+    setNames(res, make.names(c(colnames(bed.a), colnames(bed.b)), unique=T))
+  else if (ncol(res) == ncol(bed.a) + ncol(bed.b) + 1)
+    setNames(res, make.names(c(colnames(bed.a), colnames(bed.b), "overlap"), unique=T))
+  else
+    res 
+}
+
+#Get CCF using variant allele fraction, purity, copy number, prevalence
+vaf.to.ccf <- function (vaf, pur, prev, minor.cn, major.cn) {
+  cn <- major.cn + minor.cn
+  alpha <- (cn*prev + 2*(1-prev))*pur + 2*(1-pur)
+  # no duplications
+  if (minor.cn <= 1 & major.cn <= 1) {
+    alpha*vaf/pur
+    # one duplication, no LOH
+  } else if (minor.cn == 1) {
+    if (vaf >= (major.cn*prev+1)*pur/(2*alpha))
+      alpha*vaf/pur - (major.cn-1)*prev
+    else
+      alpha*vaf/pur
+    # one duplication with LOH
+  } else if (minor.cn == 0) {
+    if (vaf >= (1+(major.cn-1)*prev)*pur/(2*alpha))
+      alpha*vaf/pur - (major.cn-1)*prev
+    else
+      alpha*vaf/pur
+    # two duplications
+  } else {
+    if (vaf <= (1+(minor.cn-1)*prev)*pur/(2*alpha))
+      alpha*vaf/pur
+    else if (vaf >= (1+(major.cn+minor.cn-1)*prev)*pur/(2*alpha))
+      alpha*vaf/pur - (major.cn-1)*prev
+    else
+      alpha*vaf/pur - (minor.cn-1)*prev
+  } 
+}
+
+#~~~~# End of code from Rosemary McCloskey
+
+#Reformat sample id's to match the format defined in data files
+string_trimmer <- function (input_name) {
+  filename=as.character(input_name)
+  filename = gsub("(^[[:space:]]+|[[:space:]]+$)", "", filename)  
+  if((substring(filename,nchar(filename)-1,nchar(filename)) > 18) & ((substring(filename,1,2) == "PT")==TRUE)){
+    filename=paste(substring(filename,1,2),substring(filename,nchar(filename)-1,nchar(filename)),sep="")
+  }
+  input_name = filename
+  input_name
+}
+
+#DIRECTORIES
+temp <- readLines("/Volumes/Shared/projects/dlbcl_relapse_exome/ccf/directories.txt")
+eval(parse(text=temp))
+
+#Read data
+snp_complete = read.delim(snp_complete_txt,header=TRUE,stringsAsFactors=FALSE)
+vaf_recalculated = read.delim(vaf_recalculated_txt,header=TRUE,stringsAsFactors=FALSE)
+#read in SNP variant file and extract patient ids
+#snp = read.delim(snp_txt,header=FALSE,stringsAsFactors=FALSE) #patient, chr, startpos, endpos, x, x, median_log, x, x, copy_number
+#sample_id = unique(snp[4]) #list of unique sample ids
+filenames = snp_complete['SampleID']
+for (i in 1:dim(filenames)[1]){
+  filenames[i,1] = string_trimmer(filenames[i,1])
+}
+sample_id = unique(filenames)
+rownames(sample_id) <- NULL
+#snp['samples'] = snp[4]
+#snp[4] = filenames
+#snp_complete['SampleID'] = filenames
+#initialize holder dataframe
+bedresult_cols = c("chr_var","start_var","end_var","chr_cnv","start_cnv","end_cnv","overlap","TITAN_call","local_cnv","minor_cn","major_cn","prevalence","purity","patient","purity_corrected","vaf_mean")
+bedresult =  data.frame(matrix(vector(), 0, length(bedresult_cols), dimnames=list(c(), bedresult_cols)), stringsAsFactors=F)
+
+#Process each patient
+for (j in 1:dim(sample_id)[1]){
+  PROCESSFLAG = 1
+  patient = as.character(sample_id[j,1])
+  #get correct file
+  filename = as.character(patient)
+  pt_titan = paste(homedir,home_titan,filename,"/",sep="")
+  
+  #If params file exists, get the purity estimate
+  paramfile = list.files(path=pt_titan, pattern= "*_params.txt")
+  path_paramfile=paste(pt_titan,paramfile,sep="")
+  if(file.exists(path_paramfile)){
+    temp = read.delim(path_paramfile,nrow=1,header=FALSE,stringsAsFactors=FALSE)
+    purity = 1-temp[1,2]
+  }else{
+    PROCESSFLAG = 0
+    purity = NA
+    print (paste("Params file for patient ",patient," not found",sep=""))
+  }
+  
+  #If Titan's cnv output file exists, get the segments of CN variation from the file
+  #Also get the prevalence values, major and minor CN (for CCF calculation)
+  cnvfile = list.files(path=pt_titan, pattern= "*_segs.txt")
+  path_cnvfile=paste(pt_titan,cnvfile,sep="")
+  if(file.exists(path_cnvfile)){
+    patient_cnv = read.table(pipe(paste("cut -f 2,3,4,10,11,12",path_cnvfile,sep=" ")),header=TRUE,stringsAsFactors=FALSE) #chr start end copy_number
+    rownames(patient_cnv) <- NULL
+    colnames(patient_cnv) <- c("chr","start","end","local_cnv","minor_cn","major_cn")
+    patient_prevalence = read.table(pipe(paste("cut -f 2,3,4,10,14,9",path_cnvfile,sep=" ")),header=TRUE,stringsAsFactors=FALSE) #chr start end copy_number cellular frequency (i.e. prevalence)
+  }else{
+    PROCESSFLAG = 0
+    print (paste("Titan seg file for patient ",patient," not found",sep=""))
+  }
+  
+  #Create patient specific snp bed data
+  #######*SNP DATA FILE (maf)*##############
+  patient_snp = snp_complete[snp_complete['Sample_ID'] == sample_id,1:3] #assume snp data file's first three cols are chr start end
+  rownames(patient_snp) <- NULL
+  colnames(patient_snp) <- c("chr","start","end")
+  
+  #Prepare output bed files (patient_snp.bed, patient_cnv_exons.bed)
+  if((dim(patient_snp)[1]>0) & PROCESSFLAG){
+    temp_snp_table = bedtools("sort",patient_snp)
+    temp_cnv_table = bedtools("sort",patient_cnv[1:3])
+    #temp_table<-bedtools("closest",temp_snp_table,patient_cnv[1:3],"-d")
+    temp_table<-bedtools("closest",temp_snp_table,temp_cnv_table,"-d")
+    temp_table<-temp_table[temp_table['overlap']>-1,1:7] #Select segments with overlap
+    rownames(temp_table) <- NULL
+    #get copy numbers in these regions, that have mapped close/on to variant position
+    for (i in 1:dim(temp_table)[1]){
+      temp_table[i,"TITAN_call"] =  patient_prevalence[do.call(paste, patient_prevalence[1:3]) %in% paste(c(paste(temp_table[i,'chr.1']), temp_table[i,'start.1'], temp_table[i,'end.1']), collapse = " "),"TITAN_call"]
+      temp_table[i,"local_cnv"] = patient_cnv[do.call(paste, patient_cnv[1:3]) %in% paste(c(paste(temp_table[i,'chr.1']), temp_table[i,'start.1'], temp_table[i,'end.1']), collapse = " "),"local_cnv"]
+      temp_table[i,"minor_cn"] = patient_cnv[do.call(paste, patient_cnv[1:3]) %in% paste(c(paste(temp_table[i,'chr.1']), temp_table[i,'start.1'], temp_table[i,'end.1']), collapse = " "),"minor_cn"]
+      temp_table[i,"major_cn"] = patient_cnv[do.call(paste, patient_cnv[1:3]) %in% paste(c(paste(temp_table[i,'chr.1']), temp_table[i,'start.1'], temp_table[i,'end.1']), collapse = " "),"major_cn"]
+      temp_table[i,"prevalence"] = patient_prevalence[do.call(paste, patient_prevalence[1:3]) %in% paste(c(paste(temp_table[i,'chr.1']), temp_table[i,'start.1'], temp_table[i,'end.1']), collapse = " "),"Clonal_Frequency"]
+    }
+    temp_table[,"purity"] = purity
+    temp_table[,"patient"] = patient
+    temp_table[,"purity_corrected"] =(mean(as.numeric(snp_complete[snp_complete["SampleID"] == patient, "Variant.Allele.fraction"])))/0.5
+    temp_table[,"vaf_mean"] = as.numeric(vaf_recalculated[vaf_recalculated['patient'] == patient,'vaf'])
+    colnames(temp_table) <- bedresult_cols
+    bedresult <- rbind(bedresult, temp_table)
+  }
+}
+
+#Print resulting file with snv locations and matching cnv segments
+bedresult<-unique(bedresult)
+write.table(bedresult,bed_output_loh,sep="\t",row.names=F)
+
+#CALCULATE CCFs
+snp_whole = read.delim(snp_complete_txt,header=TRUE,stringsAsFactors=FALSE) #patient, chr, startpos, endpos, x, x, median_log, x, x, copy_number
+snp_whole = within(snp_complete,rm("CCF.estimate"))
+for (i in 1:dim(snp_whole)[1]){
+  patient_temp = snp_whole[i,'SampleID']
+  patient_temp = string_trimmer(patient_temp)
+  #cat('(', i,')',patient_temp,'..')
+  #If patient's bed matches exist
+  if(dim(bedresult[bedresult['patient']==patient_temp,])[1] > 0){
+    #Append purity to corresponding patient variant record
+    snp_whole[i,"Purity.estimate"] = unique(bedresult[bedresult['patient']==patient_temp,"purity"])
+    #Append local titan call to corresponding patient variant record
+    temp_call = bedresult[do.call(paste,bedresult[c("chr_var","start_var","end_var","patient")]) %in% paste(c(paste(snp_whole[i,'Chromosome']), snp_whole[i,'Start_Position'], snp_whole[i,'End_Position'],patient_temp), collapse = " "),"TITAN_call"]
+    snp_whole[i,"TITAN_call"] = ifelse(length(temp_call)>0, temp_call, NA)
+    #Append local cnv estimates (overall, and strand specific) to corresponding patient variant record
+    temp_cnv = bedresult[do.call(paste,bedresult[c("chr_var","start_var","end_var","patient")]) %in% paste(c(paste(snp_whole[i,'Chromosome']), snp_whole[i,'Start_Position'], snp_whole[i,'End_Position'],patient_temp), collapse = " "),"local_cnv"]
+    snp_whole[i,"Local.copy.number"] = ifelse(length(temp_cnv)>0, temp_cnv, NA)
+    temp_cnv = bedresult[do.call(paste,bedresult[c("chr_var","start_var","end_var","patient")]) %in% paste(c(paste(snp_whole[i,'Chromosome']), snp_whole[i,'Start_Position'], snp_whole[i,'End_Position'],patient_temp), collapse = " "),"minor_cn"]
+    snp_whole[i,"minor.cn"] = ifelse(length(temp_cnv)>0, temp_cnv, NA)
+    temp_cnv = bedresult[do.call(paste,bedresult[c("chr_var","start_var","end_var","patient")]) %in% paste(c(paste(snp_whole[i,'Chromosome']), snp_whole[i,'Start_Position'], snp_whole[i,'End_Position'],patient_temp), collapse = " "),"major_cn"]
+    snp_whole[i,"major.cn"] = ifelse(length(temp_cnv)>0, temp_cnv, NA)
+    #Append local prevalence estimate to corresponding patient variant record
+    temp_prev = bedresult[do.call(paste,bedresult[c("chr_var","start_var","end_var","patient")]) %in% paste(c(paste(snp_whole[i,'Chromosome']), snp_whole[i,'Start_Position'], snp_whole[i,'End_Position'],patient_temp), collapse = " "),"prevalence"]
+    snp_whole[i,"Prevalence.estimate"] = ifelse(is.na(temp_prev), NA, temp_prev)
+    #Append CCF calculation result to corresponding patient variant record (PURITY BASED ON ESTIMATE)
+    allele_frac = as.numeric(snp_whole[i,"Variant.Allele.fraction"])
+    purity = snp_whole[i,"Purity.estimate"]
+    copy_num = snp_whole[i,"Local.copy.number"]
+    minor_cn = snp_whole[i,"minor.cn"]
+    major_cn = snp_whole[i,"major.cn"]
+    preval = ifelse(is.na(snp_whole[i,"Prevalence.estimate"]) & (snp_whole[i,"TITAN_call"]=="HET"),1,snp_whole[i,"Prevalence.estimate"])
+    snp_whole[i,"Prevalence.estimate"] = preval
+    snp_whole[i,"CCF.estimate"] = ifelse(is.na(preval),NA,vaf.to.ccf(allele_frac,purity,preval,minor_cn,major_cn))
+    preval=1
+    snp_whole[i,"prev1_CCF.estimate"] = ifelse(is.na(preval),NA,vaf.to.ccf(allele_frac,purity,preval,minor_cn,major_cn))
+    
+    #Append CCF calculation result to corresponding patient variant record (PURITY BASED ON CORRECTION)
+    #snp_whole[i,"VAF.recalculated"] = unique(bedresult[bedresult['patient']==patient_temp, "vaf_mean"]) #"purity_corrected"])
+    allele_frac = as.numeric(snp_whole[i, "Variant.Allele.fraction"])
+    purity =  (unique(bedresult[bedresult['patient']==patient_temp, "vaf_mean"]))/0.5 #snp_whole[i,"Purity.corrected"]
+    snp_whole[i,"Purity.corrected"] = purity
+    minor_cn = snp_whole[i,"minor.cn"]
+    major_cn = snp_whole[i,"major.cn"]
+    preval = ifelse(is.na(snp_whole[i,"Prevalence.estimate"]) & (snp_whole[i,"TITAN_call"]=="HET"),1,snp_whole[i,"Prevalence.estimate"])
+    snp_whole[i,"Prevalence.estimate"] = preval
+    #snp_whole[i,"pur.correc.CCF.estimate"] = ifelse(is.na(preval),NA,vaf.to.ccf(allele_frac,purity,preval,minor_cn,major_cn))
+    snp_whole[i,"pur.correc.CCF.estimate"] = if(is.na(preval) | is.na(purity)){NA}else{vaf.to.ccf(allele_frac,purity,preval,minor_cn,major_cn)}
+    preval=1
+    #snp_whole[i,"pur.correc.prev1.CCF.estimate"] = ifelse(is.na(preval),NA,vaf.to.ccf(allele_frac,purity,preval,minor_cn,major_cn))
+    snp_whole[i,"pur.correc.prev1.CCF.estimate"] = if(is.na(preval) | is.na(purity)){NA}else{vaf.to.ccf(allele_frac,purity,preval,minor_cn,major_cn)}
+    
+    #Append CCF calculation result to corresponding patient variant record BASED ON VAF recalculation AND PURITY BASED ON recalculated VAF
+    snp_whole[i,"VAF.recalculated"] = unique(bedresult[bedresult['patient']==patient_temp,"vaf_mean"])
+    allele_frac = as.numeric(snp_whole[i,"VAF.recalculated"])
+    #purity = (mean(as.numeric(bedresult[bedresult["patient"] == patient_temp, "vaf_mean"])))/0.5
+    purity = allele_frac/0.5 #snp_whole[i,"Purity.estimate"]
+    snp_whole[i,"purity.used"] = purity
+    minor_cn = snp_whole[i,"minor.cn"]
+    major_cn = snp_whole[i,"major.cn"]
+    preval = ifelse(is.na(snp_whole[i,"Prevalence.estimate"]) & (snp_whole[i,"TITAN_call"]=="HET"),1,snp_whole[i,"Prevalence.estimate"])
+    snp_whole[i,"Prevalence.estimate"] = preval
+    #snp_whole[i,"vaf.correc.CCF.estimate"] = ifelse(is.na(preval) | is.na(allele_frac),NA,vaf.to.ccf(allele_frac,purity,preval,minor_cn,major_cn))
+    snp_whole[i,"vaf.correc.CCF.estimate"] = if(is.na(preval) | is.na(allele_frac)){NA}else{vaf.to.ccf(allele_frac,purity,preval,minor_cn,major_cn)}
+    preval=1
+    #snp_whole[i,"vaf.correc.prev1.CCF.estimate"] = ifelse(is.na(preval) | is.na(allele_frac),NA,vaf.to.ccf(allele_frac,purity,preval,minor_cn,major_cn))
+    snp_whole[i,"vaf.correc.prev1.CCF.estimate"] = if(is.na(preval) | is.na(allele_frac)){NA}else{vaf.to.ccf(allele_frac,purity,preval,minor_cn,major_cn)}
+  }
+}
+
+write.table(snp_whole,results_output_loh,sep="\t",row.names=F)
+
+#Post preview
+##as.data.frame(table(snp[4]))[order(as.data.frame(table(snp[4]))[1]),]
+#as.data.frame(table(bedresult['patient']))[order(as.data.frame(table(bedresult['patient']))[1]),]
+
+if(0){
+homedir = "/Volumes/Shared/projects/" #Location hosting dlbcl project
+home_titan = "dlbcl_relapse_exome/seg_files/TITAN/" #Location in dlbcl project, hosting TITAN output data
+localdir = "/Users/jgrewal/Desktop/CCF/"
+snp_txt = paste(localdir,"data/snp.txt",sep="")#Variant input file in the format chr start stop patient
+snp_complete_txt=paste(localdir,"data/snp_complete.txt",sep="")
+bed_output = paste(localdir,"results/local_cn_result.txt",sep="")
+results_output = paste(localdir,"results/ccf_result.txt",sep="")
+}

@@ -24,7 +24,7 @@ import os
 import logging
 import cancer_api
 
-__version__ = "1.1.2"
+__version__ = "v1.1.3"
 
 # MIN_SPILLOVER indicates the minimum fraction (between 0 and 1) of num_reads
 # that is required to create a new chunk. This is mostly meant to prevent the
@@ -44,9 +44,7 @@ def main():
                         help="Number of reads per output FASTQ file")
     parser.add_argument("--num_buffer", "-b", type=int, default=5000000,
                         help="Number of reads kept in buffer before flushing to disk")
-    parser.add_argument("--output_prefix", default="./split_fastq", help="Output directory and "
-                        "prefix for smaller FASTQ files. For example, /path/sample produces "
-                        "FASTQ files named /path/sample_chunk1.fastq.gz, etc.")
+    parser.add_argument("--output_dir", default=".", help="Output directory")
     parser.add_argument("--interval_file", help="Output intervals (for use in Pipeline Factory)")
     parser.add_argument("--no_compression", action="store_true",
                         help="Disables gzip compression of output FASTQ files")
@@ -70,8 +68,7 @@ def main():
         raise ValueError("Did not receive one or two FASTQ files.")
 
     # Check if output_dir exists; if not, create it
-    output_prefix = args.output_prefix
-    output_dir = os.path.dirname(args.output_prefix)
+    output_dir = args.output_dir
     if not os.path.exists(output_dir):
         os.mkdir(args.output_dir)
 
@@ -82,14 +79,13 @@ def main():
     # Define helper classes and functions
     class Chunk(object):
         """Convenience class for managing chunks"""
-        def __init__(self, infastq, output_prefix, read_type, no_compression):
+        def __init__(self, infastq, output_dir, no_compression):
             """Initialize first chunk"""
             self.infastq = infastq
             self.filename = infastq.filename
-            self.output_prefix = output_prefix
-            self.read_type = read_type
+            self.output_prefix = os.path.join(output_dir, self.filename)
             self.counter = 0
-            self.outfastq_template = "{output_prefix}_chunk{counter}_{read_type}.fastq"
+            self.outfastq_template = "{output_prefix}_chunk{counter}.fastq"
             if not no_compression:
                 self.outfastq_template += ".gz"
             self.next()
@@ -98,26 +94,21 @@ def main():
             """Move to next chunk."""
             self.counter += 1
             logging.info("Starting chunk #{}".format(self.counter))
-            self.init_outfastq()
+            self.outfastq = cancer_api.files.FastqFile.new(
+                self.outfastq_template.format(**vars(self)))
 
         def previous(self):
             """Move to previous chunk."""
             self.counter -= 1
             logging.info("Reverting back to chunk #{}".format(self.counter))
-            self.init_outfastq()
-
-        def init_outfastq(self):
-            """Initialize outfastq based on current state"""
-            self.outfastq = cancer_api.files.FastqFile.new(
+            self.outfastq = cancer_api.files.FastqFile.open(
                 self.outfastq_template.format(**vars(self)))
 
         def chunk_name(self):
             """Generate chunk name."""
-            prefix = "{output_prefix}_chunk{counter}".format(**vars(self))
-            return os.path.abspath(prefix)
+            return "chunk{counter}".format(**vars(self))
 
-    def split_fastq(fastq_filepath, output_prefix, num_reads, num_buffer, read_type="",
-                    no_compression=False):
+    def split_fastq(fastq_filepath, output_dir, num_reads, num_buffer, no_compression=False):
         """Helper function for actually splitting FASTQ files.
         Simplifies the control flow depending on if one or two
         FASTQ files are specified.
@@ -125,7 +116,7 @@ def main():
         """
         # Setup
         infastq = cancer_api.files.FastqFile.open(fastq_filepath)
-        current_chunk = Chunk(infastq, output_prefix, read_type, no_compression)
+        current_chunk = Chunk(infastq, output_dir, no_compression)
         intervals = []
         num_accum = 0
 
@@ -171,12 +162,12 @@ def main():
 
     # Run split_fastq on FASTQ file(s)
     logging.info("Splitting first FASTQ file")
-    intervals = split_fastq(fastq1_filepath, output_prefix, args.num_reads, args.num_buffer,
-                            read_type="R1", no_compression=args.no_compression)
+    intervals = split_fastq(fastq1_filepath, output_dir, args.num_reads, args.num_buffer,
+                            no_compression=args.no_compression)
     if fastq2_filepath:
         logging.info("Splitting second FASTQ file")
-        split_fastq(fastq2_filepath, output_prefix, args.num_reads, args.num_buffer,
-                    read_type="R2", no_compression=args.no_compression)
+        split_fastq(fastq2_filepath, output_dir, args.num_reads, args.num_buffer,
+                    no_compression=args.no_compression)
 
     # Create interval_file, if applicable
     if args.interval_file:
