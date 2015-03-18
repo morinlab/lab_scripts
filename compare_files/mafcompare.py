@@ -1,4 +1,4 @@
-#~~~~~~~~~~
+#~~~~~~~~~
 #This script takes in two files and outputs the intersecting entries, as well as entries unique to each input file, in three separate output files.
 #Assumptions about input data: 
 	#If comparing two files based on chr, start, end, then both should have columns: "Chromosome", "Start_Position", "End_Position"
@@ -26,11 +26,12 @@ def main():
 	# Specify command line arguments
 	parser = argparse.ArgumentParser(description='Obtain the intersect between two files.')
 	subparsers = parser.add_subparsers(dest='subcommand')
+
 	#subparser for 2 file comparison
 	parser_files = subparsers.add_parser('filecompare')
 	parser_files.add_argument('-i', '--input', nargs=2, type=argparse.FileType('r'),required=True,
                         help='Specify the two files whose intersect you\'re interested in.')
-	parser_files.add_argument('-out', '--output_file', nargs=2, type=str, required=True,help='Specify the prefixes to identify output files.')
+	parser_files.add_argument('-out', '--output_file', nargs=2, type=str, required=True,help='Specify the prefixes to identify output files for variants unique to file1 and file2 respectively.')
 	parser_files.add_argument('-m', '--merge', action='store_true', default=False, help='Instead of finding the intersecting rows, this script merges both input files such that there are no duplicate rows.')
 	parser_files.add_argument('-header', '--header_row',nargs=2, type=int, default=[0,0],help='If your input files have different header indices, pass them here.')
 
