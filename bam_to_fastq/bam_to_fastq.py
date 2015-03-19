@@ -13,8 +13,8 @@ Outputs:
 
 Requirements
 ------------
-- cancer_api >= 0.1.6
-- pysam >= 0.8.1
+- cancer_api >= v0.1.6
+- pysam >= v0.8.1
 - The input BAM file should contain unpaired reads.
     This script was created for the realignment pipeline,
     where unpaired reads need to be converted into a FASTQ
