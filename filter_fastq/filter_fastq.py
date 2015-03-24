@@ -85,6 +85,16 @@ def main():
     iregex = args.include_regex
     eregex = args.exclude_regex
 
+    # Determine default filtering status
+    if iregex and not eregex:
+        default_is_filtered = True
+    elif not iregex and eregex:
+        default_is_filtered = False
+    elif iregex and eregex:
+        default_is_filtered = True
+    elif not iregex and not eregex:
+        raise ValueError("No regular expression given for filtering.")
+
     # ========================================================================================== #
     # Filter FASTQ files
     # ========================================================================================== #
@@ -98,24 +108,31 @@ def main():
         if infastq2:
             read2 = next(infastq2_iter)
             seq2 = read2.seq
-        is_filtered1 = False
+        is_filtered1 = default_is_filtered
         # Apply include regex
-        if iregex and not re.search(iregex, seq1):
-            is_filtered1 = True
+        if iregex and re.search(iregex, seq1):
+            is_filtered1 = False
         # Apply exclude regex
         if eregex and re.search(eregex, seq1):
             is_filtered1 = True
         # Do the same for FASTQ #2, if applicable
-        is_filtered2 = False
+        is_filtered2 = default_is_filtered
         if infastq2:
             # Apply include regex
-            if iregex and not re.search(iregex, seq2):
-                is_filtered2 = True
+            if iregex and re.search(iregex, seq2):
+                is_filtered2 = False
             # Apply exclude regex
             if eregex and re.search(eregex, seq2):
                 is_filtered2 = True
         # Only write out non-filtered reads
-        if not is_filtered1 and not is_filtered2:
+        # Check if one of the is_filtered variables has changed.
+        # If so, use the changed value to determine whether to filter
+        final_is_filtered = default_is_filtered
+        if is_filtered1 is not default_is_filtered:
+            final_is_filtered = is_filtered1
+        elif is_filtered2 is not default_is_filtered:
+            final_is_filtered = is_filtered2
+        if not final_is_filtered:
             outfastq1.add_obj(read1)
             if infastq2:
                 outfastq2.add_obj(read2)
