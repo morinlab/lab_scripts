@@ -1,6 +1,15 @@
 Release History
 ===============
 
+
+1.1.4
+-----
+
+**Features and Enhancements**
+
+- Updated to support cancer_api 0.1.6 (with refactored BaseFile)
+
+
 1.1.3
 -----
 

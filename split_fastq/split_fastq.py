@@ -14,6 +14,10 @@ Outputs:
 - Output directory into which all smaller FASTQ files
     will be stored
 
+Requirements
+------------
+- cancer_api >= 0.1.6
+
 Known Issues
 ------------
 - None
@@ -24,7 +28,7 @@ import os
 import logging
 import cancer_api
 
-__version__ = "v1.1.3"
+__version__ = "v1.1.4"
 
 # MIN_SPILLOVER indicates the minimum fraction (between 0 and 1) of num_reads
 # that is required to create a new chunk. This is mostly meant to prevent the
@@ -82,7 +86,7 @@ def main():
         def __init__(self, infastq, output_dir, no_compression):
             """Initialize first chunk"""
             self.infastq = infastq
-            self.filename = infastq.filename
+            self.filename, ext = infastq.split_filename()
             self.output_prefix = os.path.join(output_dir, self.filename)
             self.counter = 0
             self.outfastq_template = "{output_prefix}_chunk{counter}.fastq"
