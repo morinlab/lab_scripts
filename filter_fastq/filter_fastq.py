@@ -13,6 +13,10 @@ Inputs:
 Outputs:
 - Filtered FASTQ file(s)
 
+Requirements
+------------
+- cancer_api >= 0.2.0
+
 Known Issues
 ------------
 - In the current implementation, if you specify both an include and
@@ -82,8 +86,8 @@ def main():
             os.path.join(output_dir, outfastq2_filepath), buffersize=args.num_buffer)
 
     # More variables
-    iregex = args.include_regex
-    eregex = args.exclude_regex
+    iregex = re.compile(args.include_regex) if args.include_regex else args.include_regex
+    eregex = re.compile(args.exclude_regex) if args.exclude_regex else args.exclude_regex
 
     # Determine default filtering status
     if iregex and not eregex:
@@ -110,19 +114,19 @@ def main():
             seq2 = read2.seq
         is_filtered1 = default_is_filtered
         # Apply include regex
-        if iregex and re.search(iregex, seq1):
+        if iregex and iregex.search(seq1):
             is_filtered1 = False
         # Apply exclude regex
-        if eregex and re.search(eregex, seq1):
+        if eregex and eregex.search(seq1):
             is_filtered1 = True
         # Do the same for FASTQ #2, if applicable
         is_filtered2 = default_is_filtered
         if infastq2:
             # Apply include regex
-            if iregex and re.search(iregex, seq2):
+            if iregex and iregex.search(seq2):
                 is_filtered2 = False
             # Apply exclude regex
-            if eregex and re.search(eregex, seq2):
+            if eregex and eregex.search(seq2):
                 is_filtered2 = True
         # Only write out non-filtered reads
         # Check if one of the is_filtered variables has changed.
