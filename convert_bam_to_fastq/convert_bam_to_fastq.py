@@ -1,8 +1,8 @@
 #!/usr/bin/env python
 
 """
-bam_to_fastq.py
-==============
+convert_bam_to_fastq.py
+=======================
 This script converts a BAM file into a FASTQ file.
 
 Inputs:
@@ -58,7 +58,7 @@ def main():
 
     # Open various files
     inbam = pysam.AlignmentFile(args.input_bam, "rb")
-    outfastq = cancer_api.files.FastqFile.new(args.output_fastq, buffersize=5000000)
+    outfastq = cancer_api.FastqFile.new(args.output_fastq, buffersize=5000000)
 
     # ========================================================================================== #
     # Convert BAM file into FASTQ file(s)
