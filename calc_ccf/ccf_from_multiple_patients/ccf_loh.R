@@ -263,13 +263,15 @@ write.table(bedresult,bed_output_loh,sep="\t",row.names=F)
 
 #CALCULATE CCFs
 snp_whole = read.delim(snp_complete_txt,header=TRUE,stringsAsFactors=FALSE) #patient, chr, startpos, endpos, x, x, median_log, x, x, copy_number
-snp_whole = within(snp_complete,rm("CCF.estimate"))
+#snp_whole = within(snp_complete,rm("CCF.estimate"))
+snp_whole=snp_complete
 for (i in 1:dim(snp_whole)[1]){
   patient_temp = snp_whole[i,'SampleID']
   patient_temp = string_trimmer(patient_temp)
   #cat('(', i,')',patient_temp,'..')
   #If patient's bed matches exist
   if(dim(bedresult[bedresult['patient']==patient_temp,])[1] > 0){
+
     #Append purity to corresponding patient variant record
     snp_whole[i,"Purity_titan"] = unique(bedresult[bedresult['patient']==patient_temp,"titan_purity"])
     #Append local titan call to corresponding patient variant record
@@ -287,6 +289,7 @@ for (i in 1:dim(snp_whole)[1]){
     #Append CCF calculation result to corresponding patient variant record (PURITY BASED ON ESTIMATE)
     allele_frac = as.numeric(snp_whole[i,"Variant.Allele.fraction"])
     purity = snp_whole[i,"Purity_titan"]
+    if(!(is.na(purity))){if(purity>1){purity=1}}
     copy_num = snp_whole[i,"Local.copy.number"]
     minor_cn = snp_whole[i,"minor.cn"]
     major_cn = snp_whole[i,"major.cn"]
@@ -295,22 +298,25 @@ for (i in 1:dim(snp_whole)[1]){
     snp_whole[i,"CCF.estimate"] = ifelse(is.na(preval),NA,vaf.to.ccf(allele_frac,purity,preval,minor_cn,major_cn))
     preval=1
     snp_whole[i,"prev1_CCF.estimate"] = ifelse(is.na(preval),NA,vaf.to.ccf(allele_frac,purity,preval,minor_cn,major_cn))
-  
+
     #Append CCF calculation result to corresponding patient variant record (PURITY BASED ON INPUT)
     allele_frac = as.numeric(snp_whole[i, "Variant.Allele.fraction"])
     purity =  (unique(bedresult[bedresult['patient']==patient_temp, "input_purity"])) #snp_whole[i,"Purity.corrected"]
+    if(!(is.na(purity))){if(purity>1){purity=1}}
     snp_whole[i,"input_purity"] = purity
     minor_cn = snp_whole[i,"minor.cn"]
     major_cn = snp_whole[i,"major.cn"]
     preval = ifelse(is.na(snp_whole[i,"Prevalence.estimate"]) & (snp_whole[i,"TITAN_call"]=="HET"),1,snp_whole[i,"Prevalence.estimate"])
     snp_whole[i,"Prevalence.estimate"] = preval
+    # cat( " vaf ", allele_frac, " Purity ", purity, " preval ", preval, " minor_cn ", minor_cn, " major_cn ", major_cn, "\n")
     snp_whole[i,"pur.input.CCF.estimate"] = if(is.na(preval) | is.na(purity)){NA}else{vaf.to.ccf(allele_frac,purity,preval,minor_cn,major_cn)}
     preval=1
     snp_whole[i,"pur.input.prev1.CCF.estimate"] = if(is.na(preval) | is.na(purity)){NA}else{vaf.to.ccf(allele_frac,purity,preval,minor_cn,major_cn)}
     
     #Append CCF calculation result to corresponding patient variant record (PURITY BASED ON CORRECTION)
     allele_frac = as.numeric(snp_whole[i, "Variant.Allele.fraction"])
-    purity =  (unique(bedresult[bedresult['patient']==patient_temp, "purity_from_mean"])) #snp_whole[i,"Purity.corrected"]
+    purity =  (unique(bedresult[bedresult['patient']==patient_temp, "purity_from_mean"])) 
+    if(!(is.na(purity))){if(purity>1){purity=1}}
     snp_whole[i,"purity_from_mean"] = purity
     minor_cn = snp_whole[i,"minor.cn"]
     major_cn = snp_whole[i,"major.cn"]
@@ -327,6 +333,7 @@ for (i in 1:dim(snp_whole)[1]){
     mean_allele_frac_from_db = unique(bedresult[bedresult['patient']==patient_temp,"vaf_mean"])
     allele_frac = as.numeric(snp_whole[i, "Variant.Allele.fraction"]) #as.numeric(snp_whole[i,"mean_db_vaf"])
     purity = 2* mean_allele_frac_from_db #snp_whole[i,"Purity.estimate"]
+    if(!(is.na(purity))){if(purity>1){purity=1}}
     snp_whole[i,"purity.used"] = purity
     snp_whole[i,"vaf.used"] = allele_frac
     minor_cn = snp_whole[i,"minor.cn"]
