@@ -118,6 +118,7 @@ def main():
         is_output = False
         # If file or dir is in the dest or if the type is argparse.FileType
         if ("file" in action.dest.lower() or "dir" in action.dest.lower() or
+                "input" in action.dest.lower() or "output" in action.dest.lower() or
                 isinstance(action.type, argparse.FileType)):
             is_file = True
         # If out is in dest or help, then mark as output
