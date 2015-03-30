@@ -78,7 +78,7 @@ def main():
                   "pos_args": [],
                   "script_filename": script_filename,
                   "script_name": script_name,
-                  "script_version": "v1.0.0",
+                  "script_version": "1.0.0",
                   "today": time.strftime("%b %d %Y")}
 
     # ========================================================================================== #
