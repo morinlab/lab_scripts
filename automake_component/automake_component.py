@@ -3,8 +3,8 @@
 """
 automake_component.py
 =====================
-This script automatically generates a Pipeline Factory
-component for a given Python script that uses argparse.
+This script  generates a Pipeline Factory component
+for a given Python script that uses argparse.
 
 Inputs:
 - Python script using argparse as interface
@@ -23,11 +23,14 @@ Requirements
 
 Known Issues
 ------------
-- It's not trivial to determine if an argument is an output
-  or an input file. Therefore, this script uses a simple
-  heuristics in an attempt to guess whether an argument is a
-  input file, output file or a param. It is recommended that
-  component_params.py is checked for any misclassification.
+- It's not trivial to determine if an argument is an input
+  file/directory, an output file/directory or a parameter.
+  Hence, the script prompts the user to classify each
+  command-line argument (as input, output or param).
+  Optionally, there's an automatic mode (--automatic) that
+  uses simple heuristics to classify the arguments. It is
+  recommended that the user verifies the automatic
+  classification.
 """
 
 import argparse
@@ -39,10 +42,12 @@ import shutil
 def main():
 
     # Argument parsing
-    parser = argparse.ArgumentParser(description="Automatically generate a Pipeline Factory "
-                                     "component from a Python script using argparse.")
+    parser = argparse.ArgumentParser(description="Generate a Pipeline Factory component "
+                                     "from a Python script that uses argparse.")
     parser.add_argument("input_script", help="Input Python script")
     parser.add_argument("--output_dir", default=".", help="Output directory")
+    parser.add_argument("--automatic", action="store_true",  help="Automatically determine "
+                        "classification of command-line arguments (input, output or param)")
     args = parser.parse_args()
 
     # Initialize variables
@@ -113,25 +118,50 @@ def main():
             properties["opt_args"][action.dest] = action.option_strings[0]
         else:
             properties["pos_args"].append(action.dest)
-        # Determine if input file, output file or param using heuristics
-        is_file = False
-        is_output = False
-        # If file or dir is in the dest or if the type is argparse.FileType
-        if ("file" in action.dest.lower() or "dir" in action.dest.lower() or
-                "input" in action.dest.lower() or "output" in action.dest.lower() or
-                isinstance(action.type, argparse.FileType)):
-            is_file = True
-        # If out is in dest or help, then mark as output
-        if is_file and ("out" in action.dest.lower() or "out" in action.help.lower()):
-            is_output = True
-        # If nargs is 0, then the argument isn't a file
-        if action.nargs == 0:
+        if args.automatic:
+            # Determine if input file, output file or param using heuristics
             is_file = False
-        # If there is only one positional argument, then assume it's the input
-        if (sum([int(len(a.option_strings) == 0) for a in parser._actions]) == 1 and
-                not is_optional):
-            is_file = True
             is_output = False
+            # If file or dir is in the dest or if the type is argparse.FileType
+            if ("file" in action.dest.lower() or "dir" in action.dest.lower() or
+                    "input" in action.dest.lower() or "output" in action.dest.lower() or
+                    isinstance(action.type, argparse.FileType)):
+                is_file = True
+            # If out is in dest or help, then mark as output
+            if is_file and ("out" in action.dest.lower() or "out" in action.help.lower()):
+                is_output = True
+            # If nargs is 0, then the argument isn't a file
+            if action.nargs == 0:
+                is_file = False
+            # If there is only one positional argument, then assume it's the input
+            if (sum([int(len(a.option_strings) == 0) for a in parser._actions]) == 1 and
+                    not is_optional):
+                is_file = True
+                is_output = False
+        else:
+            is_answered = False
+            while not is_answered:
+                question_template = ("\nIs the following command-line argument an input "
+                                     "file/directory, an output file/directory or a parameter?\n"
+                                     "    Name:  {}\n"
+                                     "    Desc:  {}\n"
+                                     "Select an option ([i]nput, [o]utput or [p]arameter): ")
+                answer = raw_input(question_template.format(action.dest, action.help))
+                if answer.lower().startswith("i"):
+                    is_file = True
+                    is_output = False
+                    is_answered = True
+                elif answer.lower().startswith("o"):
+                    is_file = True
+                    is_output = True
+                    is_answered = True
+                elif answer.lower().startswith("p"):
+                    is_file = False
+                    is_output = False
+                    is_answered = True
+                else:
+                    print
+                    print "*** Error: Invalid input. Try again.***"
         if is_file and not is_output:  # Input files
             if is_optional:
                 properties["input_files_dict"][action.dest] = "__OPTIONAL__"
