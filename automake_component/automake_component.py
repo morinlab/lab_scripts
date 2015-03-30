@@ -3,14 +3,14 @@
 """
 automake_component.py
 =====================
-This script  generates a Pipeline Factory component
+This script generates a Pipeline Factory component
 for a given Python script that uses argparse.
 
-Inputs:
-- Python script using argparse as interface
+Input:
+- Python script using argparse as its interface
 
-Outputs:
-- A automatically generated Pipeline Factory component
+Output:
+- Pipeline Factory component
 
 Requirements
 ------------
