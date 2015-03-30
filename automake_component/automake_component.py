@@ -14,12 +14,13 @@ Outputs:
 
 Requirements
 ------------
-- autopep8 for code formatting (optional)
+- autopep8 module for code formatting (optional)
 - The Python script must use argparse as its interface.
-- The argument parsing "code block" should be together.
-  In other words, the argparse.ArgumentParser call and
-  the argparse.parse_args call should delimit the argu-
-  ment parsing code.
+- The argument parsing code should be consolidated and
+  not interweaved with code performing other tasks. This
+  requirement serves to prevent exceptions when running
+  the parsing code out of context. See "Argument parsing"
+  section below for an example.
 
 Known Issues
 ------------
@@ -47,8 +48,8 @@ def main():
     # Argument parsing
     # ========================================================================================== #
 
-    desc = "Generate a Pipeline Factory component from a Python script that uses argparse."
-    parser = argparse.ArgumentParser(description=desc)
+    parser = argparse.ArgumentParser(description="Generate a Pipeline Factory component "
+                                     "from a Python script that uses argparse.")
     parser.add_argument("input_script", help="Input Python script")
     parser.add_argument("--output_dir", default=".", help="Output directory")
     parser.add_argument("--automatic", action="store_true",  help="Automatically determine "
