@@ -21,6 +21,8 @@ Requirements
   requirement serves to prevent exceptions when running
   the parsing code out of context. See "Argument parsing"
   section below for an example.
+- The accompanying component_template directory must be
+  located alongside this script.
 
 Known Issues
 ------------
