@@ -16,11 +16,11 @@ Requirements
 - cancer_api >= v0.1.6
 - pysam >= v0.8.1
 - The input BAM file should contain unpaired reads.
-    This script was created for the realignment pipeline,
-    where unpaired reads need to be converted into a FASTQ
-    file before being realigned. Accordingly, we expect read
-    names to appear uniquely in the BAM file. If not, only
-    one of the two will be outputted.
+  This script was created for the realignment pipeline,
+  where unpaired reads need to be converted into a FASTQ
+  file before being realigned. Accordingly, we expect read
+  names to appear uniquely in the BAM file. If not, only
+  one of the two will be outputted.
 
 Known Issues
 ------------
@@ -68,7 +68,8 @@ def main():
     logging.info("Iterating over reads in BAM file and adding to FASTQ file...")
     for read in inbam:
         if read.query_name in added_reads:
-            logging.warn("Skipping a read due to duplicate read name...")
+            logging.warn("Skipping read because read name has already come up ({})...".format(
+                         read.query_name))
             continue
         rawread = cancer_api.misc.RawRead(
             read.query_name, read.query_sequence, "+",
