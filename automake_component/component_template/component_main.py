@@ -27,15 +27,15 @@ class Component(ComponentAbstract):
         # Optional arguments
         opt_args = {opt_args}
         cmd_args.extend(["{{}} {{}}".format(opt_args[k], v) for k, v in args_dict.items()
-                        if k in opt_args and (v is not True and v is not False)])
+                         if k in opt_args and not isinstance(v, bool)])
         cmd_args.extend(["{{}}".format(opt_args[k], v) for k, v in args_dict.items()
-                        if k in opt_args and (v is True or v is False)])
+                         if k in opt_args and isinstance(v, bool)])
         # Positional arguments
         pos_args = {pos_args}
         cmd_args.extend([args_dict[arg] for arg in pos_args if arg in args_dict and
-                        type(args_dict[arg]) is not list])
-        cmd_args.extend([" ".join(list(args_dict[arg])) for arg in pos_args if arg in args_dict and
-                        type(args_dict[arg]) is list])
+                        not isinstance(args_dict[arg], list)])
+        cmd_args.extend([" ".join(args_dict[arg]) for arg in pos_args if arg in args_dict and
+                        isinstance(args_dict[arg], list)])
         # Return cmd and cmg_args
         return cmd, cmd_args
 
