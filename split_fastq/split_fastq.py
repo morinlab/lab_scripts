@@ -62,12 +62,12 @@ def main():
     cancer_api.utils.setup_logging()
 
     # Check if one or two FASTQ files
-    if len(args.fastq) == 1:
-        fastq1_filepath = args.fastq[0]
+    if len(args.fastq_files) == 1:
+        fastq1_filepath = args.fastq_files[0]
         fastq2_filepath = None
-    elif len(args.fastq) == 2:
-        fastq1_filepath = args.fastq[0]
-        fastq2_filepath = args.fastq[1]
+    elif len(args.fastq_files) == 2:
+        fastq1_filepath = args.fastq_files[0]
+        fastq2_filepath = args.fastq_files[1]
     else:
         raise ValueError("Did not receive one or two FASTQ files.")
 
