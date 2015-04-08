@@ -144,7 +144,8 @@ def main():
         # Handle remaining reads
         # If the current_chunk is still at chunk1, just symlink
         if current_chunk.counter == 1:
-            os.symlink(infastq.filepath, current_chunk.outfastq.filepath)
+            os.symlink(os.path.abspath(infastq.filepath),
+                       os.path.abspath(current_chunk.outfastq.filepath))
             intervals.append(str(current_chunk.chunk_name()))
         # Check if the number of remaining reads is above the MIN_SPILLOVER
         elif len(current_chunk.outfastq.storelist) >= MIN_SPILLOVER * num_reads:
