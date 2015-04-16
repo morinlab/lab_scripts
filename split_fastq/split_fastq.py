@@ -25,6 +25,7 @@ Known Issues
 
 import argparse
 import os
+import shutil
 import logging
 import cancer_api
 
@@ -52,6 +53,7 @@ def main():
     parser.add_argument("--interval_file", help="Output intervals (for use in Pipeline Factory)")
     parser.add_argument("--no_compression", action="store_true",
                         help="Disables gzip compression of output FASTQ files")
+    parser.add_argument("--no_symlink", action="store_true", help="Disables symlinking")
     args = parser.parse_args()
 
     # ========================================================================================== #
@@ -144,8 +146,12 @@ def main():
         # Handle remaining reads
         # If the current_chunk is still at chunk1, just symlink
         if current_chunk.counter == 1:
-            os.symlink(os.path.abspath(infastq.filepath),
-                       os.path.abspath(current_chunk.outfastq.filepath))
+            src = os.path.abspath(infastq.filepath)
+            dst = os.path.abspath(current_chunk.outfastq.filepath)
+            if args.no_symlink:
+                shutil.copyfile(src, dst)
+            else:
+                os.symlink(src, dst)
             intervals.append(str(current_chunk.chunk_name()))
         # Check if the number of remaining reads is above the MIN_SPILLOVER
         elif len(current_chunk.outfastq.storelist) >= MIN_SPILLOVER * num_reads:
