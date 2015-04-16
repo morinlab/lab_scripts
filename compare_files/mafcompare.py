@@ -9,7 +9,7 @@
 
 #Author: Jasleen Grewal.
 #Date Created: February 27th, 2015.
-#Date Last Modified: March 2nd, 2015.
+#Date Last Modified: April 16th, 2015.
 #Sample usage: python filecompare.py filecompare -i file1.maf file2.maf -out file1ID file2id -m -header 0 1
 #Sample usage: python filecompare.py genefilter -file file.maf -genes genelist.txt -out fileID -header 1
 
