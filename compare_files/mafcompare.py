@@ -85,7 +85,7 @@ def InBoth(table1,table2):
 def GeneFilter(table1,table2):
 	return table1[((table1.Hugo_Symbol.isin(table2.loc[0:,0])))]
 
-def GeneFilter_exclude(table1,table):
+def GeneFilter_exclude(table1,table2):
         return table1[~((table1.Hugo_Symbol.isin(table2.loc[0:,0])))]
 
 def updatecoltypes(mytable):
