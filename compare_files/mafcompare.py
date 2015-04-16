@@ -10,7 +10,7 @@
 #Author: Jasleen Grewal.
 #Date Created: February 27th, 2015.
 #Date Last Modified: April 16th, 2015.
-#Sample usage: python filecompare.py filecompare -i file1.maf file2.maf -out file1ID file2id -m -header 0 1
+#Sample usage: python filecompare.py filecompare -i file1.maf file2.maf -out file1ID file2ID -m -header 0 1
 #Sample usage: python filecompare.py genefilter -file file.maf -genes genelist.txt -out fileID -header 1
 
 #Output from 'filecompare': file1ID_only.maf (variants unique to file1), file2ID_only.maf (variants unique to file2), comparison_shared.maf (variants common to both inputs), comparison_merged (Remove duplicate rows by criteria : Chromosome-Start Position-End Position) 
