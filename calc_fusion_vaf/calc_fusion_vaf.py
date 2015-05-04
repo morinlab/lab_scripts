@@ -195,8 +195,9 @@ def main():
         if os.path.exists(output_bam_sorted_rmdup):
             logging.warning('Duplicates already removed. Skipping...')
         else:
-            logging.info('Removing duplicates from BAM file...')
-            pysam.rmdup(output_bam_sorted, output_bam_sorted_rmdup)
+            # logging.info('Removing duplicates from BAM file...')
+            # pysam.rmdup(output_bam_sorted, output_bam_sorted_rmdup)
+            logging.info('Duplicate removal disabled. Perform this manually...')
         ## Indexing sorted BAM file
         if os.path.exists(output_bam_sorted + '.bai'):
             logging.warning('Index for sorted BAM file already exists. Skipping...')
@@ -206,7 +207,7 @@ def main():
 
     # Quantify support for fusion alleles
     logging.info('Loading generated BAM file for analysis...')
-    bam_file = pysam.Samfile(output_bam_sorted_rmdup, 'rb')
+    bam_file = pysam.AlignmentFile(output_bam_sorted_rmdup, 'rb')
     ## Extract chromosome lengths in order to calculate fusion middle point
     chr_lengths = dict(zip(bam_file.references, bam_file.lengths))
     ## Calculate coverage values for each fusion and wild-type alleles
@@ -336,7 +337,7 @@ def calc_cov_at_pos(aln_file, chromosome, pos, window=2000, min_overlap=10):
             spanning_reads.append(read)
         else:
             # If not, cache non-spanning reads in dict according to read name
-            non_spanning_reads[read.qname].append(read)
+            non_spanning_reads[read.query_name].append(read)
     # Go through cached reads while only considered pairs
     for r1, r2 in ((x[0], x[1]) for x in non_spanning_reads.values() if len(x) == 2):
         # Check if reads are on opposite strands
@@ -347,10 +348,10 @@ def calc_cov_at_pos(aln_file, chromosome, pos, window=2000, min_overlap=10):
             else:
                 r_plus, r_minus = r1, r2
             # Check if pointing each other, i.e. positive insert size
-            if r_plus.isize > 0:
+            if r_plus.template_length > 0:
                 # Check if breakpoint is between both reads, i.e. not spanning
-                if ((r_plus.pos + 1 < pos - min_overlap) and
-                        (r_minus.pos + 1 + r_minus.alen >
+                if ((r_plus.reference_start + 1 < pos - min_overlap) and
+                        (r_minus.reference_start + 1 + r_minus.reference_length >
                          pos + min_overlap)):
                     spanning_read_pairs.append((r1, r2))
                     continue
