@@ -12,10 +12,9 @@ and a VAF is calculated.
 Assumptions
 -----------
 - The breakpoint in the fusion sequences is right in the middle,
-    which is what Factera does by default.
-- BWA is assumed to be located in the PATH environment variable.
-- Pysam 0.8.0 or less is needed, because v0.8.1 moves to
-    samtools 1.1 and there's an issue with rmdup in this version.
+  which is what Factera does by default.
+- BWA and samtools are assumed to be located in the PATH
+  environment variable.
 
 Known Issues
 ------------
@@ -118,16 +117,17 @@ def main():
         logging.warning('Specified output directory already exists...')
 
     # Run BWA MEM alignment against the new reference
-    ## Output file names
+    # Output file names
     new_reference_name = args.output_dir + '/reference_genome.with_fusions.fa'
     output_sai_1 = args.output_dir + '/bwa_aln_1.sai'
     output_sai_2 = args.output_dir + '/bwa_aln_2.sai'
     output_sam = args.output_dir + '/bwa_sampe.sam'
     output_bam = args.output_dir + '/bwa_sampe.bam'
-    output_bam_sorted = args.output_dir + '/bwa_sampe.sorted.bam'
+    output_bam_sorted_prefix = args.output_dir + '/bwa_sampe.sorted'
+    output_bam_sorted = output_bam_sorted_prefix + '.bam'
     output_bam_sorted_rmdup = args.output_dir + '/bwa_sampe.sorted.rmdup.bam'
-    ## Check if final output BAM file and index exist
-    if (os.path.exists(output_bam_sorted)
+    # Check if final output BAM file and index exist
+    if (os.path.exists(output_bam_sorted_rmdup)
             and os.path.exists(output_bam_sorted_rmdup + '.bai')):
         logging.warning('Final output BAM file and index already exist. Skipping alignment...')
     else:
@@ -136,7 +136,7 @@ def main():
             logging.warning('Reference genome with fusions already exists. Skipping...')
         else:
             logging.info('Generating new reference genome with fusion sequences...')
-            ## Append the fusion sequences to it in a new reference FASTA file
+            # Append the fusion sequences to it in a new reference FASTA file
             logging.info('Copying specified reference FASTA file to output directory...')
             shutil.copyfile(args.reference_genome, new_reference_name)
             logging.info('Appending fusion sequences to new reference FASTA file...')
@@ -156,7 +156,7 @@ def main():
             index_cmd = ['bwa', 'index', new_reference_name]
             run_cmd(index_cmd)
         # Align FASTQ files to new reference genome
-        ## Running BWA aln
+        # Running BWA aln
         if os.path.exists(output_sai_1) and os.path.exists(output_sai_2):
             logging.warning('BWA aln output already exists. Skipping...')
         else:
@@ -168,7 +168,7 @@ def main():
                 output_sai_2, new_reference_name, args.fastq_files[1]]
             run_cmd(align_cmd_1)
             run_cmd(align_cmd_2)
-        ## Running BWA sampe
+        # Running BWA sampe
         if os.path.exists(output_sam):
             logging.warning('BWA sampe output already exists. Skipping...')
         else:
@@ -177,29 +177,34 @@ def main():
                 'bwa', 'sampe', '-f', output_sam, new_reference_name, output_sai_1, output_sai_2,
                 args.fastq_files[0], args.fastq_files[1]]
             run_cmd(sampe_cmd)
-        ## Converting from SAM to BAM format
+        # Converting from SAM to BAM format
         if os.path.exists(output_bam):
             logging.warning('Converted BAM file already exists. Skipping...')
         else:
             logging.info('Converting SAM file to BAM format...')
             # No space between -o and output_bam as workaround, see link below
             # https://groups.google.com/d/topic/pysam-user-group/ooHgIiNVe4c/discussion
-            pysam.view('-S', '-b', '-o' + output_bam, output_sam)
-        ## Sorting converted BAM file
+            # pysam.view('-S', '-b', '-o' + output_bam, output_sam)
+            view_cmd_args = ['samtools', 'view', '-S', '-b', '-o', output_bam, output_sam]
+            subprocess.call(view_cmd_args)
+        # Sorting converted BAM file
         if os.path.exists(output_bam_sorted):
             logging.warning('Sorted BAM file already exists. Skipping...')
         else:
             logging.info('Sorting converted BAM file...')
-            pysam.sort('-f', output_bam, output_bam_sorted)
-        # ## Removing duplicates
+            # pysam.sort('-f', output_bam, output_bam_sorted)
+            sort_cmd_args = ['samtools', 'sort', output_bam, output_bam_sorted_prefix]
+            subprocess.call(sort_cmd_args)
+        # Removing duplicates
         if os.path.exists(output_bam_sorted_rmdup):
             logging.warning('Duplicates already removed. Skipping...')
         else:
             # logging.info('Removing duplicates from BAM file...')
             # pysam.rmdup(output_bam_sorted, output_bam_sorted_rmdup)
-            logging.info('Duplicate removal disabled. Perform this manually...')
-        ## Indexing sorted BAM file
-        if os.path.exists(output_bam_sorted + '.bai'):
+            rmdup_cmd_args = ['samtools', 'rmdup', output_bam_sorted, output_bam_sorted_rmdup]
+            subprocess.call(rmdup_cmd_args)
+        # Indexing sorted BAM file
+        if os.path.exists(output_bam_sorted_rmdup + '.bai'):
             logging.warning('Index for sorted BAM file already exists. Skipping...')
         else:
             logging.info('Indexing sorted output BAM file...')
@@ -208,9 +213,9 @@ def main():
     # Quantify support for fusion alleles
     logging.info('Loading generated BAM file for analysis...')
     bam_file = pysam.AlignmentFile(output_bam_sorted_rmdup, 'rb')
-    ## Extract chromosome lengths in order to calculate fusion middle point
+    # Extract chromosome lengths in order to calculate fusion middle point
     chr_lengths = dict(zip(bam_file.references, bam_file.lengths))
-    ## Calculate coverage values for each fusion and wild-type alleles
+    # Calculate coverage values for each fusion and wild-type alleles
     logging.info('Calculating coverage for fusion and wild-type sequences...')
     results = []
     for index, fusion in fusions.items():
