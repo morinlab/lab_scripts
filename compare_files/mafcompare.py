@@ -34,7 +34,9 @@ def main():
                         help='Specify the two files whose intersect you\'re interested in.')
 	parser_files.add_argument('-out', '--output_file', nargs=2, type=str, required=True,help='Specify the prefixes to identify output files for variants unique to file1 and file2 respectively.')
 	parser_files.add_argument('-m', '--merge', action='store_true', default=False, help='Instead of finding the intersecting rows, this script merges both input files such that there are no duplicate rows.')
+	parser_files.add_argument('-g', '--genebased', action='store_true', default=False, help='Instead of filtering by exact mutation location, filter by gene name.')
 	parser_files.add_argument('-header', '--header_row',nargs=2, type=int, default=[0,0],help='If your input files have different header indices, pass them here.')
+        parser_files.add_argument('-odir', '--output_dir', nargs=1, type=str, required=True, help='Specify output directory for the output files.')
 
 
 	#subparser for 1 infile and 1 genelist filter
@@ -52,19 +54,25 @@ def main():
 		input_maf_2 = pandas.DataFrame.from_csv(args.input[1], sep="\t",index_col=None,header=args.header_row[1]);
 		input_maf_2 = updatecoltypes(input_maf_2);
 		is_merging = args.merge
-	
+		is_genefilter = args.genebased
+
+		#Get target dir, create if not exists
+		outdir = args.output_dir[0]
+		if not os.path.exists(outdir):
+			os.makedirs(outdir)
+
 		#Get your intersects and unique values
-		maf1only = onlyInLeft(input_maf_1,input_maf_2)
-		maf2only = onlyInLeft(input_maf_2,input_maf_1)
+		maf1only = onlyInLeft(input_maf_1,input_maf_2,is_genefilter)
+		maf2only = onlyInLeft(input_maf_2,input_maf_1,is_genefilter)
 		intersect = InBoth(input_maf_1,maf1only)
 
-		maf1only.to_csv((args.output_file[0]+"_only.maf"), sep="\t", index=False)
-		maf2only.to_csv((args.output_file[1]+"_only.maf"),sep="\t", index=False)
-		intersect.to_csv(("comparison_shared.maf"),sep="\t", index=False)
+		maf1only.to_csv((outdir+"/"+args.output_file[0]+"_only.maf"), sep="\t", index=False)
+		maf2only.to_csv((outdir+"/"+args.output_file[1]+"_only.maf"),sep="\t", index=False)
+		intersect.to_csv((outdir+"/"+"comparison_shared.maf"),sep="\t", index=False)
 
 		if (is_merging):
 			mergefile = pandas.concat([maf1only,maf2only]).drop_duplicates().reset_index(drop=True)
-			mergefile.to_csv(("comparison_merged.maf"),sep="\t", index=False)
+			mergefile.to_csv((outdir+"/"+"comparison_merged.maf"),sep="\t", index=False)
 
 	if args.subcommand == 'genefilter':
 		input_maf = pandas.DataFrame.from_csv(args.input[0], sep="\t",index_col=None,header=args.header_row[0])
@@ -74,13 +82,19 @@ def main():
 		filtered.to_csv((args.output_file[0] + "_filtered.maf"), sep="\t",index=False)
 		excludegenes.to_csv((args.output_file[0] + "_exclude_genes.maf"),sep="\t",index=False)
 
-def onlyInLeft(table1,table2):
-        return table1[~((table1.Chromosome.isin(table2.Chromosome)) & (table1.Start_Position.isin(table2.Start_Position)) & (table1.End_Position.isin(table2.End_Position)))]
+def onlyInLeft(table1,table2,genefilter_flag):
+	if (genefilter_flag):
+		return table1[~((table1.Hugo_Symbol.isin(table2.Hugo_Symbol)))]
+	else:
+        	return table1[~((table1.Chromosome.isin(table2.Chromosome)) & (table1.Start_Position.isin(table2.Start_Position)) & (table1.End_Position.isin(table2.End_Position)))]
 
-def InBoth(table1,table2):
+def InBoth(table1,table2,genefilter_flag):
 # return table1[((table1.Chromosome.isin(table2.Chromosome)) & (table1.Start_Position.isin(table2.Start_Position)) & (table1.End_Position.isin(table2.End_Position)))]
     tempmerge = pandas.concat([table1,table2]).reset_index(drop=True)
-    return tempmerge.groupby(["Chromosome","End_Position","Start_Position"]).filter(lambda x: len(x) ==1)
+    if (genefilter_flag):
+	return tempmerge.groupby(["Hugo_Symbol"]).filter(lambda x: len(x)==1)
+    else:
+    	return tempmerge.groupby(["Chromosome","End_Position","Start_Position"]).filter(lambda x: len(x) ==1)
 
 def GeneFilter(table1,table2):
 	return table1[((table1.Hugo_Symbol.isin(table2.loc[0:,0])))]
