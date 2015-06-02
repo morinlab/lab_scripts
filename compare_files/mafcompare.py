@@ -11,9 +11,9 @@
 #Date Created: February 27th, 2015.
 #Date Last Modified: June 2nd, 2015.
 #Note that header in first row means -header 0 (not -header 1)
-#Sample usage: python filecompare.py filecompare -i file1.maf file2.maf -out file1ID file2ID -m -header 0 0
-#Sample usage: python filecompare.py filecompare -i file1.maf file2.maf -out file1ID file2ID -g -m -header 0 0
-#Sample usage: python filecompare.py genefilter -file file.maf -genes genelist.txt -out fileID -header 1
+#Sample usage: python filecompare.py filecompare -i file1.maf file2.maf -out file1ID file2ID -m -header 0 0 -odir ./testrun/
+#Sample usage: python filecompare.py filecompare -i file1.maf file2.maf -out file1ID file2ID -g -m -header 0 0 -odir ./testrun/
+#Sample usage: python filecompare.py genefilter -file file.maf -genes genelist.txt -out fileID -header 1 -odir ./testrun/
 
 #Output from 'filecompare': file1ID_only.maf (variants unique to file1), file2ID_only.maf (variants unique to file2), comparison_shared.maf (variants common to both inputs), comparison_merged (Remove duplicate rows by criteria : Chromosome-Start Position-End Position) 
 #Output from 'genefilter': fileID_filtered.maf (variants for genes from passed list), fileID_exclude_genes.maf (variants for genes not in the passed list).
@@ -48,6 +48,7 @@ def main():
 	parser_filter.add_argument('-genes', '--genelist', nargs=1, type=argparse.FileType('r'), required=False, default = ['/home/jgrewal/scripts/ref/genes_lymphoma.txt'],help="Specify the gene list you wish to filter against")
 	parser_filter.add_argument('-out', '--output_file', nargs=1, type=str, required=True, help='Specify the prefix to identify output file.')
 	parser_filter.add_argument('-header', '--header_row', nargs=1, type=int, default=[0], help='If your input file has a different header index, pass it here')
+        parser_files.add_argument('-odir', '--output_dir', nargs=1, type=str, required=True, help='Specify output directory for the output files.')
 
     	# Parse command line arguments
 	args = parser.parse_args()
@@ -88,12 +89,19 @@ def main():
 			print ("Merged output with only first copy of duplicate rows maintained: "+outdir+"/"+"comparison_merged.maf")
 
 	if args.subcommand == 'genefilter':
+                #Get target dir, create if not exists
+                outdir = args.output_dir[0]
+                if not os.path.exists(outdir):
+                        os.makedirs(outdir)
+
 		input_maf = pandas.DataFrame.from_csv(args.input[0], sep="\t",index_col=None,header=args.header_row[0])
 		input_list = pandas.DataFrame.from_csv(args.genelist[0], sep="\t", index_col=None, header=None)
 		filtered = GeneFilter(input_maf,input_list)
 		excludegenes = GeneFilter_exclude(input_maf,input_list)
 		filtered.to_csv((args.output_file[0] + "_filtered.maf"), sep="\t",index=False)
 		excludegenes.to_csv((args.output_file[0] + "_exclude_genes.maf"),sep="\t",index=False)
+		print ("Output filtered by gene list " + args.genelist[0] + " is at : \n\t" + outdir+"/"+ args.output_file[0] + "_filtered.maf")
+		print ("Output excluding gene list " + args.genelist[0] + " is at : \n\t" + outdir+"/"+ args.output_file[0] + "_exclude_genes.maf")
 
 def onlyInLeft(table1,table2,genefilter_flag):
 	if (genefilter_flag):
