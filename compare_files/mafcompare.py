@@ -41,7 +41,6 @@ def main():
 	parser_files.add_argument('-header', '--header_row',nargs=2, type=int, default=[0,0],help='If your input files have different header indices, pass them here.')
         parser_files.add_argument('-odir', '--output_dir', nargs=1, type=str, required=True, help='Specify output directory for the output files.')
 
-
 	#subparser for 1 infile and 1 genelist filter
 	parser_filter = subparsers.add_parser('genefilter')
 	parser_filter.add_argument('-i', '--input', nargs=1, type=argparse.FileType('r'),required=True, help="Specify the file you want to filter")
@@ -72,7 +71,7 @@ def main():
 
 		maf1only.to_csv((outdir+"/"+args.output_file[0]+"_only.maf"), sep="\t", index=False)
 		maf2only.to_csv((outdir+"/"+args.output_file[1]+"_only.maf"),sep="\t", index=False)
-		intersect.to_csv((outdir+"/"+"comparison_shared.maf"),sep="\t", index=False)
+		intersect.to_csv((outdir+"/"+args.output_file[0]+"_"+args.output_file[1]+"_comparison_shared.maf"),sep="\t", index=False)
 		
 		if (is_genefilter):
 			print ("Filtering by gene name only....")
@@ -81,12 +80,12 @@ def main():
 
 		print ("File 1 specific output: " + outdir + "/" + args.output_file[0]+"_only.maf")
 		print ("File 2 specific output: " + outdir + "/" + args.output_file[1]+"_only.maf")
-		print ("Pool of shared variants: " + outdir + "/" + "comparison_shared.maf")
+		print ("Pool of shared variants: " + outdir + "/" + args.output_file[0] + "_" + args.output_file[1] + "_comparison_shared.maf")
 
 		if (is_merging):
 			mergefile = pandas.concat([maf1only,maf2only]).drop_duplicates().reset_index(drop=True)
-			mergefile.to_csv((outdir+"/"+"comparison_merged.maf"),sep="\t", index=False)
-			print ("Merged output with only first copy of duplicate rows maintained: "+outdir+"/"+"comparison_merged.maf")
+			mergefile.to_csv((outdir+"/"+args.output_file[0] + "_" + args.output_file[1] + "_comparison_merged.maf"),sep="\t", index=False)
+			print ("Merged output with only first copy of duplicate rows maintained: "+outdir+"/"+args.output_file[0] + "_" + args.output_file[1] + "_comparison_merged.maf")
 
 	if args.subcommand == 'genefilter':
                 #Get target dir, create if not exists
