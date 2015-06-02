@@ -48,7 +48,7 @@ def main():
 	parser_filter.add_argument('-genes', '--genelist', nargs=1, type=argparse.FileType('r'), required=False, default = ['/home/jgrewal/scripts/ref/genes_lymphoma.txt'],help="Specify the gene list you wish to filter against")
 	parser_filter.add_argument('-out', '--output_file', nargs=1, type=str, required=True, help='Specify the prefix to identify output file.')
 	parser_filter.add_argument('-header', '--header_row', nargs=1, type=int, default=[0], help='If your input file has a different header index, pass it here')
-        parser_files.add_argument('-odir', '--output_dir', nargs=1, type=str, required=True, help='Specify output directory for the output files.')
+        parser_filter.add_argument('-odir', '--output_dir', nargs=1, type=str, required=True, help='Specify output directory for the output files.')
 
     	# Parse command line arguments
 	args = parser.parse_args()
