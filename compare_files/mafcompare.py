@@ -20,6 +20,7 @@
 import pandas
 import argparse
 import numpy
+import os
 
 def main():
 	"""Run augmentmaf_filter.py
@@ -64,15 +65,25 @@ def main():
 		#Get your intersects and unique values
 		maf1only = onlyInLeft(input_maf_1,input_maf_2,is_genefilter)
 		maf2only = onlyInLeft(input_maf_2,input_maf_1,is_genefilter)
-		intersect = InBoth(input_maf_1,maf1only)
+		intersect = InBoth(input_maf_1,maf1only,is_genefilter)
 
 		maf1only.to_csv((outdir+"/"+args.output_file[0]+"_only.maf"), sep="\t", index=False)
 		maf2only.to_csv((outdir+"/"+args.output_file[1]+"_only.maf"),sep="\t", index=False)
 		intersect.to_csv((outdir+"/"+"comparison_shared.maf"),sep="\t", index=False)
+		
+		if (is_genefilter):
+			print ("Filtering by gene name only....")
+		else:
+			print ("Filtering by exact mutation location....")
+
+		print ("File 1 specific output: " + outdir + "/" + args.output_file[0]+"_only.maf")
+		print ("File 2 specific output: " + outdir + "/" + args.output_file[1]+"_only.maf")
+		print ("Pool of shared variants: " + outdir + "/" + "comparison_shared.maf")
 
 		if (is_merging):
 			mergefile = pandas.concat([maf1only,maf2only]).drop_duplicates().reset_index(drop=True)
 			mergefile.to_csv((outdir+"/"+"comparison_merged.maf"),sep="\t", index=False)
+			print ("Merged output with only first copy of duplicate rows maintained: "+outdir+"/"+"comparison_merged.maf")
 
 	if args.subcommand == 'genefilter':
 		input_maf = pandas.DataFrame.from_csv(args.input[0], sep="\t",index_col=None,header=args.header_row[0])
