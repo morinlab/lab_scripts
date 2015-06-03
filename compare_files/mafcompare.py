@@ -67,8 +67,8 @@ def main():
 		#Get your intersects and unique values
 		maf1only = onlyInLeft(input_maf_1,input_maf_2,is_genefilter)
 		maf2only = onlyInLeft(input_maf_2,input_maf_1,is_genefilter)
-		intersect = InBoth(input_maf_1,maf1only,is_genefilter)
-
+		intersect = InBoth(input_maf_1,input_maf_2,is_genefilter)
+		
 		maf1only.to_csv((outdir+"/"+args.output_file[0]+"_only.maf"), sep="\t", index=False)
 		maf2only.to_csv((outdir+"/"+args.output_file[1]+"_only.maf"),sep="\t", index=False)
 		intersect.to_csv((outdir+"/"+args.output_file[0]+"_"+args.output_file[1]+"_comparison_shared.maf"),sep="\t", index=False)
@@ -85,7 +85,7 @@ def main():
 		if (is_merging):
 			mergefile = pandas.concat([maf1only,maf2only]).drop_duplicates().reset_index(drop=True)
 			mergefile.to_csv((outdir+"/"+args.output_file[0] + "_" + args.output_file[1] + "_comparison_merged.maf"),sep="\t", index=False)
-			print ("Merged output with only first copy of duplicate rows maintained: "+outdir+"/"+args.output_file[0] + "_" + args.output_file[1] + "_comparison_merged.maf")
+			print ("Merged outputs of unique variants: "+outdir+"/"+args.output_file[0] + "_" + args.output_file[1] + "_comparison_merged.maf")
 
 	if args.subcommand == 'genefilter':
                 #Get target dir, create if not exists
@@ -112,9 +112,14 @@ def InBoth(table1,table2,genefilter_flag):
 # return table1[((table1.Chromosome.isin(table2.Chromosome)) & (table1.Start_Position.isin(table2.Start_Position)) & (table1.End_Position.isin(table2.End_Position)))]
     tempmerge = pandas.concat([table1,table2]).reset_index(drop=True)
     if (genefilter_flag):
-	return tempmerge.groupby(["Hugo_Symbol"]).filter(lambda x: len(x)==1)
+	mergeinclude=table1[((table1.Hugo_Symbol.isin(table2.Hugo_Symbol)))]
+	tempmerge=tempmerge[((tempmerge.Hugo_Symbol.isin(mergeinclude.Hugo_Symbol)))]
+	mytablef= (tempmerge.groupby(["Hugo_Symbol"])).filter(lambda x: (len(x["Hugo_Symbol"])>1))
+	return mytablef
     else:
-    	return tempmerge.groupby(["Chromosome","End_Position","Start_Position"]).filter(lambda x: len(x) ==1)
+	mergeinclude=table1[((table1.Chromosome.isin(table2.Chromosome)) & (table1.Start_Position.isin(table2.Start_Position)) & (table1.End_Position.isin(table2.End_Position)))]
+	tempmerge=tempmerge[((tempmerge.Chromosome.isin(mergeinclude.Chromosome))&(tempmerge.Start_Position.isin(mergeinclude.Start_Position))&(tempmerge.End_Position.isin(mergeinclude.End_Position)))]
+    	return tempmerge.groupby(["Chromosome","End_Position","Start_Position"]).filter(lambda x: len(x) > 1)
 
 def GeneFilter(table1,table2):
 	return table1[((table1.Hugo_Symbol.isin(table2.loc[0:,0])))]
