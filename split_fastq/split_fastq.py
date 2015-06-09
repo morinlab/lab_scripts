@@ -167,6 +167,7 @@ def main():
                 current_chunk.outfastq.add_obj(read)
             logging.info("Writing out chunk #{}".format(current_chunk.counter))
             current_chunk.outfastq.write()
+            intervals.append(str(current_chunk.chunk_name()))
 
         # Return intervals
         return intervals
