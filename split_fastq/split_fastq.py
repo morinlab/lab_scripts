@@ -29,7 +29,7 @@ import shutil
 import logging
 import cancer_api
 
-__version__ = "v1.1.4"
+__version__ = "v1.1.5"
 
 # MIN_SPILLOVER indicates the minimum fraction (between 0 and 1) of num_reads
 # that is required to create a new chunk. This is mostly meant to prevent the
@@ -141,7 +141,8 @@ def main():
                 current_chunk.outfastq.write()
                 intervals.append(str(current_chunk.chunk_name()))
                 current_chunk.next()
-                num_accum = 0
+                current_chunk.outfastq.add_obj(read)
+                num_accum = 1
 
         # Handle remaining reads
         # If the current_chunk is still at chunk1, just symlink
