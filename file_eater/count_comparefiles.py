@@ -13,7 +13,7 @@ def cmd_readcount(infile, filetype, outfile, whichsam):
 	elif filetype == "bam":
 		mycmd = whichsam + " view -F 2048 -c " + infile + " >> " + outfile
 	elif filetype == "fq.gz":
-		mycmd = "zcat " + infile + " | wc -l | xargs -n 1 bash -c 'echo $(($1/4))' args " + " >> " + outfile
+		mycmd = "zcat -f " + infile + " | wc -l | xargs -n 1 bash -c 'echo $(($1/4))' args " + " >> " + outfile
 	return mycmd
 
 def main():
