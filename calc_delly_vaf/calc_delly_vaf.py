@@ -31,7 +31,7 @@ import vcf
 # Here are the standard columns for the output file.
 # To this, you must add one column per tumour sample,
 # which will contain the VAFs
-BASE_COLUMNS = ["sv_id", "chr1", "pos1", "chr2", "pos2", "strand"]
+BASE_COLUMNS = ["sv_id", "chr1", "pos1", "chr2", "pos2", "strand", "type"]
 
 
 def main():
@@ -40,12 +40,12 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("input_vcf", type=argparse.FileType("r"), help="Input DELLY VCF file")
     parser.add_argument("output", type=argparse.FileType("w"), help="Output matrix TSV file")
-    parser.add_argument("--tumour_regex", "-r", default="[Tt]umou?r",
-                        help="Regex to identify tumour sample names")
+    parser.add_argument("--tumour1_regex", "-r1", required=True)
+    parser.add_argument("--tumour2_regex", "-r2", required=True)
     args = parser.parse_args()
 
     # Argument processing
-    t_regex = re.compile(args.tumour_regex)
+    t_regex = re.compile(r"({}|{})".format(args.tumour1_regex, args.tumour2_regex))
     invcf = vcf.Reader(args.input_vcf)
     output = args.output
 
@@ -64,7 +64,8 @@ def main():
             record.POS,
             record.INFO["CHR2"],
             record.INFO["END"],
-            record.INFO["CT"]]
+            record.INFO["CT"],
+            record.INFO["SVTYPE"]]
         # Calculate VAF for each tumour sample
         vaf_cols = []
         for call in get_tumour_calls(record, t_regex):
