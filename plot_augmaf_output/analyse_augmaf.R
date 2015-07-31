@@ -1,50 +1,20 @@
-# Multiple plot function
-#
-# ggplot objects can be passed in ..., or to plotlist (as a list of ggplot objects)
-# - cols:   Number of columns in layout
-# - layout: A matrix specifying the layout. If present, 'cols' is ignored.
-#
-# If the layout is something like matrix(c(1,2,3,3), nrow=2, byrow=TRUE),
-# then plot 1 will go in the upper left, 2 will go in the upper right, and
-# 3 will go all the way across the bottom.
-#
-multiplot <- function(..., plotlist=NULL, file, cols=1, layout=NULL) {
-  library(grid)
-  
-  # Make a list from the ... arguments and plotlist
-  plots <- c(list(...), plotlist)
-  
-  numPlots = length(plots)
-  
-  # If layout is NULL, then use 'cols' to determine layout
-  if (is.null(layout)) {
-    # Make the panel
-    # ncol: Number of columns of plots
-    # nrow: Number of rows needed, calculated from # of cols
-    layout <- matrix(seq(1, cols * ceiling(numPlots/cols)),
-                     ncol = cols, nrow = ceiling(numPlots/cols))
-  }
-  
-  if (numPlots==1) {
-    print(plots[[1]])
-    
-  } else {
-    # Set up the page
-    grid.newpage()
-    pushViewport(viewport(layout = grid.layout(nrow(layout), ncol(layout))))
-    
-    # Make each plot, in the correct location
-    for (i in 1:numPlots) {
-      # Get the i,j matrix positions of the regions that contain this subplot
-      matchidx <- as.data.frame(which(layout == i, arr.ind = TRUE))
-      
-      print(plots[[i]], vp = viewport(layout.pos.row = matchidx$row,
-                                      layout.pos.col = matchidx$col))
-    }
-  }
-}
+# Initially written March 2015
+# Last facelifted (significantly) on July 31, 2015
+# By Jasleen Grewal (grewalj23@gmail.com)
+# This script takes in an augmaf file, target columns, output directory 
+# And plots the vaf distributions between the two samples (currently only for dual comparisons)
+# May expand later if felt worth the extra effort :P
+## Unfortunately currently require input in format: 
+##  ("Hugo_Symbol","Chromosome","Start_Position","End_Position","Tumor_Sample_Barcode","Matched_Norm_Sample_Barcode","t_ref_count","t_alt_count","Variant_Classification","Variant_Type")
 
-#Functions
+#Req libs
+suppressWarnings(suppressMessages(library(argparser,logical.return=FALSE,verbose=FALSE,quietly=TRUE)))
+suppressWarnings(suppressMessages(library(sqldf,logical.return=FALSE,verbose=FALSE,quietly=TRUE)))
+suppressWarnings(suppressMessages(library(ggplot2,logical.return=FALSE,verbose=FALSE,quietly=TRUE)))
+suppressWarnings(suppressMessages(library(grid,logical.return=FALSE,verbose=FALSE,quietly=TRUE)))
+source("multiplot.R") #Import function to plot multiple plots on same view
+
+#Function Definitions for file parsing and processing
 read_augmaf<-function(filename,sampletype,incols=selected_cols,outcols=renamed_cols){
   mydf<-read.delim(filename,stringsAsFactors=FALSE,header=TRUE)
   mydf<-mydf[incols]
@@ -65,21 +35,27 @@ compare_mafs<-function(tum_maf,plasma_maf){
   return(dat_overlap)
 }
 
-#Req libs
-library(sqldf)
-library(ggplot2)
-library(grid)
+#Set up my argparser
+parser<- arg.parser("Plot vaf distributions of paired samples from augmaf input.")
+parser<- add.argument(parser,"--in_dir",help="Specify directory with augmaf files", default="/Volumes/morinlab/projects/dlbcl_normal_tumour_plasma_co/augment_maf_QCRC_out/comparative_analysis/")
+parser<- add.argument(parser,"--data_dir",help="Specify directory to store comparison data files", default="/Volumes/morinlab/projects/dlbcl_relapse_exome/QCROC_cnv_snv_analyses/snv/data/")
+parser<- add.argument(parser,"--plot_dir",help="Specify directory for plot files", default="/Volumes/morinlab/projects/dlbcl_relapse_exome/QCROC_cnv_snv_analyses/snv/plots/")
+parser<- add.argument(parser,"--tum_min",help="Specify minimum vaf threshold. Vafs in tumour >= this value will be selected", default=0)
+parser<- add.argument(parser,"--plasma_min",help="Specify minimum vaf threshold. Vafs in plasma >= this value will be selected", default=0)
+parser<- add.argument(parser,"--refcov",help="Minimum number of reads in ref allele required to qualify a plasma variant (when plasma vaf=0)", default=10)
+args<- parse.args(parser)
+
+augdir= normalizePath(args$in_dir)
+outputdir= normalizePath(args$data_dir)
+plotdir= normalizePath(args$plot_dir)
+tumour_threshold = args$tum_min
+plasma_threshold = args$plasma_min
+refcov = args$refcov
 
 #Shared vars
 selected_cols=c("Hugo_Symbol","Chromosome","Start_Position","End_Position","Tumor_Sample_Barcode","Matched_Norm_Sample_Barcode","t_ref_count","t_alt_count","Variant_Classification","Variant_Type")
 renamed_cols=c("gene","chr","start","end","sample_type","sample_matched","t_ref_count","t_alt_count","variant_class","variant_type")
 
-augdir="/Volumes/morinlab/projects/dlbcl_normal_tumour_plasma_co/augment_maf_QCRC_out/comparative_analysis/"
-plotdir="/Volumes/morinlab/projects/dlbcl_relapse_exome/QCROC_bed/snv/plots/"
-outputdir="/Volumes/morinlab/projects/dlbcl_relapse_exome/QCROC_bed/snv/data/"
-tumour_threshold=0 #vafs in tumour will be selected >= this value
-plasma_threshold=0 #vafs in plasma will be selected > this value
-refcov=10 #Minimum number of reads in ref allele required to qualify a plasma variant (when plasma vaf=0)
 #Sample specific analysis
 mysamples=c("PT003","PT011","PT012","PT018","PT32","PT39")
 output_header=paste("gene","chr","start","end","variant_type","variant_class","tum_ref","tum_alt","tum_vaf","plasma_ref","plasma_alt","plasma_vaf","sample",sep="\t")
