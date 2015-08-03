@@ -3,30 +3,22 @@ Morin Lab Scripts
 
 This repository serves to consolidate scripts for shared use in the Morin lab. Each script is housed in a separate subdirectory, which contains all related files, if applicable. 
 
-To reduce redundant code, commonly used methods are added to a module in the `modules` subdirectory. Accordingly, users should add the path of this `modules` directory to their `PYTHONPATH` environment variable. 
+Tags
+----
 
-    export PYTHONPATH=/path/to/lab_scripts/modules:$PYTHONPATH
+Tags are used to track specific releases/versions of this repository. This allows for reproducibility when using these scripts for projects. This repository adopts the format `X.Y` (_e.g._ `1.0`), where X is the major version and Y is the minor version. When updates are made to existing scripts, increment the minor version number (_e.g._ `1.0 -> 1.1`). When new scripts are added to the repository, increment the major version (_e.g._ `1.0 -> 2.0`).  
 
-A quick summary and example command for each script are included below. 
+Here's how to tag commits and push them to GitHub. 
 
-calc_vaf_db_strand
-------------------
+```bash
+git tag 1.1
+git push --tags
+```
 
-### Description
+And then on another machine, you can checkout that tag as follows. 
 
-calc_vaf_db_strand.py calculates the variant allele fraction (VAF) at a given position while only considering read pairs for which the forward and reverse strand agree on the base call at the given position. Effectively, this suppresses errors due to incorrect base calling. This script was originally meant to calculate the VAF in amplicon sequencing data derived from circulating tumour DNA (ctDNA), where the forward and reverse strands are designed to overlap. 
-
-    python calc_vaf_db_strand.py --in_bam input.sorted.bam --out_bam output.sorted.db_strand.bam --chromosome chr3 --position 38182641 --ref_allele T --mut_allele C
-
-calc_fusion_vaf
----------------
-
-### Requirements
-
-- Pysam 0.8.0 (installed by running `pip install pysam==0.8.0`)
-
-### Description
-
-calc_fusion_vaf.py calculates the variant allele fraction (VAF) of fusions called by Factera. It does so by appending the fusion sequences to the reference genome and realigning the reads to this new reference. Then, reads supporting the fusion and wild-type alleles are counted and a VAF is calculated. Moreover, if a certain gene was targeted like in a capture-based approach, there's the option of only considering fusions involving this gene (_e.g._ `--gene EWSR1`).
-
-    python calc_fusion_vaf.py --output_dir ./fusion_vaf/ --threads 4 hg19.fa ewings_sarcoma.R1.fastq.gz ewings_sarcoma.R2.fastq.gz ./factera_output/ewings_sarcoma.factera.fusions.txt
+```bash
+git clone git@github.com:morinlab/lab_scripts.git
+cd lab_scripts
+git checkout -b tags/1.1 tags/1.1
+```
