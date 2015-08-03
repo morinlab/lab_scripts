@@ -42,12 +42,15 @@ def main():
     parser.add_argument("output", type=argparse.FileType("w"), help="Output matrix TSV file")
     parser.add_argument("--tumour1_regex", "-r1", required=True)
     parser.add_argument("--tumour2_regex", "-r2", required=True)
+    parser.add_argument("--min_cov", "-c", type=int, default=0,
+                        help="Minimum coverage at SV locus")
     args = parser.parse_args()
 
     # Argument processing
     t_regex = re.compile(r"({}|{})".format(args.tumour1_regex, args.tumour2_regex))
     invcf = vcf.Reader(args.input_vcf)
     output = args.output
+    min_cov = args.min_cov
 
     # VCF parsing
     is_first = True
@@ -66,14 +69,16 @@ def main():
             record.INFO["END"],
             record.INFO["CT"],
             record.INFO["SVTYPE"]]
-        # Calculate VAF for each tumour sample
-        vaf_cols = []
-        for call in get_tumour_calls(record, t_regex):
-            vaf = calc_vaf(call)
-            vaf_cols.append(vaf)
-        # Output
-        all_cols = [str(col) for col in info_cols + vaf_cols]
-        output.write("\t".join(all_cols) + "\n")
+        # Ensure minimum coverage in all samples
+        if all([calc_cov(call) >= min_cov for call in get_tumour_calls(record, t_regex)]):
+            # Calculate VAF for each tumour sample
+            vaf_cols = []
+            for call in get_tumour_calls(record, t_regex):
+                vaf = calc_vaf(call)
+                vaf_cols.append(vaf)
+            # Output
+            all_cols = [str(col) for col in info_cols + vaf_cols]
+            output.write("\t".join(all_cols) + "\n")
 
     # Closing files
     args.input_vcf.close()
@@ -94,6 +99,15 @@ def get_tumour_calls(vcf_record, t_regex):
     """
     tumour_calls = [call for call in vcf_record.samples if t_regex.search(call.sample)]
     return tumour_calls
+
+
+def calc_cov(vcf_call):
+    """Calculate total coverage for a given DELLY VCF record
+    and sample
+    """
+    cov = (int(vcf_call.data.DR) + int(vcf_call.data.RR) +
+           int(vcf_call.data.DV) + int(vcf_call.data.RV))
+    return cov
 
 
 def calc_vaf(vcf_call):
