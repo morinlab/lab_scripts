@@ -39,6 +39,4 @@ plot <- ggplot() +
     geom_point(data = df_t2_zero, aes(tumour_1, tumour_2, colour = factor(type)), alpha = 0.5, size = 1,
                position = position_jitter(w = 0, h = 0.02)) +
     coord_cartesian(xlim = c(-0.1, 1.1), ylim = c(-0.1, 1.1))
-plot
-ggsave(file="delly_vaf_t1_vs_t2.png", width=6.5, height=5)
 ggsave(file="delly_vaf_t1_vs_t2.pdf", width=6.5, height=5)
