@@ -38,6 +38,9 @@ from collections import defaultdict
 
 __version__ = "1.0.0"
 
+# INFO tags to keep
+INFO_TO_KEEP = []
+
 
 def main():
     """filter_vcf"""
@@ -53,10 +56,16 @@ def main():
     one_reader.samples = sample_names
 
     # Create a VCF Writer object with new INFO metadata lines
-    one_reader.infos["SNP"] = vcf.parser._Info("SNP", 0, "Flag", snp_desc(
-        args.snp_threshold), __name__, __version__)
-    one_reader.infos["HOTSPOT"] = vcf.parser._Info("HOTSPOT", 0, "Flag", hotspot_desc(
-        args.alt_codon_threshold, args.cluster_threshold), __name__, __version__)
+    for info in one_reader.infos:
+        if info not in INFO_TO_KEEP:
+            del one_reader.infos[info]
+    one_reader.infos["TOP_CSQ"] = vcf.parser._Info(
+        "TOP_CSQ", ".", "String", "Top VEP effect", __name__, __version__)
+    one_reader.infos["SNP"] = vcf.parser._Info(
+        "SNP", 0, "Flag", snp_desc(args.snp_threshold), __name__, __version__)
+    one_reader.infos["HOTSPOT"] = vcf.parser._Info(
+        "HOTSPOT", 0, "Flag", hotspot_desc(args.alt_codon_threshold, args.cluster_threshold),
+        __name__, __version__)
     vcf_writer = vcf.Writer(args.output, template=one_reader, lineterminator='\n')
 
     # Create dictionary of positions to exclude
@@ -363,7 +372,13 @@ def annotate_variants(vcf_iter, vep_cols, sample_names, exclude_pos_dict, snp_th
                 num_affected_samples += 1
             combined_samples.append(new_sample)
         one_record.samples = combined_samples
+        # Remove unnecessary INFO tags
+        for k in one_record.INFO.keys():
+            if k not in INFO_TO_KEEP:
+                del one_record.INFO[k]
         # Annotate variant
+        top_effect_encoded = "|".join([top_effect[col] for col in vep_cols])
+        one_record.INFO["TOP_CSQ"] = top_effect_encoded
         if num_affected_samples >= snp_threshold:
             one_record.INFO["SNP"] = True
         if top_effect["HGVSp"] != "" and one_record.is_snp:
