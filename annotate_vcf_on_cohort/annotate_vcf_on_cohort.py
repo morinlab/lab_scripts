@@ -67,16 +67,18 @@ def main():
         "PROTEIN_CHANGE", 0, "Flag", "Top effect changes protein", __name__, __version__)
     one_reader.infos["SNP"] = vcf.parser._Info(
         "SNP", 0, "Flag", snp_desc(args.snp_threshold), __name__, __version__)
+    one_reader.infos["ANN_SNP_POS"] = vcf.parser._Info(
+        "ANN_SNP_POS", 0, "Flag", "Annotated SNP position", __name__, __version__)
     one_reader.infos["HOTSPOT"] = vcf.parser._Info(
         "HOTSPOT", 0, "Flag", hotspot_desc(args.alt_codon_threshold, args.cluster_threshold),
         __name__, __version__)
     vcf_writer = vcf.Writer(args.output, template=one_reader, lineterminator='\n')
 
-    # Create dictionary of positions to exclude
-    if args.exclude:
-        exclude_positions = create_pos_dict(args.exclude)
+    # Create dictionary of positions to annotated_snp_pos
+    if args.annotated_snp_pos:
+        annotated_snp_pos = create_pos_dict(args.annotated_snp_pos)
     else:
-        exclude_positions = {}
+        annotated_snp_pos = {}
 
     # Find mutated codons
     mutated_codons = find_mutated_codons(vcf_iter, vep_cols, args.chrom)
@@ -87,7 +89,7 @@ def main():
 
     # Regenerate vcf_iter and annotate variants and output
     vcf_readers, vcf_iter = create_vcf_iter(*args.vcf)
-    variant_iterator = annotate_variants(vcf_iter, vep_cols, sample_names, exclude_positions,
+    variant_iterator = annotate_variants(vcf_iter, vep_cols, sample_names, annotated_snp_pos,
                                          args.snp_threshold, hotspot_codons, args.chrom)
     for record in variant_iterator:
         vcf_writer.write_record(record)
@@ -105,8 +107,8 @@ def parse_args():
                         help="Min. number of alt. codons for being flagged as hotspot")
     parser.add_argument("--cluster_threshold", "-c", default=2,
                         help="Max. distance between SNVs of a hotspot cluster")
-    parser.add_argument("--exclude", "-x", type=argparse.FileType("r"),
-                        help="Position to exclude (format: CHROM\tPOS)")
+    parser.add_argument("--annotated_snp_pos", type=argparse.FileType("r"),
+                        help="Annotated SNP positions (format: CHROM\\tPOS)")
     parser.add_argument("--chrom", default=None, help="Restrict to one chromosome")
     parser.add_argument("vcf1", nargs=1, metavar="vcf_file")
     parser.add_argument("vcf2", nargs="+", metavar="vcf_file", help=argparse.SUPPRESS)
@@ -332,7 +334,7 @@ def detect_hotspots(mutated_codons, alt_codon_threshold, cluster_threshold):
     return hotspot_codons
 
 
-def annotate_variants(vcf_iter, vep_cols, sample_names, exclude_pos_dict, snp_threshold,
+def annotate_variants(vcf_iter, vep_cols, sample_names, annotated_snp_pos, snp_threshold,
                       hotspot_codons, chrom=None):
     """Generator yielding annotated records ready
     for being outputted to a file. Combine samples
@@ -358,10 +360,6 @@ def annotate_variants(vcf_iter, vep_cols, sample_names, exclude_pos_dict, snp_th
         format_tuple = model.make_calldata_tuple(format_fields)
         blanks = [""] * (len(format_fields) - 1)
         uncalled_format = format_tuple("0/0", *blanks)
-        # Check if position is to be excluded (i.e., skipped)
-        variant_id = create_pos_id(one_record.CHROM, one_record.POS)
-        if variant_id in exclude_pos_dict:
-            continue
         # Obtain top effect
         top_effect = obtain_top_effect(one_record, vep_cols)
         # Generate calls for all records
@@ -380,7 +378,12 @@ def annotate_variants(vcf_iter, vep_cols, sample_names, exclude_pos_dict, snp_th
         for k in one_record.INFO.keys():
             if k not in INFO_TO_KEEP:
                 del one_record.INFO[k]
+        # Clear QUAL col
+        one_record.QUAL = "."
         # Annotate variant
+        variant_id = create_pos_id(one_record.CHROM, one_record.POS)
+        if variant_id in annotated_snp_pos:
+            one_record.INFO["ANN_SNP_POS"] = True
         one_record.INFO["NUM_SAMPLES"] = num_affected_samples
         top_effect_encoded = "|".join([top_effect[col] for col in vep_cols])
         one_record.INFO["TOP_CSQ"] = top_effect_encoded
