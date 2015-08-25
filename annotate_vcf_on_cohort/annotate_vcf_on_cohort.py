@@ -25,6 +25,7 @@ Known Issues
   It's also used when taking the consequence for a given
   variant from one of the samples.
 - Assumes one sample per VCF file (first one)
+- The format column changes across calls and samples.
 """
 
 import sys
@@ -37,9 +38,6 @@ import re
 from collections import defaultdict
 
 __version__ = "1.0.0"
-
-# INFO tags to keep
-INFO_TO_KEEP = []
 
 
 def main():
@@ -57,10 +55,10 @@ def main():
 
     # Create a VCF Writer object with new INFO metadata lines
     for info in one_reader.infos:
-        if info not in INFO_TO_KEEP:
+        if info not in ["CSQ"]:
             del one_reader.infos[info]
     one_reader.infos["NUM_SAMPLES"] = vcf.parser._Info(
-        "NUM_SAMPLES", 1, "Number", "Number of affected samples", __name__, __version__)
+        "NUM_SAMPLES", 1, "Integer", "Number of affected samples", __name__, __version__)
     one_reader.infos["TOP_CSQ"] = vcf.parser._Info(
         "TOP_CSQ", ".", "String", "Top VEP effect", __name__, __version__)
     one_reader.infos["PROTEIN_CHANGE"] = vcf.parser._Info(
@@ -155,10 +153,10 @@ def parse_vep_cols(vcf_reader):
     return vep_cols
 
 
-def parse_vep(vep_cols, vcf_record):
+def parse_vep(vep_cols, vcf_record, tag="CSQ"):
     """Parse VEP INFO output"""
     vep_effects = []
-    for vep_effect in vcf_record.INFO["CSQ"]:
+    for vep_effect in vcf_record.INFO[tag]:
         vep_effect_vals = vep_effect.split("|")
         vep_effects.append(dict(zip(vep_cols, vep_effect_vals)))
     return vep_effects
@@ -356,9 +354,16 @@ def annotate_variants(vcf_iter, vep_cols, sample_names, annotated_snp_pos, snp_t
             if is_chrom_seen and one_record.CHROM != chrom:
                 break
         # Otherwise, continue
-        format_fields = one_record.FORMAT.split(":")
-        format_tuple = model.make_calldata_tuple(format_fields)
-        blanks = [""] * (len(format_fields) - 1)
+        # Find common denominator of format fields
+        all_fmt_fields = [set(r.FORMAT.split(":")) for r in records if r is not None]
+        common_fmt_fields = set.intersection(*all_fmt_fields)
+        # Ensure that GT is first
+        if "GT" in common_fmt_fields:
+            common_fmt_fields = ["GT"] + list(common_fmt_fields - set(["GT"]))
+        common_fmt_string = ":".join(common_fmt_fields)
+        one_record.FORMAT = common_fmt_string
+        format_tuple = model.make_calldata_tuple(common_fmt_fields)
+        blanks = ["0"] * (len(common_fmt_fields) - 1)
         uncalled_format = format_tuple("0/0", *blanks)
         # Obtain top effect
         top_effect = obtain_top_effect(one_record, vep_cols)
@@ -371,12 +376,15 @@ def annotate_variants(vcf_iter, vep_cols, sample_names, annotated_snp_pos, snp_t
                                              data=uncalled_format)
             else:
                 new_sample = record.samples[0]
+                fmt_dict = record.samples[0].data._asdict()
+                fmt_data = format_tuple(*[fmt_dict[field] for field in common_fmt_fields])
+                new_sample.data = fmt_data
                 num_affected_samples += 1
             combined_samples.append(new_sample)
         one_record.samples = combined_samples
         # Remove unnecessary INFO tags
         for k in one_record.INFO.keys():
-            if k not in INFO_TO_KEEP:
+            if k not in []:
                 del one_record.INFO[k]
         # Clear QUAL col
         one_record.QUAL = "."
@@ -393,7 +401,7 @@ def annotate_variants(vcf_iter, vep_cols, sample_names, annotated_snp_pos, snp_t
             one_record.INFO["PROTEIN_CHANGE"] = True
             if one_record.is_snp:
                 transcript, codon_num, alt_codon = obtain_mutated_codon_info(top_effect)
-                if hotspot_codons[transcript][codon_num]:
+                if hotspot_codons[transcript].setdefault(codon_num, False):
                     one_record.INFO["HOTSPOT"] = True
         # Yield variant
         yield one_record
