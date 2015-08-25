@@ -27,6 +27,9 @@ def main():
 
     # Iterate over VCF file
     for record in vcf_reader:
+        # Filter on NUM_SAMPLES
+        if args.max_samples and record.INFO["NUM_SAMPLES"] > args.max_samples:
+            continue
         # Parse VEP output and select the first and only one
         vep_effect = parse_vep(vep_cols, record, tag="TOP_CSQ")[0]
         # Extract gene ID and symbol
@@ -56,6 +59,7 @@ def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("input_vcf", type=argparse.FileType("r"))
     parser.add_argument("--output", "-o", default=sys.stdout, type=argparse.FileType('w'))
+    parser.add_argument("--max_samples", "-m", type=int, help="Max. number of samples allowed")
     args = parser.parse_args()
     return args
 
