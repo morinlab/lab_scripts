@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 
 """
-filter_vcf.py
-=============
+annotate_vcf_on_cohort.py
+=========================
 This script is meant to filter several VCF files from
 a given cohort simultaneously. This allows filtering
 on the cohort level as opposed to simply on the sample
-level.
+level. Effect prioritization based on vcf2maf.
 
 Features
 --------
@@ -25,7 +25,6 @@ Known Issues
   It's also used when taking the consequence for a given
   variant from one of the samples.
 - Assumes one sample per VCF file (first one)
-- The format column changes across calls and samples.
 """
 
 import sys
@@ -41,7 +40,7 @@ __version__ = "1.0.0"
 
 
 def main():
-    """filter_vcf"""
+    """Consolidate and annotate variants across cohort."""
 
     # Argument parsing
     args = parse_args()
@@ -54,76 +53,41 @@ def main():
     one_reader.samples = sample_names
 
     # Create a VCF Writer object with new INFO metadata lines
-    for info in one_reader.infos:
-        if info not in ["CSQ"]:
-            del one_reader.infos[info]
-    one_reader.infos["NUM_SAMPLES"] = vcf.parser._Info(
-        "NUM_SAMPLES", 1, "Integer", "Number of affected samples", __name__, __version__)
-    one_reader.infos["TOP_CSQ"] = vcf.parser._Info(
-        "TOP_CSQ", ".", "String", "Top VEP effect", __name__, __version__)
-    one_reader.infos["PROTEIN_CHANGE"] = vcf.parser._Info(
-        "PROTEIN_CHANGE", 0, "Flag", "Top effect changes protein", __name__, __version__)
-    one_reader.infos["SNP"] = vcf.parser._Info(
-        "SNP", 0, "Flag", snp_desc(args.snp_threshold), __name__, __version__)
-    one_reader.infos["ANN_SNP_POS"] = vcf.parser._Info(
-        "ANN_SNP_POS", 0, "Flag", "Annotated SNP position", __name__, __version__)
-    one_reader.infos["HOTSPOT"] = vcf.parser._Info(
-        "HOTSPOT", 0, "Flag", hotspot_desc(args.alt_codon_threshold, args.cluster_threshold),
-        __name__, __version__)
-    vcf_writer = vcf.Writer(args.output, template=one_reader, lineterminator='\n')
+    one_reader_tweaked = tweak_vcf_reader(one_reader, args.snp_threshold, args.alt_codon_threshold, args.cluster_threshold)
+    vcf_writer = vcf.Writer(args.output, template=one_reader_tweaked, lineterminator='\n')
 
-    # Create dictionary of positions to annotated_snp_pos
-    if args.annotated_snp_pos:
-        annotated_snp_pos = create_pos_dict(args.annotated_snp_pos)
-    else:
-        annotated_snp_pos = {}
+    # Create dictionary of positions to annotated_snp_pos (empty if not specified)
+    annotated_snp_pos = create_pos_dict(args.annotated_snp_pos)
 
     # Find mutated codons
-    mutated_codons = find_mutated_codons(vcf_iter, vep_cols, args.chrom)
+    mutated_codons = find_mutated_codons(vcf_iter, vep_cols)
 
     # Detect potential hotspots in mutated_codons
-    hotspot_codons = detect_hotspots(mutated_codons, args.alt_codon_threshold,
-                                     args.cluster_threshold)
+    hotspot_codons = detect_hotspots(mutated_codons, args.alt_codon_threshold, args.cluster_threshold, args.max_for_hotspot)
 
     # Regenerate vcf_iter and annotate variants and output
     vcf_readers, vcf_iter = create_vcf_iter(*args.vcf)
-    variant_iterator = annotate_variants(vcf_iter, vep_cols, sample_names, annotated_snp_pos,
-                                         args.snp_threshold, hotspot_codons, args.chrom)
+    variant_iterator = annotate_variants(vcf_iter, vep_cols, sample_names, annotated_snp_pos, args.snp_threshold, hotspot_codons)
     for record in variant_iterator:
         vcf_writer.write_record(record)
 
 
 def parse_args():
     """Parse the command-line arguments"""
-    parser = argparse.ArgumentParser(
-        usage='%(prog)s [-h] [OPTIONS] vcf_file vcf_file [vcf_file ...]')
-    parser.add_argument("--output", "-o", default=sys.stdout, type=argparse.FileType("w"),
-                        help="Output VCF file")
-    parser.add_argument("--snp_threshold", "-s", default=3,
-                        help="Min. number of cases for SNV -> SNP")
-    parser.add_argument("--alt_codon_threshold", "-a", default=2,
-                        help="Min. number of alt. codons for being flagged as hotspot")
-    parser.add_argument("--cluster_threshold", "-c", default=2,
-                        help="Max. distance between SNVs of a hotspot cluster")
-    parser.add_argument("--annotated_snp_pos", type=argparse.FileType("r"),
-                        help="Annotated SNP positions (format: CHROM\\tPOS)")
-    parser.add_argument("--chrom", default=None, help="Restrict to one chromosome")
-    parser.add_argument("vcf1", nargs=1, metavar="vcf_file")
-    parser.add_argument("vcf2", nargs="+", metavar="vcf_file", help=argparse.SUPPRESS)
+    # Setup
+    parser = argparse.ArgumentParser()
+    # Optional arguments
+    parser.add_argument("--output", "-o", default=sys.stdout, type=argparse.FileType("w"), help="Output VCF file")
+    parser.add_argument("--snp_threshold", "-s", default=3, help="Min. number of cases for SNV -> SNP")
+    parser.add_argument("--alt_codon_threshold", "-a", default=2, help="Min. number of alt. codons for being flagged as hotspot")
+    parser.add_argument("--cluster_threshold", "-c", default=2, help="Max. distance between SNVs of a hotspot cluster")
+    parser.add_argument("--annotated_snp_pos", type=argparse.FileType("r"), help="Annotated SNP positions (format: CHROM\\tPOS)")
+    parser.add_argument("--max_for_hotspot", type=int, default=10, help="Max. number of cases for hotspot to be considered")
+    # Positional arguments
+    parser.add_argument("vcf", nargs="+", metavar="vcf_file")
+    # Parsing
     args = parser.parse_args()
-    args.vcf = args.vcf1 + args.vcf2
     return args
-
-
-def snp_desc(snp_threshold):
-    desc = "Recurrent across population, namely in {} or more cases".format(snp_threshold)
-    return desc
-
-
-def hotspot_desc(alt_codon_threshold, cluster_threshold):
-    desc = "Own codon altered in {}+ ways or codons within {} positions are mutated".format(
-        alt_codon_threshold, cluster_threshold)
-    return desc
 
 
 def create_vcf_iter(*vcf_paths):
@@ -131,8 +95,7 @@ def create_vcf_iter(*vcf_paths):
     Returns a list of readers and a VCF iterator.
     """
     vcf_readers = [vcf.Reader(open(path)) for path in vcf_paths]
-    vcf_iter = utils.walk_together(
-        *vcf_readers, vcf_record_sort_key=lambda r: (r.CHROM, r.POS, r.REF, r.ALT))
+    vcf_iter = utils.walk_together(*vcf_readers, vcf_record_sort_key=lambda r: (r.CHROM, r.POS, r.REF, r.ALT))
     return vcf_readers, vcf_iter
 
 
@@ -162,6 +125,21 @@ def parse_vep(vep_cols, vcf_record, tag="CSQ"):
     return vep_effects
 
 
+def tweak_vcf_reader(vcf_reader, snp_threshold, alt_codon_threshold, cluster_threshold):
+    """Tweak VCF reader to become VCF writer template"""
+    for info in vcf_reader.infos:
+        if info not in ["CSQ"]:
+            del vcf_reader.infos[info]
+    vcf_reader.infos["NUM_SAMPLES"] = vcf.parser._Info("NUM_SAMPLES", 1, "Integer", "Number of affected samples", __name__, __version__)
+    vcf_reader.infos["TOP_CSQ"] = vcf.parser._Info("TOP_CSQ", ".", "String", "Top VEP effect", __name__, __version__)
+    vcf_reader.infos["PROTEIN_CHANGE"] = vcf.parser._Info("PROTEIN_CHANGE", 0, "Flag", "Top effect changes protein", __name__, __version__)
+    vcf_reader.infos["SNP"] = vcf.parser._Info("SNP", 0, "Flag", "Recurrent across population, namely in {} or more cases".format(snp_threshold), __name__, __version__)
+    vcf_reader.infos["ANN_SNP_POS"] = vcf.parser._Info("ANN_SNP_POS", 0, "Flag", "Annotated SNP position", __name__, __version__)
+    vcf_reader.infos["HOTSPOT"] = vcf.parser._Info("HOTSPOT", 0, "Flag", "Codon altered in {}+ ways".format(alt_codon_threshold), __name__, __version__)
+    vcf_reader.infos["HOTSPOT_CLUSTER"] = vcf.parser._Info("HOTSPOT_CLUSTER", 0, "Flag", "Codons within {} positions are mutated".format(cluster_threshold), __name__, __version__)
+    return vcf_reader
+
+
 def create_pos_id(chrom, pos):
     """Create unique ID for chromosome and position"""
     identifier = "{}_{}".format(chrom, pos)
@@ -171,6 +149,8 @@ def create_pos_id(chrom, pos):
 def create_pos_dict(pos_file):
     """Create dictionary of positions for fast lookup."""
     positions = {}
+    if pos_file is None:
+        return positions
     for line in pos_file:
         if line.startswith("#"):
             continue
@@ -217,8 +197,7 @@ def prioritize_effects(vep_effects):
             transcript_length = int(match.group(1))
         transcript_length_priority = 0 - transcript_length
         # Combine priorities
-        combined = (biotype_priority, consequence_priority, canonical_priority,
-                    transcript_length_priority)
+        combined = (biotype_priority, consequence_priority, canonical_priority, transcript_length_priority)
         all_priorities.append(combined)
     combined = zip(vep_effects, all_priorities)
     combined_sorted = sorted(combined, key=lambda x: x[1])
@@ -255,56 +234,42 @@ def obtain_mutated_codon_info(vep_effect):
     return transcript, codon_num, alt_codon
 
 
-def find_mutated_codons(vcf_iter, vep_cols, chrom=None):
+def find_mutated_codons(vcf_iter, vep_cols):
     """Find mutated codons and returns a dictionary
     of transcripts as keys and dictionaries as values.
     These dictionaries in turn contain codon numbers as
-    keys and sets of alternate codon sequences as values.
+    keys and dicts of alternate codon sequences as values.
+    These dicts contain the number of instances this
+    alteration is seen in the cohort.
     See below for example.
         {'ENSCAFT00000001435': {
-            64: set(['tAc']),
-            71: set(['Acc']) }}
+            64: {'tAc': 2},
+            71: {'Acc': 4} }}
     To be used in tandem with detect_hotspots().
     """
-    is_chrom_seen = False
-    mutated_codons = defaultdict(lambda: defaultdict(list))
+    mutated_codons = defaultdict(lambda: defaultdict(lambda: defaultdict(int)))
     for records in vcf_iter:
         # Find one exemplary record/sample carrying variant
         one_record = obtain_one_record(records)
-        # Check chrom if enabled
-        if chrom:
-            # If chrom hasn't been encountered and CHROM doesn't match, skip
-            if not is_chrom_seen and one_record.CHROM != chrom:
-                continue
-            # If chrom is seen, set to True
-            if not is_chrom_seen and one_record.CHROM == chrom:
-                is_chrom_seen = True
-            # If chrom is seen and CHROM mismatches, break
-            if is_chrom_seen and one_record.CHROM != chrom:
-                break
         # Obtain top effect
         top_effect = obtain_top_effect(one_record, vep_cols)
-        # Skip synonymous variants
-        if top_effect["HGVSp"] == "":
-            continue
-        # If SNV, add variant codon to mutated_codons (for detecting hotspots)
-        if one_record.is_snp:
+        # If SNV and non-synonymous, increment variant codon in mutated_codons by num_samples
+        if one_record.is_snp and top_effect["HGVSp"] != "":
             transcript, codon_num, alt_codon = obtain_mutated_codon_info(top_effect)
-            # Check if alt_codon is in list first
-            if alt_codon not in mutated_codons[transcript][codon_num]:
-                mutated_codons[transcript][codon_num].append(alt_codon)
+            num_samples = sum([1 for r in records if r is not None])
+            mutated_codons[transcript][codon_num][alt_codon] += num_samples
     return mutated_codons
 
 
-def detect_hotspots(mutated_codons, alt_codon_threshold, cluster_threshold):
+def detect_hotspots(mutated_codons, alt_codon_threshold, cluster_threshold, max_for_hotspot):
     """Detects hotspot codons when given a dictionary
     of transcripts as keys and dictionaries as values.
     These dictionaries in turn contain codon numbers as
     keys and sets of alternate codon sequences as values.
     See below for example.
         {'ENSCAFT00000001435': {
-            64: set(['tAc']),
-            71: set(['Acc']) }}
+            64: {'tAc': 2},
+            71: {'Acc': 4} }}
     Returns a dictionary of trancripts-dictionary key-value
     pairs, where the dictionary contains the codon numbers
     as keys and whether it is flagged as a hotspot as values.
@@ -318,41 +283,28 @@ def detect_hotspots(mutated_codons, alt_codon_threshold, cluster_threshold):
         # Initialize hotspot_codons
         hotspot_codons[transcript] = {codon_num: False for codon_num in codons_dict.keys()}
         # Identify codons altered in different ways
-        for codon_num, alt_codons_set in codons_dict.items():
-            if len(alt_codons_set) >= alt_codon_threshold:
+        for codon_num, alt_codons_dict in codons_dict.items():
+            if len(alt_codons_dict) >= alt_codon_threshold and not any(map(lambda num: num > max_for_hotspot, alt_codons_dict.values())):
                 hotspot_codons[transcript][codon_num] = True
         # Determine clustered mutated codons
-        ordered_codons = sorted(codons_dict.keys())
-        prev_codon = None
-        for curr_codon in ordered_codons:
-            if prev_codon is not None and (curr_codon - prev_codon <= cluster_threshold):
-                hotspot_codons[transcript][curr_codon] = True
-                hotspot_codons[transcript][prev_codon] = True
-            prev_codon = curr_codon
+        # ordered_codons = sorted(codons_dict.keys())
+        # prev_codon = None
+        # for curr_codon in ordered_codons:
+        #     if prev_codon is not None and (curr_codon - prev_codon <= cluster_threshold):
+        #         hotspot_codons[transcript][curr_codon] = True
+        #         hotspot_codons[transcript][prev_codon] = True
+        #     prev_codon = curr_codon
     return hotspot_codons
 
 
-def annotate_variants(vcf_iter, vep_cols, sample_names, annotated_snp_pos, snp_threshold,
-                      hotspot_codons, chrom=None):
+def annotate_variants(vcf_iter, vep_cols, sample_names, annotated_snp_pos, snp_threshold, hotspot_codons):
     """Generator yielding annotated records ready
     for being outputted to a file. Combine samples
     together.
     """
-    is_chrom_seen = False
     for records in vcf_iter:
         # Find one exemplary record/sample carrying variant
         one_record = obtain_one_record(records)
-        # Check chrom if enabled
-        if chrom:
-            # If chrom hasn't been encountered and CHROM doesn't match, skip
-            if not is_chrom_seen and one_record.CHROM != chrom:
-                continue
-            # If chrom is seen, set to True
-            if not is_chrom_seen and one_record.CHROM == chrom:
-                is_chrom_seen = True
-            # If chrom is seen and CHROM mismatches, break
-            if is_chrom_seen and one_record.CHROM != chrom:
-                break
         # Otherwise, continue
         # Find common denominator of format fields
         all_fmt_fields = [set(r.FORMAT.split(":")) for r in records if r is not None]
@@ -372,8 +324,7 @@ def annotate_variants(vcf_iter, vep_cols, sample_names, annotated_snp_pos, snp_t
         num_affected_samples = 0
         for sample_name, record in zip(sample_names, records):
             if record is None:
-                new_sample = vcf.model._Call(site=one_record, sample=sample_name,
-                                             data=uncalled_format)
+                new_sample = vcf.model._Call(site=one_record, sample=sample_name, data=uncalled_format)
             else:
                 new_sample = record.samples[0]
                 fmt_dict = record.samples[0].data._asdict()
