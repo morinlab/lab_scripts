@@ -21,6 +21,7 @@ if __name__ == "__main__":
     parser.add_argument("--normal-bam", "-n", action="append", default=[])
     parser.add_argument("--tumour-bam", "-t", action="append", default=[])
     parser.add_argument("--maf", "-m", action="append", default=[])
+    parser.add_argument("--mode", "-d", default="hybrid", choices=bamUtils.MODES.keys())
     parser.add_argument("reference")
     parser.add_argument("outfile")
     args = parser.parse_args()
@@ -32,7 +33,7 @@ if __name__ == "__main__":
     normal_sams = [pysam.Samfile(bam) for bam in args.normal_bam]
     tumour_sams = [pysam.Samfile(bam) for bam in args.tumour_bam]
     samfiles = {"normal": normal_sams, "tumour": tumour_sams}
-    
+
     readers = []
     for f in args.maf:
         lines = [x for x in open(f) if not x.startswith("#")]
@@ -65,7 +66,7 @@ if __name__ == "__main__":
                 old_counts = (0, 0, 0, 0)
             else:
                 warnings.warn("Adding to existing allele counts")
-        
+
         row.update(dict(zip(count_keys, old_counts)))
 
         for sample, sams in samfiles.items():
@@ -75,7 +76,7 @@ if __name__ == "__main__":
                 if mafUtils.is_snv(row):
                     counts = bamUtils.count_bases(samfile, reffile, chrom, pos)
                 else:
-                    counts = bamUtils.count_indels(samfile, reffile, chrom, pos, ref, alt)
+                    counts = bamUtils.count_indels(samfile, reffile, chrom, pos, ref, alt, args.mode)
                 row[ref_key] += counts[ref]
                 row[alt_key] += counts[alt]
 

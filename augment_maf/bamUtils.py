@@ -208,7 +208,7 @@ def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
     return (ref_count, alt_count)
 
 
-def count_indels(samfile, reffile, chrom, pos, ref, alt, min_mapq=20):
+def count_indels(samfile, reffile, chrom, pos, ref, alt, mode, min_mapq=20):
     """
     Count occurences of the reference and alternate indel allele at a given
     position, by alignment score.
@@ -227,7 +227,8 @@ def count_indels(samfile, reffile, chrom, pos, ref, alt, min_mapq=20):
     alt_seq = ref_seq[:pos-start-1] + alt + ref_seq[pos-start-1+len(ref):]
 
     # Calculate read counts for ref and alt
-    counts = pair_align(ref_seq, alt_seq, reads)
+    method = MODES[mode]
+    counts = method(ref_seq, alt_seq, reads)
     return {ref: counts[0], alt: counts[1]}
 
 
@@ -269,9 +270,9 @@ def count_bases(samfile, reffile, chrom, pos):
     return count_bases_pileup(pileup, pos)
 
 
-METHOD = {
+MODES = {
     "mafft": multi_align,
     "muscle": multi_muscle_align,
     "swalign": pair_align,
-    "hybrid": hybrid
+    "hybrid": kmer_count_and_aln
 }
