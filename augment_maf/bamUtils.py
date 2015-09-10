@@ -168,7 +168,8 @@ def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
         "max_ival": 5,
         "min_delta_aln": 8
     }
-    params = defaults.update(params)
+    defaults.update(params)
+    params = defaults
     # Initialize some variables
     ref_count = 0
     alt_count = 0
