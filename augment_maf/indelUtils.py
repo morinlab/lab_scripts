@@ -19,6 +19,36 @@ import numpy as np
 
 # Sequence Functions
 
+def get_seqs(ref_file, chrom, pos, ref, alt, margin):
+    """Obtain reference and alternate sequences
+    from Ensembl.
+
+    Returns (ref_seq, alt_seq) tuple
+    """
+    # Calculate start and end positions
+    start = max(pos - margin, 0)
+    end = pos + margin
+    # Extract reference sequence
+    ref_seq = ref_file.fetch(reference=chrom, start=start, end=end).decode("utf-8")
+    # Strip away any gaps when calculating length
+    ref_len = len(ref.strip("-"))
+    alt_len = len(alt.strip("-"))
+    # Categorize the variant
+    if ref_len < alt_len:  # Insertion
+        prefix = ref_seq[:margin+1]
+        suffix = ref_seq[margin+1:]
+        alt_seq = prefix + alt + suffix
+    elif ref_len > alt_len:  # Deletion
+        prefix = ref_seq[:margin]
+        suffix = ref_seq[margin+len(ref):]
+        alt_seq = prefix + suffix
+    else:  # SNP
+        prefix = ref_seq[:margin]
+        suffix = ref_seq[margin+1:]
+        alt_seq = prefix + alt + suffix
+    return ref_seq, alt_seq
+
+
 def rev_comp(seq):
     """Return reverse complement"""
     cbases = {"A": "T",

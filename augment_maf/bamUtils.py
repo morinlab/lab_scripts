@@ -219,13 +219,8 @@ def count_indels(samfile, reffile, chrom, pos, ref, alt, mode, min_mapq=20):
     reads = [r.seq for r in reads if r.mapq >= min_mapq]
 
     # Extract ref and alt sequences
-    # Calculate margin on either side of the variant position dynamically
-    # based on read length
-    margin = len(reads[0]) + 10
-    start = max(pos-margin, 0)
-    end = pos+margin
-    ref_seq = reffile.fetch(reference=chrom, start=start, end=end).decode("utf-8")
-    alt_seq = ref_seq[:pos-start-1] + alt + ref_seq[pos-start-1+len(ref):]
+    margin = len(reads[0]) + 10  # Dynamically set margin based on read length
+    ref_seq, alt_seq = indelUtils.get_seqs(reffile, chrom, pos, ref, alt, margin)
 
     # Calculate read counts for ref and alt
     method = MODES[mode]
