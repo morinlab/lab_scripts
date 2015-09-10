@@ -14,46 +14,10 @@ from __future__ import division
 from collections import defaultdict
 from random import shuffle
 
-import requests
 import numpy as np
 
 
 # Sequence Functions
-
-def get_seqs(chrom, pos, ref, alt, margin=200):
-    """Obtain reference and alternate sequences
-    from Ensembl.
-
-    Returns (ref_seq, alt_seq) tuple
-    """
-    # Calculate start and end positions
-    start = pos - margin
-    end = pos + margin
-    # Construct the URL for the REST query
-    server = "http://grch37.rest.ensembl.org/"
-    ext = "/sequence/region/human/{}:{}..{}:1?".format(chrom, start, end)
-    # Send the HTTP request
-    r = requests.get(server+ext, headers={"Content-Type": "text/plain"})
-    # Extract reference sequence
-    ref_seq = str(r.text)
-    # Strip away any gaps when calculating length
-    ref_len = len(ref.strip("-"))
-    alt_len = len(alt.strip("-"))
-    # Categorize the variant
-    if ref_len < alt_len:  # Insertion
-        prefix = ref_seq[:margin+1]
-        suffix = ref_seq[margin+1:]
-        alt_seq = prefix + alt + suffix
-    elif ref_len > alt_len:  # Deletion
-        prefix = ref_seq[:margin]
-        suffix = ref_seq[margin+len(ref):]
-        alt_seq = prefix + suffix
-    else:  # SNP
-        prefix = ref_seq[:margin]
-        suffix = ref_seq[margin+1:]
-        alt_seq = prefix + alt + suffix
-    return ref_seq, alt_seq
-
 
 def rev_comp(seq):
     """Return reverse complement"""
