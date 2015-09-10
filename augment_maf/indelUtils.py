@@ -88,7 +88,7 @@ def kmer_count(seq, kmer_idx, k, step, ival):
     return kmer_count
 
 
-def calc_kmer_delta(read_seq, ref_idxs, alt_idxs, min_delta=1, max_ival=3):
+def calc_kmer_delta(read_seq, ref_idxs, alt_idxs, k, min_delta=1, max_ival=3):
     """Determines whether read has more k-mers
     in common with reference sequence or alternate
     sequence.
@@ -106,12 +106,12 @@ def calc_kmer_delta(read_seq, ref_idxs, alt_idxs, min_delta=1, max_ival=3):
     alt_score = 0
     while (abs(ref_score - alt_score) < min_delta) and ival <= max_ival:
         # Generate k-mer indexes for this ival
-        ref_idx = ref_idxs.get_idx(k=K, step=1, ival=ival)
-        alt_idx = alt_idxs.get_idx(k=K, step=1, ival=ival)
+        ref_idx = ref_idxs.get_idx(k=k, step=1, ival=ival)
+        alt_idx = alt_idxs.get_idx(k=k, step=1, ival=ival)
         # Find ref scores for forward and reverse and take max
-        ref_score += kmer_count(read_seq, ref_idx, k=K, step=1, ival=ival)
+        ref_score += kmer_count(read_seq, ref_idx, k=k, step=1, ival=ival)
         # Find alt scores for forward and reverse and take max
-        alt_score += kmer_count(read_seq, alt_idx, k=K, step=1, ival=ival)
+        alt_score += kmer_count(read_seq, alt_idx, k=k, step=1, ival=ival)
         # Increment ival
         ival += 1
     if abs(ref_score - alt_score) < min_delta:
@@ -121,13 +121,13 @@ def calc_kmer_delta(read_seq, ref_idxs, alt_idxs, min_delta=1, max_ival=3):
     return delta
 
 
-def is_forward(read_seq, ref_idxs):
+def is_forward(read_seq, ref_idxs, k, ival):
     """Returns whether read is forward."""
     fread = read_seq
     rread = rev_comp(read_seq)
-    ref_idx = ref_idxs.get_idx(k=K, step=1, ival=2)
-    fscore = kmer_count(fread, ref_idx, k=K, step=1, ival=2)
-    rscore = kmer_count(rread, ref_idx, k=K, step=1, ival=2)
+    ref_idx = ref_idxs.get_idx(k=k, step=1, ival=ival)
+    fscore = kmer_count(fread, ref_idx, k=k, step=1, ival=ival)
+    rscore = kmer_count(rread, ref_idx, k=k, step=1, ival=ival)
     return fscore > rscore
 
 

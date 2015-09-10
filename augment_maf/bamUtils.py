@@ -180,7 +180,7 @@ def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
         # Replace Ns with As (workaround)
         read = read.rstrip("\n").replace("N", "A")
         # Reverse read if applicable
-        if not indelUtils.is_forward(read, ref_idxs):
+        if not indelUtils.is_forward(read, ref_idxs, k=params["k"], ival=params["ival"]):
             read = indelUtils.rev_comp(read)
         # Find offset
         offset = indelUtils.find_offset(read, ref_idxs, k=params["k"], step=1, ival=params["ival"])
@@ -188,7 +188,7 @@ def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
         if offset and not indelUtils.is_overlap(read, ref_seq, offset, min_olap=params["min_olap"]):
             continue
         # Calculate score delta using k-mer method
-        kmer_delta = indelUtils.calc_kmer_delta(read, ref_idxs, alt_idxs, min_delta=params["min_delta_kmer"], max_ival=params["max_ival"])
+        kmer_delta = indelUtils.calc_kmer_delta(read, ref_idxs, alt_idxs, k=params["k"], min_delta=params["min_delta_kmer"], max_ival=params["max_ival"])
         if kmer_delta > 0:
             ref_count += 1
         elif kmer_delta < 0:
