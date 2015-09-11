@@ -4,6 +4,7 @@ import warnings
 import subprocess
 import tempfile
 import sys
+import logging
 from Bio import SeqIO
 from Bio.Align.Applications import MuscleCommandline
 import swalign
@@ -176,6 +177,9 @@ def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
     amb_count = 0
     ref_idxs = indelUtils.SeqIndexSet(ref_seq)
     alt_idxs = indelUtils.SeqIndexSet(alt_seq)
+    # Log ref and alt sequences
+    logging.debug("ref_seq: {}".format(ref_seq))
+    logging.debug("alt_seq: {}".format(alt_seq))
     # Iterate over reads
     for read in reads:
         # Replace Ns with As (workaround)
@@ -192,8 +196,10 @@ def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
         kmer_delta = indelUtils.calc_kmer_delta(read, ref_idxs, alt_idxs, k=params["k"], min_delta=params["min_delta_kmer"], max_ival=params["max_ival"])
         if kmer_delta > 0:
             ref_count += 1
+            logging.debug("ref: {}".format(read))
         elif kmer_delta < 0:
             alt_count += 1
+            logging.debug("alt: {}".format(read))
         else:
             # If k-mer method can't discriminate between ref and alt, use alignment method
             # Estimate appropriate margin (esp. if insertion)
@@ -202,10 +208,13 @@ def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
             aln_delta = indelUtils.calc_aln_delta(read, ref_seq, alt_seq, min_delta=params["min_delta_aln"], offset=offset, margin=margin)
             if aln_delta > 0:
                 ref_count += 1
+                logging.debug("ref: {}".format(read))
             elif aln_delta < 0:
                 alt_count += 1
+                logging.debug("alt: {}".format(read))
             else:
                 amb_count += 1
+                logging.debug("amb: {}".format(read))
     return (ref_count, alt_count)
 
 
@@ -214,6 +223,9 @@ def count_indels(samfile, reffile, chrom, pos, ref, alt, mode, min_mapq=20):
     Count occurences of the reference and alternate indel allele at a given
     position, by alignment score.
     """
+    # Log
+    logging.debug("indel: {} {} {} {}".format(chrom, pos, ref, alt))
+
     # Extract reads
     reads = samfile.fetch(chrom, pos, pos+len(ref))
     reads = [r.seq for r in reads if r.mapq >= min_mapq]
