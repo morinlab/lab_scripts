@@ -218,6 +218,10 @@ def count_indels(samfile, reffile, chrom, pos, ref, alt, mode, min_mapq=20):
     reads = samfile.fetch(chrom, pos, pos+len(ref))
     reads = [r.seq for r in reads if r.mapq >= min_mapq]
 
+    # If there are no reads, return zero counts
+    if len(reads) == 0:
+        return {ref: 0, alt: 0}
+
     # Extract ref and alt sequences
     margin = len(reads[0]) + 10  # Dynamically set margin based on read length
     ref_seq, alt_seq = indelUtils.get_seqs(reffile, chrom, pos, ref, alt, margin)
