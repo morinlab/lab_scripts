@@ -13,6 +13,7 @@ import bamUtils
 import warnings
 import sys
 import itertools
+import logging
 
 if __name__ == "__main__":
     desc = "Add normal and/or tumour allele counts to a MAF file"
@@ -21,10 +22,16 @@ if __name__ == "__main__":
     parser.add_argument("--normal-bam", "-n", action="append", default=[])
     parser.add_argument("--tumour-bam", "-t", action="append", default=[])
     parser.add_argument("--maf", "-m", action="append", default=[])
-    parser.add_argument("--mode", "-d", default="hybrid", choices=bamUtils.MODES.keys())
+    parser.add_argument("--mode", default="hybrid", choices=bamUtils.MODES.keys())
+    parser.add_argument("--log_lvl", type=str.upper, default="INFO")
+    parser.add_argument("--log_file", type=argparse.FileType("w"), default=sys.stderr)
     parser.add_argument("reference")
     parser.add_argument("outfile")
     args = parser.parse_args()
+
+    # Setup logging
+    log_lvl = getattr(logging, args.log_lvl)
+    logging.basicConfig(stream=args.log_file, level=log_lvl, format="%(message)s")
 
     if (args.maf == []):
         sys.exit("You must specify at least one MAF file")
