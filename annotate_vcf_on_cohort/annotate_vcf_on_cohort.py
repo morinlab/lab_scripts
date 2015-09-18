@@ -117,7 +117,7 @@ def parse_vep_cols(vcf_reader):
 
 
 def parse_vep(vep_cols, vcf_record, tag="CSQ"):
-    """Parse VEP INFO output"""
+    """Parse VEP INFO output and return as list"""
     vep_effects = []
     for vep_effect in vcf_record.INFO[tag]:
         vep_effect_vals = vep_effect.split("|")
