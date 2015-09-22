@@ -34,9 +34,9 @@ def main():
     bam_map = parse_bam_map_file(args.bam_map_file)
     vcf_reader = vcf.Reader(args.vcf_file)
     vep_cols = parse_vep_cols(vcf_reader)
-    records_per_gene = parse_vcf_file(vcf_reader, vep_cols, args.symbol_only)
-    top_genes = select_top_genes(records_per_gene)
-    for gene, records in top_genes.items():
+    gene_list = parse_genes(args.genes)
+    records_per_gene = parse_vcf_file(vcf_reader, vep_cols, gene_list)
+    for gene, records in records_per_gene.items():
         gene_dir = os.path.join(args.output_dir, gene)
         if not os.path.exists(gene_dir):
             os.mkdir(gene_dir)
@@ -64,7 +64,7 @@ def parse_args():
     parser.add_argument("--autoigv", "-a", default="autoIGV1.5.py", help="Path to autoIGV")
     parser.add_argument("--python", "-p", default="python", help="Path to python")
     parser.add_argument("--genome", "-g", default="hg19", help="Genome to use")
-    parser.add_argument("--symbol_only", "-s", action="store_true", help="Only consider genes with symbols")
+    parser.add_argument("--genes", type=argparse.FileType("r"), help="File containing list of genes to include (Ensembl IDs or symbols)")
     args = parser.parse_args()
     # Validating output directory
     if not os.path.exists(args.output_dir):
@@ -78,30 +78,29 @@ def parse_bam_map_file(fh):
     return {name: bam for name, bam in map(lambda line: line.rstrip().split("\t"), fh)}
 
 
-def parse_vcf_file(vcf_reader, vep_cols, symbol_only):
+def parse_genes(genes_fh):
+    """Return list of genes in genes file."""
+    genes = []
+    for line in genes_fh:
+        genes.append(line.rstrip().split("\t")[0])
+    return genes
+
+
+def parse_vcf_file(vcf_reader, vep_cols, gene_list):
     """ Parse VCF file into a dict of records grouped by gene """
     records = defaultdict(list)
     for record in vcf_reader:
         vep_effect = parse_vep(vep_cols, record, tag="TOP_CSQ")[0]
-        if symbol_only and not vep_effect["SYMBOL"]:
+        # If gene list not empty, skip genes not in list
+        if gene_list and not (vep_effect["SYMBOL"] in gene_list or vep_effect["Gene"] in gene_list):
             continue
         gene = vep_effect["SYMBOL"] if vep_effect["SYMBOL"] else vep_effect["Gene"]
         records[gene].append(record)
     return records
 
 
-def select_top_genes(records_per_gene, n=100):
-    """Select top n genes based on number of samples affected"""
-    counts = defaultdict(int)
-    for gene, records in records_per_gene.items():
-        num_samples = [r.INFO["NUM_SAMPLES"] for r in records]
-        counts[gene] += sum(num_samples)
-    top_genes = set([gene for gene, count in sorted(counts.items(), key=lambda x: x[1], reverse=True)[:n]])
-    return {gene: records for gene, records in records_per_gene.items() if gene in top_genes}
-
-
 def generate_autoigv_cmd(python_path, autoigv_path, genome):
-    tmpl = "{} {} --file {} --directory {} --genome {} --mode 3 --host localhost --port 60151 --prefsfile ../{}\n"
+    tmpl = "{} {} --file {} --directory {} --genome {} --mode 1 --host localhost --port 60151 --prefsfile ../{}\n"
     return tmpl.format(python_path, autoigv_path, POSITIONS_NAME, ".", genome, PREFS_NAME)
 
 
