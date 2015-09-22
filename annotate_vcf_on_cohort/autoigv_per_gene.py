@@ -101,7 +101,7 @@ def select_top_genes(records_per_gene, n=100):
 
 
 def generate_autoigv_cmd(python_path, autoigv_path, genome):
-    tmpl = "{} {} --file {} --directory {} --genome {} --mode 1 --host localhost --port 60151 --prefsfile ../{}\n"
+    tmpl = "{} {} --file {} --directory {} --genome {} --mode 3 --host localhost --port 60151 --prefsfile ../{}\n"
     return tmpl.format(python_path, autoigv_path, POSITIONS_NAME, ".", genome, PREFS_NAME)
 
 

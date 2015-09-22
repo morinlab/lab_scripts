@@ -80,7 +80,7 @@ def parse_args():
     parser.add_argument("--output", "-o", default=sys.stdout, type=argparse.FileType("w"), help="Output VCF file")
     parser.add_argument("--snp_threshold", "-s", default=3, help="Min. number of cases for SNV -> SNP")
     parser.add_argument("--alt_codon_threshold", "-a", default=2, help="Min. number of alt. codons for being flagged as hotspot")
-    parser.add_argument("--cluster_threshold", "-c", default=2, help="Max. distance between SNVs of a hotspot cluster")
+    parser.add_argument("--cluster_threshold", "-c", default=1, help="Max. distance between SNVs of a hotspot cluster")
     parser.add_argument("--annotated_snp_pos", type=argparse.FileType("r"), help="Annotated SNP positions (format: CHROM\\tPOS)")
     parser.add_argument("--max_for_hotspot", type=int, default=10, help="Max. number of cases for hotspot to be considered")
     # Positional arguments

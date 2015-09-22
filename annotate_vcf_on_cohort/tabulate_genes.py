@@ -42,6 +42,9 @@ def main():
             continue
         # Parse VEP output and select the first and only one
         vep_effect = parse_vep(vep_cols, record, tag="TOP_CSQ")[0]
+        # Skip if symbol is absent
+        if args.symbol and vep_effect["SYMBOL"] == "":
+            continue
         # Exclude on gene ID or symbol
         if vep_effect["Gene"] in excl_genes_set or vep_effect["SYMBOL"] in excl_genes_set:
             continue
@@ -73,6 +76,7 @@ def parse_args():
     parser.add_argument("input_vcf", type=argparse.FileType("r"))
     parser.add_argument("--output", "-o", default=sys.stdout, type=argparse.FileType('w'))
     parser.add_argument("--max_samples", "-m", type=int, help="Max. number of samples allowed")
+    parser.add_argument("--symbol", "-s", action="store_true", help="Only keep genes with symbols")
     parser.add_argument("--exclude_genes", type=argparse.FileType("r"), help="List of gene IDs or symbols to exclude")
     parser.add_argument("--exclude_positions", type=argparse.FileType("r"), help="List of genomic positions to exclude (format: CHROM\\tPOS)")
     args = parser.parse_args()
