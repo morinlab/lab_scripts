@@ -13,34 +13,46 @@ Dependencies
 
 Inputs
 -SAM-formatted file of read mappings
+-Output directory for FASTQ chunks
 
 Outputs
 -FASTQ file for paired reads
 -FASTQ file for unpaired reads
 
 Known Issues
--Add split FASTQ functionality
+-Incorporate shuffling of reads prior to writing to buffer
 -Add functinality to gzip FASTQ files
+-Add a way to write an interval file containing the path and
+name of chunk files.
 
 """
 
 import argparse
-import random
+# import random
+import os
 
 
 def main():
     """Parse BAM file and convert to FASTQ"""
-
     # Argument parsing
     args = parse_args()
+    chunk_size = args.num_reads
     bam_infile = args.bam[0]
-    unpaired_outfile = args.unpaired_out[0]
-    paired_outfile = args.paired_out[0]
+    unpaired_outdir = args.single_outdir[0]
+    paired_outdir = args.paired_outdir[0]
 
     # Initalize data structures
     read_pair_dict = {}
-    unpaired_reads = {}
     paired_read_names = []
+    chunk_number = 1
+    read_count = 0
+
+    # Creates output directories if they don't exist
+    if not os.path.exists(unpaired_outdir):
+        os.mkdir(unpaired_outdir)
+
+    if not os.path.exists(paired_outdir):
+        os.mkdir(paired_outdir)
 
     # Look over each line in bam
     for line in bam_infile:
@@ -55,12 +67,6 @@ def main():
         if sam_flag_list[1]:
             seq = revcomp(seq)
             quality = quality[::-1]
-
-        # if read is unpaired, store in unpaired_reads dict
-        # do I append a read pair number (i.e., \1 or \2)?
-        if not sam_flag_list[0]:
-            unpaired_reads[qname] = (seq, quality)
-            continue
 
         # Add qname as key if it doesn't exist.
         # If it already exists, means the current read is part of
@@ -79,51 +85,76 @@ def main():
     else:
         bam_infile.close()
 
-    # Identifies reads with only forward or reverse read
-    for unpaired in set(read_pair_dict.keys()) - set(paired_read_names):
-        if len(read_pair_dict[unpaired][0]):
-            unpaired_reads[unpaired] = (x[0][0], x[0][1])
-        else:
-            unpaired_reads[unpaired] = (x[1][0], x[1][1])
+    # Open first paired chunk file for writing
+    paired_chunk_file = open_chunk_file(chunk_number, paired_outdir)
+    if len(paired_read_names):
+        # Output to buffer, increment read_count
+        for k in paired_read_names:
+            t = [k, read_pair_dict[k][0][0], read_pair_dict[k][0][1],
+                 read_pair_dict[k][1][0], read_pair_dict[k][1][1]]
+            outstring = '@{0}/1\n{1}\n+\n{2}\n@{0}/2\n{3}\n+\n{4}\n'
+            outstring = outstring.format(*t)
+            # del read_pair_dict[k]
+            paired_chunk_file.write(outstring)
+            read_count += 2
+            if (read_count >= chunk_size):
+                paired_chunk_file.flush()
+                paired_chunk_file.close()
+                chunk_number += 1
+                read_count = 0
+                paired_chunk_file = open_chunk_file(chunk_number,
+                                                    paired_outdir)
+    unpaired_read_names = set(read_pair_dict.keys()) - set(paired_read_names)
+    if len(unpaired_read_names):
+        chunk_number = 1
+        read_count = 0
+        unpaired_chunk_file = open_chunk_file(chunk_number, unpaired_outdir)
+        # Remaining keys in dictionary should be unpaired reads
+        for k in read_pair_dict.keys():
+            read = []
+            if len(read_pair_dict[k][0]):
+                read = read_pair_dict[k][0]
+            else:
+                read = read_pair_dict[k][1]
+            outstring = '@{0}\n{1}\n+\n{2}'.format(*read)
+            del read_pair_dict[k]
+            unpaired_chunk_file.write(outstring)
+            read_count += 1
+            if (read_count >= chunk_size):
+                unpaired_chunk_file.flush()
+                unpaired_chunk_file.close()
+                chunk_number += 1
+                read_count = 0
+                unpaired_chunk_file = open_chunk_file(chunk_number,
+                                                      unpaired_outdir)
 
     # Shuffle paired reads prior to output
-    random.shuffle(paired_read_names)
-
-    # Output paired reads to file
-    for k in paired_read_names:
-        t = [k, read_pair_dict[k][0][0], read_pair_dict[k][0][1],
-             read_pair_dict[k][1][0], read_pair_dict[k][1][1]]
-        outstring = '@{0}/1\n{1}\n+\n{2}\n@{0}/2\n{3}\n+\n{4}\n'
-        paired_outfile.write(outstring.format(*t))
-    else:
-        paired_outfile.close()
-
-    # Output unpaired reads to file
-    for k in unpaired_reads.keys():
-        t = [k, unpaired_reads[k][0], unpaired_reads[k][1]]
-        unpaired_outfile.write('@{0}\n{1}\n+\n{2}\n'.format(*t))
-    else:
-        unpaired_outfile.close()
+    # random.shuffle(paired_read_names)
 
 
-# Identifies the bits that are set in the SAM flag
 def decompose_flag(flag, bits=[2**x for x in range(12)]):
+    """Identifies the bits that are set in the SAM flag"""
     flag_list = [bool(int(flag) & x) for x in bits]
     return flag_list
 
 
-# Reverse complements a sequence
 def revcomp(seq):
+    """Reverse complements a sequence"""
     complement = {'A': 'T', 'C': 'G', 'G': 'C', 'T': 'A'}
     rev = "".join(complement.get(base, base) for base in reversed(seq))
     return rev
 
 
-# Appends items to a list at index 'i' in a given tuple reference
-# ***No return value***
 def sort_reads(tuple_to_append, list_index, seq, quality):
+    """Appends items to a list at index 'i' in a given tuple reference"""
     tuple_to_append[list_index].append(seq)
     tuple_to_append[list_index].append(quality)
+
+
+def open_chunk_file(chunk_number, filepath="."):
+    """Opens new chunk file for writing"""
+    chunk_file = os.path.join(filepath, '{0}.fastq'.format(chunk_number))
+    return open(chunk_file, 'w')
 
 
 def parse_args():
@@ -131,12 +162,13 @@ def parse_args():
     # Setup
     parser = argparse.ArgumentParser()
     # Optional arguments
-    parser.add_argument('--num_reads', '-n', type=int, default=75000000)
+    parser.add_argument('--num_reads', '-n', type=int, default=75000000,
+                        help='Specify number of reads per FASTQ file.')
     # Positional arguments
     parser.add_argument('bam', nargs=1, type=argparse.FileType('r'),
-                        help='Specify paired end BAM file.')
-    parser.add_argument("paired_out", nargs=1, type=argparse.FileType("w"))
-    parser.add_argument("unpaired_out", nargs=1, type=argparse.FileType("w"))
+                        help='Specify SAM file.')
+    parser.add_argument("paired_outdir", default='.', nargs=1)
+    parser.add_argument("single_outdir", default='.', nargs=1)
     # Parsing
     args = parser.parse_args()
     return args
