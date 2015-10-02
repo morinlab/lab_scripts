@@ -20,16 +20,23 @@ Outputs
 -FASTQ files for unpaired reads
 
 Known Issues
--BUG: if the user sets --num_reads to an odd number (e.g., 5), 
-but there are an even number of read pairs (e.g., 3 pairs or 6 reads), 
-the algorithm will keep the read pairs together rather than splitting 
-them into separate files (i.e., will create one file with 6 reads 
-rather than one file with 5 reads and another file with 1 read)
+-Ignored read shuffling
+-BUG: >2 reads with qnames exist
+and they may both be first (or second) in pair. In the situation where
+the first read to be found is added to the dictionary, and the second read
+that is found is in the same direction, this causes the 'paired' variable to
+become true which means the reads will be output. Since they are in the same
+direction, however, only one of the lists in the tuple will be filled. This
+results in an "IndexError: list index out of range" when the empty list is
+being accessed for output.
+-BUG: if the user sets --num_reads to an odd number (e.g., 5),
+but there are an even number of read pairs (e.g., 3 pairs or 6 reads),
+the algorithm will create 1 file with 6 reads and another file that is
+empty.
 
 """
 
 import argparse
-import random
 import os
 import gzip
 import string
@@ -46,7 +53,6 @@ def main():
 
     # Initalize data structures
     read_pair_dict = {}
-    paired_read_names = []
 
     # Creates output directories if they don't exist
     if not os.path.exists(unpaired_outdir):
@@ -56,6 +62,13 @@ def main():
         os.mkdir(paired_outdir)
 
     # Look over each line in bam
+    paired = False
+    p_outstring = '@{0}/1\n{1}\n+\n{2}\n@{0}/2\n{3}\n+\n{4}\n'
+    up_outstring = '@{0}\n{1}\n+\n{2}\n'
+    chunk_number = 1
+    read_count = 0
+    paired_chunk_file = open_chunk_file(chunk_number, paired_outdir)
+    log_file = open(os.path.join(paired_outdir, 'paired_log.txt'), 'w')
     for line in bam_infile:
         bam_line = line.split("\t")
         qname = bam_line[0]
@@ -75,7 +88,7 @@ def main():
         if qname not in read_pair_dict.keys():
             read_pair_dict[qname] = ([], [])
         else:
-            paired_read_names.append(qname)
+            paired = True
 
         # Add sequence and quality to array corresponding to the
         # read
@@ -83,48 +96,46 @@ def main():
             sort_reads(read_pair_dict[qname], 0, seq, quality)
         elif sam_flag_list[3]:
             sort_reads(read_pair_dict[qname], 1, seq, quality)
-    else:
-        bam_infile.close()
 
-    if len(paired_read_names):
-        chunk_number = 1
-        read_count = 0
-        paired_chunk_file = open_chunk_file(chunk_number, paired_outdir)
-        outstring = '@{0}/1\n{1}\n+\n{2}\n@{0}/2\n{3}\n+\n{4}\n'
-        random.shuffle(paired_read_names)
-        for k in paired_read_names:
-            t = [k, read_pair_dict[k][0][0], read_pair_dict[k][0][1],
-                 read_pair_dict[k][1][0], read_pair_dict[k][1][1]]
-            write_to_chunk(paired_chunk_file, t, outstring)
+        if paired:
+            log_file.write(qname + '\n')
+            flushed = False
+            t = [qname,
+                 read_pair_dict[qname][0][0],
+                 read_pair_dict[qname][0][1],
+                 read_pair_dict[qname][1][0],
+                 read_pair_dict[qname][1][1]]
+            write_to_chunk(paired_chunk_file, t, p_outstring)
             read_count += 2
-            paired_chunk_file, read_count, chunk_number =\
+            paired_chunk_file, read_count, chunk_number, flushed =\
             check_read_count(paired_chunk_file, read_count, chunk_number,
                              chunk_size, paired_outdir)
-        # Take current chunk_number and format a string 
+            if flushed:
+                del read_pair_dict[qname]
+            paired = False
+    else:
+        bam_infile.close()
         create_interval_file(chunk_number, paired_outdir, 'paired')
 
-    # Remaining keys in dictionary should be unpaired reads
-    unpaired_read_names = set(read_pair_dict.keys()) - set(paired_read_names)
-    if len(unpaired_read_names):
-        chunk_number = 1
-        read_count = 0
-        unpaired_chunk_file = open_chunk_file(chunk_number, unpaired_outdir)
-        outstring = '@{0}\n{1}\n+\n{2}'
-        for k in unpaired_read_names:
-            read = [k]
+    chunk_number = 1
+    read_count = 0
+    unpaired_chunk_file = open_chunk_file(chunk_number, unpaired_outdir)
+    for qname in read_pair_dict.keys():
+        flushed = False
+        read = [qname]
+        if len(read_pair_dict[qname][0]):
+            read = read + read_pair_dict[qname][0]
+        else:
+            read = read + read_pair_dict[qname][1]
+        write_to_chunk(unpaired_chunk_file, read, up_outstring)
+        read_count += 1
+        unpaired_chunk_file, read_count, chunk_number, flushed = \
+        check_read_count(unpaired_chunk_file, read_count, chunk_number,
+                         chunk_size, unpaired_outdir)
+        if flushed:
+            del read_pair_dict[qname]
+    create_interval_file(chunk_number, unpaired_outdir, 'unpaired')
 
-            # Determine which read (fwd or rev) is in the dictionary
-            if len(read_pair_dict[k][0]):
-                read = read + read_pair_dict[k][0]
-            else:
-                read = read + read_pair_dict[k][1]
-
-            write_to_chunk(unpaired_chunk_file, read, outstring)
-            read_count += 1
-            unpaired_chunk_file, read_count, chunk_number =\
-            check_read_count(unpaired_chunk_file, read_count,
-                             chunk_number, chunk_size, unpaired_outdir)
-        create_interval_file(chunk_number, unpaired_outdir, 'unpaired')
 
 def decompose_flag(flag, bits=[2**x for x in range(12)]):
     """Identifies the bits that are set in the SAM flag"""
@@ -152,26 +163,27 @@ def open_chunk_file(chunk_number, filepath="."):
 
 
 def write_to_chunk(chunk_file, read_data, outstring):
-	"""Writes formatted string to current chunk"""
-	chunk_file.write(outstring.format(*read_data))
+    """Writes formatted string to current chunk"""
+    chunk_file.write(outstring.format(*read_data))
 
 
 def check_read_count(chunk_file, read_count, chunk_number, chunk_size,
                      output_dir):
     """Iterates to next chunk if max. reads has been reached"""
-    if read_count >= chunk_size:
-		chunk_file.flush()
-		chunk_file.close()
-		chunk_number += 1
-		read_count = 0
-		chunk_file = open_chunk_file(chunk_number, output_dir)
-    return chunk_file, read_count, chunk_number
+    flushed = False
+    if read_count > chunk_size:
+        chunk_file.flush()
+        chunk_file.close()
+        chunk_number += 1
+        read_count = 0
+        chunk_file = open_chunk_file(chunk_number, output_dir)
+        flushed = True
+    return chunk_file, read_count, chunk_number, flushed
 
 
 def create_interval_file(chunk_number, directory, prefix):
     """Creates an interval file in the given directory"""
-    interval_filename = os.path.join(directory,
-                                     '{0}_interval.txt'.format(prefix))
+    interval_filename = os.path.join(directory, prefix + '_interval.txt')
     outstring = string.join([str(i) + '.fastq.gz' for i in range(1, chunk_number + 1)], '\n')
     interval_file = open(interval_filename, 'w')
     interval_file.write(outstring)
