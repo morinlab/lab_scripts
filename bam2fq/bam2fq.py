@@ -21,18 +21,6 @@ Outputs
 
 Known Issues
 -Ignored read shuffling
--BUG: >2 reads with qnames exist
-and they may both be first (or second) in pair. In the situation where
-the first read to be found is added to the dictionary, and the second read
-that is found is in the same direction, this causes the 'paired' variable to
-become true which means the reads will be output. Since they are in the same
-direction, however, only one of the lists in the tuple will be filled. This
-results in an "IndexError: list index out of range" when the empty list is
-being accessed for output.
--BUG: if the user sets --num_reads to an odd number (e.g., 5),
-but there are an even number of read pairs (e.g., 3 pairs or 6 reads),
-the algorithm will create 1 file with 6 reads and another file that is
-empty.
 
 """
 
@@ -50,9 +38,19 @@ def main():
     bam_infile = args.bam[0]
     unpaired_outdir = args.single_outdir[0]
     paired_outdir = args.paired_outdir[0]
-
+    
+    # Initialize globals
+    paired = False
+    p_outstring = '@{0}/1\n{1}\n+\n{2}\n@{0}/2\n{3}\n+\n{4}\n'
+    up_outstring = '@{0}\n{1}\n+\n{2}\n'
+    bits = [1, 16, 64, 128, 256, 512, 1024, 2048]
+    p_chunk_number = 1
+    p_read_count = 0
+    up_chunk_number = 1
+    up_read_count = 0
+    
     # Initalize data structures
-    read_pair_dict = {}
+    paired_dict = {}
 
     # Creates output directories if they don't exist
     if not os.path.exists(unpaired_outdir):
@@ -61,18 +59,14 @@ def main():
     if not os.path.exists(paired_outdir):
         os.mkdir(paired_outdir)
 
+    # Open directories for output
+    paired_chunk_file = open_chunk_file(p_chunk_number, paired_outdir)
+    unpaired_chunk_file = open_chunk_file(up_chunk_number, unpaired_outdir)
     # Look over each line in bam
-    paired = False
-    p_outstring = '@{0}/1\n{1}\n+\n{2}\n@{0}/2\n{3}\n+\n{4}\n'
-    up_outstring = '@{0}\n{1}\n+\n{2}\n'
-    chunk_number = 1
-    read_count = 0
-    paired_chunk_file = open_chunk_file(chunk_number, paired_outdir)
-    log_file = open(os.path.join(paired_outdir, 'paired_log.txt'), 'w')
     for line in bam_infile:
         bam_line = line.split("\t")
         qname = bam_line[0]
-        sam_flag_list = decompose_flag(bam_line[1], [1, 16, 64, 128])
+        sam_flag_list = decompose_flag(bam_line[1], bits)
         seq = bam_line[9]
         quality = bam_line[10]
 
@@ -82,59 +76,68 @@ def main():
             seq = revcomp(seq)
             quality = quality[::-1]
 
+        # Unpaired read if supplementary flag is set    
+        if sam_flag_list[4] or sam_flag_list[5] or sam_flag_list[6] or sam_flag_list[7]:
+			if up_read_count >= chunk_size:
+				unpaired_chunk_file.close()
+				up_chunk_number += 1
+				up_read_count = 0
+				unpaired_chunk_file = open_chunk_file(up_chunk_number, unpaired_outdir)
+			read = [qname, seq, quality]
+			write_to_chunk(unpaired_chunk_file, read, up_outstring)
+			up_read_count += 1
+			continue
+
         # Add qname as key if it doesn't exist.
-        # If it already exists, means the current read is part of
+        # If it already exists then current read is part of
         # a pair.
-        if qname not in read_pair_dict.keys():
-            read_pair_dict[qname] = ([], [])
+        if qname not in paired_dict.keys():
+            paired_dict[qname] = ([], [])
         else:
             paired = True
 
-        # Add sequence and quality to array corresponding to the
+        # Add sequence and quality to list corresponding to the
         # read
         if sam_flag_list[2]:
-            sort_reads(read_pair_dict[qname], 0, seq, quality)
+            sort_reads(paired_dict[qname], 0, seq, quality)
         elif sam_flag_list[3]:
-            sort_reads(read_pair_dict[qname], 1, seq, quality)
+            sort_reads(paired_dict[qname], 1, seq, quality)
 
-        if paired:
-            log_file.write(qname + '\n')
-            flushed = False
-            t = [qname,
-                 read_pair_dict[qname][0][0],
-                 read_pair_dict[qname][0][1],
-                 read_pair_dict[qname][1][0],
-                 read_pair_dict[qname][1][1]]
-            write_to_chunk(paired_chunk_file, t, p_outstring)
-            read_count += 2
-            paired_chunk_file, read_count, chunk_number, flushed =\
-            check_read_count(paired_chunk_file, read_count, chunk_number,
-                             chunk_size, paired_outdir)
-            if flushed:
-                del read_pair_dict[qname]
-            paired = False
+        if paired:       
+			if p_read_count >= chunk_size:
+				paired_chunk_file.close()
+				p_chunk_number += 1
+				p_read_count = 0
+				paired_chunk_file = open_chunk_file(p_chunk_number, paired_outdir)
+			t = [qname, paired_dict[qname][0][0], paired_dict[qname][0][1],
+			     paired_dict[qname][1][0], paired_dict[qname][1][1]]
+			write_to_chunk(paired_chunk_file, t, p_outstring)
+			p_read_count += 2
+			del paired_dict[qname]
+			paired = False
     else:
         bam_infile.close()
-        create_interval_file(chunk_number, paired_outdir, 'paired')
-
-    chunk_number = 1
-    read_count = 0
-    unpaired_chunk_file = open_chunk_file(chunk_number, unpaired_outdir)
-    for qname in read_pair_dict.keys():
-        flushed = False
-        read = [qname]
-        if len(read_pair_dict[qname][0]):
-            read = read + read_pair_dict[qname][0]
-        else:
-            read = read + read_pair_dict[qname][1]
-        write_to_chunk(unpaired_chunk_file, read, up_outstring)
-        read_count += 1
-        unpaired_chunk_file, read_count, chunk_number, flushed = \
-        check_read_count(unpaired_chunk_file, read_count, chunk_number,
-                         chunk_size, unpaired_outdir)
-        if flushed:
-            del read_pair_dict[qname]
-    create_interval_file(chunk_number, unpaired_outdir, 'unpaired')
+        paired_chunk_file.close()
+        create_interval_file(p_chunk_number, paired_outdir, 'paired')
+    
+    # Output unpaired reads
+    for qname in paired_dict.keys():
+		if up_read_count >= chunk_size:
+			unpaired_chunk_file.close()
+			up_chunk_number += 1
+			up_read_count = 0
+			unpaired_chunk_file = open_chunk_file(up_chunk_number, unpaired_outdir)
+		read = [qname]
+		if len(paired_dict[qname][0]):
+			read = read + paired_dict[qname][0]
+		else:
+			read = read + paired_dict[qname][1]
+		write_to_chunk(unpaired_chunk_file, read, up_outstring)
+		up_read_count += 1
+		del paired_dict[qname]
+    else:
+		unpaired_chunk_file.close()
+		create_interval_file(up_chunk_number, unpaired_outdir, 'unpaired')
 
 
 def decompose_flag(flag, bits=[2**x for x in range(12)]):
@@ -169,16 +172,17 @@ def write_to_chunk(chunk_file, read_data, outstring):
 
 def check_read_count(chunk_file, read_count, chunk_number, chunk_size,
                      output_dir):
-    """Iterates to next chunk if max. reads has been reached"""
-    flushed = False
-    if read_count > chunk_size:
-        chunk_file.flush()
-        chunk_file.close()
-        chunk_number += 1
-        read_count = 0
-        chunk_file = open_chunk_file(chunk_number, output_dir)
-        flushed = True
-    return chunk_file, read_count, chunk_number, flushed
+	"""DEPRECATED"""
+	"""Iterates to next chunk if max. reads has been reached"""
+	flushed = False
+	if read_count > chunk_size:
+		chunk_file.flush()
+		chunk_file.close()
+		chunk_number += 1
+		read_count = 0
+		chunk_file = open_chunk_file(chunk_number, output_dir)
+		flushed = True
+	return chunk_file, read_count, chunk_number, flushed
 
 
 def create_interval_file(chunk_number, directory, prefix):
