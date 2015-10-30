@@ -59,12 +59,8 @@ def main():
         # Extract gene ID and symbol
         gid, gsymbol = vep_effect["Gene"], vep_effect["SYMBOL"]
         # Extract calls with minimum depth
-        calls = [call for call in record.samples if call.gt_type != 0 and call.data.DP >= args.min_depth]
-        # Calculate VAF for each call and determine if too many homozygous samples
-        vafs = [c.data.AD[1] / (c.data.AD[0] + c.data.AD[1]) for c in calls]
-        num_homo_samples = sum(1 for vaf in vafs if vaf > args.homo_vaf_threshold)
-        if num_homo_samples / len(vafs) > args.max_homo_samples:
-            continue
+        calls = [call for call in record.samples if (call.gt_type != 0 and call.data.DP >= args.min_depth and
+                                                     call.data.AD[1] / (call.data.AD[0] + call.data.AD[1]) < args.homo_vaf_threshold)]
         # Extract samples
         samples = set(c.sample for c in calls)
         # Add samples to genes dict; using gid and gsymbol for readability
@@ -101,7 +97,6 @@ def parse_args():
     parser.add_argument("--exclude_positions", type=argparse.FileType("r"), help="List of genomic positions to exclude (format: CHROM\\tPOS)")
     parser.add_argument("--min_depth", default=5, type=int, help="Min. depth to consider variant in sample")
     parser.add_argument("--homo_vaf_threshold", default=0.9, type=float, help="Min. VAF for a variant to be considered homozygous")
-    parser.add_argument("--max_homo_samples", default=0.2, type=float, help="Max. fraction of samples with homozygous variants")
     args = parser.parse_args()
     return args
 
