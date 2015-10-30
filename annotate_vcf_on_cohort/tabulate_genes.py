@@ -7,9 +7,12 @@ genes in a cohort VCF file.
 
 import argparse
 import sys
-from collections import defaultdict
+from collections import defaultdict, namedtuple
 import vcf
 from annotate_vcf_on_cohort import parse_vep_cols, parse_vep, create_pos_id
+
+MODERATE_IMPACT = ["missense_variant", "protein_altering_variant", "inframe_deletion", "inframe_insertion"]
+HIGH_IMPACT = ["transcript_ablation", "splice_acceptor_variant", "splice_donor_variant", "stop_gained", "frameshift_variant", "stop_lost", "initiator_codon_variant"]
 
 
 def main():
@@ -29,7 +32,9 @@ def main():
     excl_pos_set = build_exclude_positions(args.exclude_positions)
 
     # Build dict of genes with affected samples
-    genes = defaultdict(set)
+    # Sets: num_samples, num_samples_mod_impact, num_samples_high_impact
+    SampleSets = namedtuple("SampleSets", ["all", "moderate", "high"])
+    genes = defaultdict(lambda: SampleSets(set(), set(), set()))
 
     # Iterate over VCF file
     for record in vcf_reader:
@@ -53,14 +58,19 @@ def main():
         # Extract affected samples
         samples = set([call.sample for call in record.samples if call.gt_type != 0])
         # Add samples to genes dict; using gid and gsymbol for readability
-        genes[(gid, gsymbol)].update(samples)
+        genes[(gid, gsymbol)].all.update(samples)
+        # Update sample lists based on variant type
+        if any([eff in vep_effect["Consequence"] for eff in HIGH_IMPACT]):
+            genes[(gid, gsymbol)].high.update(samples)
+        elif any([eff in vep_effect["Consequence"] for eff in MODERATE_IMPACT]):
+            genes[(gid, gsymbol)].moderate.update(samples)
 
     # Order genes by number of affected samples
-    genes_list = [(gene[0], gene[1], len(samples)) for gene, samples in genes.items()]
+    genes_list = [(gene[0], gene[1], len(sets[0]), len(sets[1]), len(sets[2])) for gene, sets in genes.items()]
     genes_list.sort(key=lambda x: x[2], reverse=True)
 
     # Output sorted gene list
-    header = "\t".join(["gene_id", "gene_symbol", "num_samples"]) + "\n"
+    header = "\t".join(["gene_id", "gene_symbol", "num_samples", "num_samples_with_moderate_effect", "num_samples_with_high_effect"]) + "\n"
     args.output.write(header)
     for gene in genes_list:
         line = "\t".join(map(str, gene)) + "\n"

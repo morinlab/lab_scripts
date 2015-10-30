@@ -348,7 +348,7 @@ def annotate_variants(vcf_iter, vep_cols, sample_names, annotated_snp_pos, snp_t
         one_record.INFO["TOP_CSQ"] = top_effect_encoded
         if num_affected_samples >= snp_threshold:
             one_record.INFO["SNP"] = True
-        if top_effect["HGVSp"] != "":
+        if top_effect["HGVSp"] != "" and "synonymous_variant" not in top_effect["Consequence"]:
             one_record.INFO["PROTEIN_CHANGE"] = True
             if one_record.is_snp:
                 transcript, codon_num, alt_codon = obtain_mutated_codon_info(top_effect)
