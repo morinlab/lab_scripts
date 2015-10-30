@@ -57,7 +57,10 @@ def main():
     vcf_writer = vcf.Writer(args.output, template=one_reader_tweaked, lineterminator='\n')
 
     # Create dictionary of positions to annotated_snp_pos (empty if not specified)
-    annotated_snp_pos = create_pos_dict(args.annotated_snp_pos)
+    annotated_snp_pos_dict = create_pos_dict(args.annotated_snp_pos)
+
+    # Create dictionary of positions in COSMIC
+    cosmic_pos_dict = create_pos_dict(args.cosmic_pos)
 
     # Find mutated codons
     mutated_codons = find_mutated_codons(vcf_iter, vep_cols)
@@ -67,7 +70,7 @@ def main():
 
     # Regenerate vcf_iter and annotate variants and output
     vcf_readers, vcf_iter = create_vcf_iter(*args.vcf)
-    variant_iterator = annotate_variants(vcf_iter, vep_cols, sample_names, annotated_snp_pos, args.snp_threshold, hotspot_codons)
+    variant_iterator = annotate_variants(vcf_iter, vep_cols, sample_names, annotated_snp_pos_dict, cosmic_pos_dict, args.snp_threshold, hotspot_codons)
     for record in variant_iterator:
         vcf_writer.write_record(record)
 
@@ -83,6 +86,7 @@ def parse_args():
     parser.add_argument("--cluster_threshold", "-c", default=1, help="Max. distance between SNVs of a hotspot cluster")
     parser.add_argument("--annotated_snp_pos", type=argparse.FileType("r"), help="Annotated SNP positions (format: CHROM\\tPOS)")
     parser.add_argument("--max_for_hotspot", type=int, default=10, help="Max. number of cases for hotspot to be considered")
+    parser.add_argument("--cosmic_pos", type=argparse.FileType("r"), help="COSMIC database of variants for annotation (format: CHROM\\tPOS)")
     # Positional arguments
     parser.add_argument("vcf", nargs="+", metavar="vcf_file")
     # Parsing
@@ -135,6 +139,7 @@ def tweak_vcf_reader(vcf_reader, snp_threshold, alt_codon_threshold, cluster_thr
     vcf_reader.infos["PROTEIN_CHANGE"] = vcf.parser._Info("PROTEIN_CHANGE", 0, "Flag", "Top effect changes protein", __name__, __version__)
     vcf_reader.infos["SNP"] = vcf.parser._Info("SNP", 0, "Flag", "Recurrent across population, namely in {} or more cases".format(snp_threshold), __name__, __version__)
     vcf_reader.infos["ANN_SNP_POS"] = vcf.parser._Info("ANN_SNP_POS", 0, "Flag", "Annotated SNP position", __name__, __version__)
+    vcf_reader.infos["COSMIC"] = vcf.parser._Info("COSMIC", 0, "Flag", "Annotated COSMIC position", __name__, __version__)
     vcf_reader.infos["HOTSPOT"] = vcf.parser._Info("HOTSPOT", 0, "Flag", "Codon altered in {}+ ways".format(alt_codon_threshold), __name__, __version__)
     vcf_reader.infos["HOTSPOT_CLUSTER"] = vcf.parser._Info("HOTSPOT_CLUSTER", 0, "Flag", "Codons within {} positions are mutated".format(cluster_threshold), __name__, __version__)
     return vcf_reader
@@ -297,7 +302,7 @@ def detect_hotspots(mutated_codons, alt_codon_threshold, cluster_threshold, max_
     return hotspot_codons
 
 
-def annotate_variants(vcf_iter, vep_cols, sample_names, annotated_snp_pos, snp_threshold, hotspot_codons):
+def annotate_variants(vcf_iter, vep_cols, sample_names, annotated_snp_pos_dict, cosmic_pos_dict, snp_threshold, hotspot_codons):
     """Generator yielding annotated records ready
     for being outputted to a file. Combine samples
     together.
@@ -341,8 +346,10 @@ def annotate_variants(vcf_iter, vep_cols, sample_names, annotated_snp_pos, snp_t
         one_record.QUAL = "."
         # Annotate variant
         variant_id = create_pos_id(one_record.CHROM, one_record.POS)
-        if variant_id in annotated_snp_pos:
+        if variant_id in annotated_snp_pos_dict:
             one_record.INFO["ANN_SNP_POS"] = True
+        if variant_id in cosmic_pos_dict:
+            one_record.INFO["COSMIC"] = True
         one_record.INFO["NUM_SAMPLES"] = num_affected_samples
         top_effect_encoded = "|".join([top_effect[col] for col in vep_cols])
         one_record.INFO["TOP_CSQ"] = top_effect_encoded
