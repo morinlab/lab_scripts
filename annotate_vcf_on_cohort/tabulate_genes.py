@@ -5,11 +5,17 @@ This script tabulates the most recurrently altered
 genes in a cohort VCF file.
 """
 
+from __future__ import division
+
 import argparse
 import sys
-from collections import defaultdict
+from collections import defaultdict, namedtuple
+
 import vcf
 from annotate_vcf_on_cohort import parse_vep_cols, parse_vep, create_pos_id
+
+MODERATE_IMPACT = ["missense_variant", "protein_altering_variant", "inframe_deletion", "inframe_insertion"]
+HIGH_IMPACT = ["transcript_ablation", "splice_acceptor_variant", "splice_donor_variant", "stop_gained", "frameshift_variant", "stop_lost", "initiator_codon_variant"]
 
 
 def main():
@@ -29,7 +35,9 @@ def main():
     excl_pos_set = build_exclude_positions(args.exclude_positions)
 
     # Build dict of genes with affected samples
-    genes = defaultdict(set)
+    # Sets: num_samples, num_samples_mod_impact, num_samples_high_impact
+    SampleSets = namedtuple("SampleSets", ["all", "moderate", "high"])
+    genes = defaultdict(lambda: SampleSets(set(), set(), set()))
 
     # Iterate over VCF file
     for record in vcf_reader:
@@ -50,17 +58,25 @@ def main():
             continue
         # Extract gene ID and symbol
         gid, gsymbol = vep_effect["Gene"], vep_effect["SYMBOL"]
-        # Extract affected samples
-        samples = set([call.sample for call in record.samples if call.gt_type != 0])
+        # Extract calls with minimum depth
+        calls = [call for call in record.samples if (call.gt_type != 0 and call.data.DP >= args.min_depth and
+                                                     call.data.AD[1] / (call.data.AD[0] + call.data.AD[1]) < args.homo_vaf_threshold)]
+        # Extract samples
+        samples = set(c.sample for c in calls)
         # Add samples to genes dict; using gid and gsymbol for readability
-        genes[(gid, gsymbol)].update(samples)
+        genes[(gid, gsymbol)].all.update(samples)
+        # Update sample lists based on variant type
+        if any([eff in vep_effect["Consequence"] for eff in HIGH_IMPACT]):
+            genes[(gid, gsymbol)].high.update(samples)
+        elif any([eff in vep_effect["Consequence"] for eff in MODERATE_IMPACT]):
+            genes[(gid, gsymbol)].moderate.update(samples)
 
     # Order genes by number of affected samples
-    genes_list = [(gene[0], gene[1], len(samples)) for gene, samples in genes.items()]
+    genes_list = [(gene[0], gene[1], len(sets[0]), len(sets[1]), len(sets[2])) for gene, sets in genes.items()]
     genes_list.sort(key=lambda x: x[2], reverse=True)
 
     # Output sorted gene list
-    header = "\t".join(["gene_id", "gene_symbol", "num_samples"]) + "\n"
+    header = "\t".join(["gene_id", "gene_symbol", "num_samples", "num_samples_with_moderate_effect", "num_samples_with_high_effect"]) + "\n"
     args.output.write(header)
     for gene in genes_list:
         line = "\t".join(map(str, gene)) + "\n"
@@ -79,6 +95,8 @@ def parse_args():
     parser.add_argument("--symbol", "-s", action="store_true", help="Only keep genes with symbols")
     parser.add_argument("--exclude_genes", type=argparse.FileType("r"), help="List of gene IDs or symbols to exclude")
     parser.add_argument("--exclude_positions", type=argparse.FileType("r"), help="List of genomic positions to exclude (format: CHROM\\tPOS)")
+    parser.add_argument("--min_depth", default=5, type=int, help="Min. depth to consider variant in sample")
+    parser.add_argument("--homo_vaf_threshold", default=0.9, type=float, help="Min. VAF for a variant to be considered homozygous")
     args = parser.parse_args()
     return args
 
