@@ -26,9 +26,9 @@ import subprocess
 import argparse
 
 def main():
-	args = parse.args()
-	input_dir = args.input_dir[0]
-	output_file = args.output_file[0]
+	args = parse_args()
+	input_dir = args.input_dir
+	output_file = args.output_file
 	
 	if not os.path.exists(input_dir):
 		raise ValueError("{} does not exist.".format(input_dir))
@@ -36,22 +36,16 @@ def main():
 	if not os.path.isdir(input_dir):
 		raise ValueError("{} is not a directory.".format(input_dir))
 	
-	pileups = glob.glob('*.pileup')
+	pileups = glob.glob(os.path.join(input_dir,"*.pileup"))
 	
 	if not len(pileups):
 		raise ValueError("No pileup files found in {}".format(input_dir))
 	
-	f1 = os.path.join(input_dir, pileups.pop(0))
-	f2 = os.path.join(input_dir, pileups.pop(0))
-	
-	subprocess.call(["cat", f1, f2, ">", output_file])
-	
-	del(f1)
-	del(f2)
-	
-	for pileup in pileups:
-		f3 = os.path.join(input_dir, pileup)
-		subprocess.call(["cat", f3, ">>", output_file])
+	with open(output_file, 'w') as outfile:
+		for pileup in pileups:
+			with open(pileup) as infile:
+				for line in infile:
+					outfile.write(line)
 	return
 
 def parse_args():
