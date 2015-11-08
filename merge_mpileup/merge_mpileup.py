@@ -24,6 +24,8 @@ import os.path
 import glob
 import subprocess
 import argparse
+import re
+
 
 def main():
 	args = parse_args()
@@ -37,12 +39,20 @@ def main():
 		raise ValueError("{} is not a directory.".format(input_dir))
 	
 	pileups = glob.glob(os.path.join(input_dir,"*.pileup"))
-	
-	if not len(pileups):
-		raise ValueError("No pileup files found in {}".format(input_dir))
+        if not len(pileups):
+                raise ValueError("No pileup files found in {}".format(input_dir))
+
+	order = ['1', '2', '3', '4', '5', '6', '7', 'X', '8', '9', '10', 
+                 '11', '12', '13', '14', '15', '16', '17', '18', '20', 
+                 'Y', '19', '22', '21']
+	ordered_pileups = []
+	for i in order:
+		s = ".+_{}.pileup".format(i)
+		p = re.compile(s)
+		ordered_pileups.extend([m.group(0) for l in pileups for m in [p.search(l)] if m])
 	
 	with open(output_file, 'w') as outfile:
-		for pileup in pileups:
+		for pileup in ordered_pileups:
 			with open(pileup) as infile:
 				for line in infile:
 					outfile.write(line)
