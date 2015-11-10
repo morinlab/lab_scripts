@@ -37,8 +37,8 @@ def main():
     # Argument parsing
     args = parse_args()
     chnk_size = args.num_reads
-    bam_infile = args.bam[0]
-    outdir = args.outdir[0]
+    bam_infile = args.bam
+    outdir = args.outdir
 
     # Initialize globals
     paired = False
@@ -75,8 +75,8 @@ def main():
 
         # Supplementary alignment check
         if sam_flag_list[3]:
-			tot_read_count += 1
-			continue
+	    tot_read_count += 1
+	    continue
 
         # Reverse complement sequence and reverse quality string
         # if revcomp flag is set
@@ -164,8 +164,10 @@ def spawn_gzip(chnk_num, chnk_dir, gzip_cmd, read_type):
 def write_interval_file(directory):
     """Creates an interval file in the given directory"""
     interval_filename = os.path.join(directory, 'interval.txt')
-    outstring = [ str(x) + '\n' for x in os.listdir(directory)
+    l = len("fastq.gz")
+    outstring = [ str(x)[:-len(l)-1] + '\n' for x in os.listdir(directory)
                  if os.path.isfile(os.path.join(directory, x))]
+    
     interval_file = open(interval_filename, 'w')
     interval_file.write(string.join(outstring, ''))
     interval_file.close()
@@ -188,9 +190,9 @@ def parse_args():
     parser.add_argument('--num_reads', '-n', type=int, default=75000000,
                         help='Specify number of reads per FASTQ file.')
     # Positional arguments
-    parser.add_argument('bam', nargs=1, type=argparse.FileType('r'),
+    parser.add_argument('bam', type=argparse.FileType('r'),
                         help='Specify SAM file.')
-    parser.add_argument("outdir", default='.', nargs=1)
+    parser.add_argument("outdir", default='.')
     # Parsing
     args = parser.parse_args()
     return args
