@@ -1,0 +1,21 @@
+#!/bin/bash
+
+output=""
+
+while getopts "h:" opt; do
+    case "$opt" in
+	h)
+	    show_help
+	    exit 0
+	    ;;
+	s)  suffix=$OPTARG
+	    ;;
+    esac
+done
+
+for file in $@
+do
+    output="$output $(basename $file .bam).snvmix.out"
+done
+
+echo $output
