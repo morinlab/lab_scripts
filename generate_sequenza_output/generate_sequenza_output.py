@@ -48,7 +48,7 @@ def main():
 	input_fa = args.ref_fa[0]
 	input_tumour = args.input_tumour_bam[0]
 	input_normal = args.input_normal_bam[0]
-	odir = args.output_dir[0]
+	odir = os.path.dirname(os.path.abspath(args.output_dir[0]))
 	seq_utils = args.seq_utils[0]
 	gc_ref = args.gc_ref[0]
 	seq_analyze = args.seq_analyze[0]
@@ -56,11 +56,11 @@ def main():
 	patient_gender = args.gender[0]
 	is_parallel = 'False'#args.parallel
 	#Create output dir(s)
-    
-	make_output_dir(os.path.dirname(odir)+"/mpileups/"+patient)
-	make_output_dir(os.path.dirname(odir)+"/seqz/"+patient)
-	make_output_dir(os.path.dirname(odir)+"/seq_output/"+patient)
-	final_odir =os.path.dirname(odir)+"/seq_output/"+patient
+
+	make_output_dir(odir+"/mpileups/"+patient)
+	make_output_dir(odir+"/seqz/"+patient)
+	make_output_dir(odir+"/seq_output/"+patient)
+	final_odir =odir+"/seq_output/"+patient
 	#Process input
 	#mpileup object (1)
 	my_command = []
@@ -82,7 +82,7 @@ def main():
 
 	temp_seqz = "python {0} pileup2seqz -gc {1} -n {2} -t {3} | gzip > {4} ".format(seq_utils,gc_ref,out_normal_mp,out_tumour_mp,out_patient_seq)
     	temp_seqz_bin = "python {0} seqz-binning -w 50 -s {1} | gzip > {2} ".format(seq_utils,out_patient_seq,out_patient_seq_bin)
-        
+
 	if((doesnt_exist_output(out_patient_seq))):
         	print "Will generate joint normal_tumour binned (-w 50) seqz object for .... " + out_normal_mp.split("/",5)[-1] + " and " + out_tumour_mp.split("/",5)[-1]
         	my_command.append(temp_seqz)
