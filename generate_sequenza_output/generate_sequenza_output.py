@@ -48,7 +48,7 @@ def main():
 	input_fa = args.ref_fa[0]
 	input_tumour = args.input_tumour_bam[0]
 	input_normal = args.input_normal_bam[0]
-	odir = os.path.dirname(os.path.abspath(args.output_dir[0]))
+	odir = args.output_dir[0]
 	seq_utils = args.seq_utils[0]
 	gc_ref = args.gc_ref[0]
 	seq_analyze = args.seq_analyze[0]
