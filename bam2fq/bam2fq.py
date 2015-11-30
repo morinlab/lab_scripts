@@ -30,7 +30,7 @@ import argparse
 import string
 import subprocess
 import sys
-
+import glob
 
 def main():
     """Parse BAM file and convert to FASTQ"""
@@ -132,7 +132,9 @@ def main():
 
     # Write interval file
     write_interval_file(outdir)
-    print('read_total:' + str(tot_read_count), file=sys.stderr)
+    #print('read_total:' + str(tot_read_count), file=sys.stderr)
+    return
+
 
 def decompose_flag(flag, bits=[2**x for x in range(12)]):
     """Identifies the bits that are set in the SAM flag"""
@@ -164,13 +166,12 @@ def spawn_gzip(chnk_num, chnk_dir, gzip_cmd, read_type):
 def write_interval_file(directory):
     """Creates an interval file in the given directory"""
     interval_filename = os.path.join(directory, 'interval.txt')
-    l = len("fastq.gz")
-    outstring = [ str(x)[:-len(l)-1] + '\n' for x in os.listdir(directory)
-                 if os.path.isfile(os.path.join(directory, x))]
-    
+    files = glob.glob(os.path.join(directory, "*.fastq.gz"))
+    outstring = [str(x)[:-len(".fastq.gz")] + '\n' for x in files]
     interval_file = open(interval_filename, 'w')
     interval_file.write(string.join(outstring, ''))
     interval_file.close()
+    return
 
 
 def check_read_count(rc, chnk_num, chnk_dir, chnk_size, sp, cmd, read_type):
@@ -199,6 +200,4 @@ def parse_args():
 
 
 if __name__ == '__main__':
-    import timeit
-    print(timeit.timeit("main()", setup="from __main__ import main", 
-                        number=1), file=sys.stderr)
+    main()
