@@ -59,8 +59,12 @@ def main():
         # Extract gene ID and symbol
         gid, gsymbol = vep_effect["Gene"], vep_effect["SYMBOL"]
         # Extract calls with minimum depth
-        calls = [call for call in record.samples if (call.gt_type != 0 and call.data.DP >= args.min_depth and
-                                                     call.data.AD[1] / (call.data.AD[0] + call.data.AD[1]) < args.homo_vaf_threshold)]
+        calls = []
+        for call in record.samples:
+            depth = getattr(call.data, "DP", 0)
+            allele_depths = getattr(call.data, "AD", (0, 0))
+            if (call.gt_type != 0 and depth >= args.min_depth and allele_depths[1] / (allele_depths[0] + allele_depths[1]) < args.homo_vaf_threshold):
+                calls.append(call)
         # Extract samples
         samples = set(c.sample for c in calls)
         # Add samples to genes dict; using gid and gsymbol for readability
