@@ -29,7 +29,6 @@ args <- parser$parse_args()
 infile<- args$input
 outdir<- args$output
 sample_id<- args$sample_id
-sample_gender<- args$gender
 
 if(args$chr_list){
   chromosome_list=seq(1,22,1)
@@ -38,20 +37,24 @@ if(args$chr_list){
   chromosome_list=NULL
 }
 
-is_female=TRUE
-if(sample_gender=="m"){
-  is_female = FALSE
-}
-
 #Analysis step 1 - read raw data, normalize depth ratio for GC content bias, 
 #perform allele-specific segmentation, filter noisy mutations, bin raw data for plotting.
 #RETURNS a single list object.
-my_seq_extract = sequenza.extract(infile, chromosome.list=chromosome_list,min.reads=args$min_reads,min.reads.normal=args$min_normal_reads)
+my_seq_extract = sequenza.extract(
+    file = infile
+)
 
 #Analysis step 2 - calculate log posterior probability for all pairs of candidate ploidy
 #and cellularity parameters
-my_seq_fit = sequenza.fit(my_seq_extract, female=is_female,cellularity=seq(0.1,args$cellularity_limit,0.01),ploidy=seq(1,args$ploidy_limit,0.1))
+my_seq_fit = sequenza.fit(
+    my_seq_extract
+)
 #Prepare inputs for Sequenza (Python Pre Processing Script)
 
 #Analysis step 3 - save output objects in output directory
-sequenza.results(my_seq_extract, my_seq_fit, out.dir = outdir, female=is_female, sample.id = sample_id, CNt.max=args$max_cn)
+sequenza.results(
+    my_seq_extract, 
+    my_seq_fit, 
+    out.dir = outdir, 
+    sample.id = sample_id
+)
