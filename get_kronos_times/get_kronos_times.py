@@ -45,7 +45,13 @@ def main():
             for sample in samples:
                 job_ids = get_job_ids(step, os.path.join(args.pipeline_dir, sample))
                 times = [get_runtime(job_id) for job_id in job_ids] or [None]
-                cols.append(str(max(times)))
+                if "IP" in times:
+                    maxtime = "IP"
+                elif "ERR" in times:
+                    maxtime = "ERR"
+                else:
+                    maxtime = max(times)
+                cols.append(str(maxtime))
             output.write("\t".join(cols) + "\n")
 
 
@@ -112,7 +118,9 @@ def get_runtime(job_id):
     """Get runtime for job_id"""
     attrs = query_qacct(job_id)
     if not attrs:
-        return
+        return "IP"
+    elif attrs["exit_status"] != "0":
+        return "ERR"
     date_fmt = "%a %b %d %H:%M:%S %Y"
     stime = datetime.strptime(attrs["start_time"], date_fmt)
     etime = datetime.strptime(attrs["end_time"], date_fmt)
