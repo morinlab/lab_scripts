@@ -28,7 +28,7 @@ Seed Used    : count_comparefiles.py, compare_deleteinput.py
 
 ### Last Updates
 
-- None
+- Parent component can be found at https://github.com/morinlab/pipeline-components/tree/master/file_eater
 
 ### Parameter definitions
 ```
