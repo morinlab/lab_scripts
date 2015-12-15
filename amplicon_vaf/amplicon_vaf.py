@@ -41,7 +41,7 @@ def main():
         readers.append(csv.DictReader(lines, delimiter="\t"))
     reader = list(*readers)
 
-    count_keys = ["ref_count", "alt_count", "vaf"]
+    count_keys = ["ref_count", "alt_count", "vaf", "sample_id"]
     fields = readers[0].fieldnames
     for key in count_keys:
         if not key in fields:
@@ -55,12 +55,14 @@ def main():
     # writer.writeheader()
 
     bams = [pysam.AlignmentFile(bam) for bam in args.bam_filenames]
+    sample_ids = [bam.split(os.path.extsep)[0] for bam in args.bam_filenames]
 
     ref_key = "ref_count"
     alt_key = "alt_count"
     vaf_key = "vaf"
+    sample_id_key = "sample_id"
     
-    for bam in bams:
+    for (sample_id, bam) in zip(sample_ids, bams):
         for row in reader:
             chrom = chr_prefix + row["Chromosome"]
             pos = int(row["Start_Position"])
@@ -77,7 +79,7 @@ def main():
 
             vaf = counts[alt] / (counts[alt] + counts[ref])
             row[vaf_key] = round(vaf, 6)
-
+            row[sample_id_key] = sample_id
             writer.writerow(row)
 
 if __name__ == "__main__":
