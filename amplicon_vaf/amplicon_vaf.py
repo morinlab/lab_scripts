@@ -39,7 +39,7 @@ def main():
     for f in args.maf:
         lines = [x for x in open(f) if not x.startswith("#")]
         readers.append(csv.DictReader(lines, delimiter="\t"))
-    reader = itertools.chain(*readers)
+    reader = list(*readers)
 
     count_keys = ["ref_count", "alt_count", "vaf"]
     fields = readers[0].fieldnames
@@ -52,16 +52,15 @@ def main():
     else:
         outfile = sys.stdout
     writer = csv.DictWriter(outfile, delimiter="\t", fieldnames=fields)
-    writer.writeheader()
+    # writer.writeheader()
 
     bams = [pysam.AlignmentFile(bam) for bam in args.bam_filenames]
-    
+
     ref_key = "ref_count"
     alt_key = "alt_count"
     vaf_key = "vaf"
     
     for bam in bams:
-        done = []
         for row in reader:
             chrom = chr_prefix + row["Chromosome"]
             pos = int(row["Start_Position"])
