@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 """Variant calling from Access Array data to extract the VAF of known mutations."""
+from __future__ import division
 import pysam
 import csv
 import itertools
@@ -14,9 +15,6 @@ from augment_maf import bamUtils
 from augment_maf import mafUtils
 
 def main():
-    print "DEBUG: Using pysam version: " + pysam.__version__ 
-    #set some global variables
-
     #get options
     parser = argparse.ArgumentParser(description='obtain input files and mutation details, if available')
     parser.add_argument('-s', '--sample', dest='sample', help='name for sample being provided')
@@ -43,7 +41,7 @@ def main():
         readers.append(csv.DictReader(lines, delimiter="\t"))
     reader = itertools.chain(*readers)
 
-    count_keys = ["ref_count", "alt_count"]
+    count_keys = ["ref_count", "alt_count", "vaf"]
     fields = readers[0].fieldnames
     for key in count_keys:
         if not key in fields:
@@ -57,40 +55,31 @@ def main():
     writer.writeheader()
 
     bams = [pysam.AlignmentFile(bam) for bam in args.bam_filenames]
-    bamfiles = {"sample": bams}
     
-    done = []
-    for row in reader:
-        chrom = chr_prefix + row["Chromosome"]
-        pos = int(row["Start_Position"])
-        ref = row["Reference_Allele"]
-        alt = mafUtils.get_nref_allele(row)
-        if (chrom, pos, ref, alt) in done:
-            continue
+    ref_key = "ref_count"
+    alt_key = "alt_count"
+    vaf_key = "vaf"
+    
+    for bam in bams:
+        done = []
+        for row in reader:
+            chrom = chr_prefix + row["Chromosome"]
+            pos = int(row["Start_Position"])
+            ref = row["Reference_Allele"]
+            alt = mafUtils.get_nref_allele(row)
 
-        old_counts = mafUtils.get_allele_counts(row)
-
-        if sum(old_counts) > 0:
-            if args.replace:
-                warnings.warn("Replacing existing allele counts")
-                old_counts = (0, 0)
-            else:
-                warnings.warn("Adding to existing allele counts")
-
-        row.update(dict(zip(count_keys, old_counts)))
-
-        for bam in bams:
-            ref_key = "ref_count"
-            alt_key = "alt_count"
             if mafUtils.is_snv(row):
                 counts = bamUtils.count_bases(bam, reffile, chrom, pos)
             else:
                 counts = bamUtils.count_indels(bam, reffile, chrom, pos, ref, alt, "hybrid")
-            row[ref_key] += counts[ref]
-            row[alt_key] += counts[alt]
+                
+            row[ref_key] = counts[ref]
+            row[alt_key] = counts[alt]
 
-        writer.writerow(row)
-        done.append((chrom, pos, ref, alt))
+            vaf = counts[alt] / (counts[alt] + counts[ref])
+            row[vaf_key] = round(vaf, 6)
+
+            writer.writerow(row)
 
 if __name__ == "__main__":
     main()
