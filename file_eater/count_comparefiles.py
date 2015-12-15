@@ -22,7 +22,7 @@ def main():
 
 	#Specify command line arguments
 	parser = argparse.ArgumentParser(description="Get total counts for file list, depending on file type")
-        parser.add_argument('-t', '--input_type', nargs=1, type=str, required=True, help="One of fastq or bam")
+        parser.add_argument('-t', '--input_type', nargs=1, type=str, required=True, help="One of fastq or bam or fq.gz")
         parser.add_argument('-o', '--countfile', nargs=1, type=str, required=True, help="Name of output file with one count per file list item")
 	parser.add_argument('-i', '--input_list', nargs='+', type=str, required=True, help="List of input file names")
 	parser.add_argument('--samtools', nargs=1, type=str, required=False, default=["samtools"], help="Path to samtools exec")
