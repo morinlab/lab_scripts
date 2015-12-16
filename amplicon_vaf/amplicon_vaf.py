@@ -51,7 +51,7 @@ def main():
     else:
         outfile = sys.stdout
     writer = csv.DictWriter(outfile, delimiter="\t", fieldnames=fields)
-    # writer.writeheader()
+    writer.writeheader()
 
     bams = [pysam.AlignmentFile(bam) for bam in args.bam_filenames]
     # Take bam filename up until first '.' as sample id
