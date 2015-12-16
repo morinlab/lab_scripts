@@ -54,13 +54,14 @@ def main():
     # writer.writeheader()
 
     bams = [pysam.AlignmentFile(bam) for bam in args.bam_filenames]
-    sample_ids = [bam.split(os.path.extsep)[0] for bam in args.bam_filenames]
+    # Take bam filename up until first '.' as sample id
+    sample_ids = [os.path.basename(bam).split(os.path.extsep)[0] for bam in args.bam_filenames]
 
     ref_key = "ref_count"
     alt_key = "alt_count"
     vaf_key = "vaf"
     sample_id_key = "sample_id"
-    
+
     for (sample_id, bam) in zip(sample_ids, bams):
         for row in reader:
             chrom = chr_prefix + row["Chromosome"]
@@ -72,7 +73,7 @@ def main():
                 counts = bamUtils.count_bases(bam, reffile, chrom, pos)
             else:
                 counts = bamUtils.count_indels(bam, reffile, chrom, pos, ref, alt, "hybrid")
-                
+     
             row[ref_key] = counts[ref]
             row[alt_key] = counts[alt]
 
