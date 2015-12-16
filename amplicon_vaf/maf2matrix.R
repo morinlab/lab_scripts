@@ -1,0 +1,11 @@
+library(reshape2)
+
+args <- commandArgs(trailingOnly = TRUE)
+
+maf <- read.csv(file=args[1], sep="\t", header=T, stringsAsFactors = F)
+
+if(is.null(maf$Variant_ID)) {
+  maf$Variant_ID <- paste(as.character(maf$Chromosome), ":", as.character(maf$Start_Position), maf$Reference_Allele, ">", maf$Tumor_Seq_Allele2, sep="")
+}
+
+acast(maf, Sample_ID ~ Variant_ID, value.var = "VAF")
