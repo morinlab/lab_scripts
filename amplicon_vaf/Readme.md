@@ -16,4 +16,4 @@ Fields Appended to MAF in Output
 
 | Reference_Counts | Alternate_Counts |      VAF |                     Sample_ID |
 | ---------------- | ---------------- | -------- | ----------------------------- |
-|             4702 |             3272 | 0.410334 | <basename of .bam input file> |
+|             4702 |             3272 | 0.410334 | (basename of .bam input file) |
