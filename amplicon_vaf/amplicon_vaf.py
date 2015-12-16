@@ -17,18 +17,17 @@ from augment_maf import mafUtils
 def main():
     #get options
     parser = argparse.ArgumentParser(description='obtain input files and mutation details, if available')
-    parser.add_argument('-s', '--sample', dest='sample', help='name for sample being provided')
     parser.add_argument('-b', '--bam', nargs='+', type=str, dest='bam_filenames', help='bam file for sample provided')
     parser.add_argument('-m', '--maf', dest='maf', action='append', default = [], help='MAF file(s) containing details for mutations of interest')
-    parser.add_argument('-r', '--region_file', dest='regions', help='file containing coordinates of one or more regions targeted in sample(s)')
-    parser.add_argument('-g', '--genome_fasta', dest='genome', help='indexed fasta file alinged to')
+    parser.add_argument('-r', '--ref', dest='genome', help='indexed fasta file alinged to')
     parser.add_argument('-o', '--output', dest='outfile', help='output file')
     args = parser.parse_args()
     
     try:
         reffile = pysam.Fastafile(args.genome)
     except AttributeError:
-        print "using default genome fasta %s" % genome_fasta
+        print "Error finding reference file:" + args.genome
+	sys.exit(-1)
 
     if reffile.references[0].startswith("chr"):
         chr_prefix = "chr"
