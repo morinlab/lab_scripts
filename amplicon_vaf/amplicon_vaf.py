@@ -40,7 +40,7 @@ def main():
         readers.append(csv.DictReader(lines, delimiter="\t"))
     reader = list(*readers)
 
-    count_keys = ["ref_count", "alt_count", "vaf", "sample_id"]
+    count_keys = ["Reference_Count", "Alternate_Count", "VAF", "Sample_ID"]
     fields = readers[0].fieldnames
     for key in count_keys:
         if not key in fields:
@@ -57,10 +57,10 @@ def main():
     # Take bam filename up until first '.' as sample id
     sample_ids = [os.path.basename(bam).split(os.path.extsep)[0] for bam in args.bam_filenames]
 
-    ref_key = "ref_count"
-    alt_key = "alt_count"
-    vaf_key = "vaf"
-    sample_id_key = "sample_id"
+    ref_key = "Reference_Count"
+    alt_key = "Alternate_Count"
+    vaf_key = "VAF"
+    sample_id_key = "Sample_ID"
 
     for (sample_id, bam) in zip(sample_ids, bams):
         for row in reader:
