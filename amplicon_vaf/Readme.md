@@ -20,3 +20,9 @@ Fields Appended to MAF in Output
 | Reference_Counts | Alternate_Counts |      VAF |                     Sample_ID |
 | ---------------- | ---------------- | -------- | ----------------------------- |
 |             4702 |             3272 | 0.410334 | (basename of .bam input file) |
+
+Running the maf2matrix.R Helper Script
+======================================
+```
+Rscript maf2matrix.R {amplicon_vaf_output.maf}
+```
