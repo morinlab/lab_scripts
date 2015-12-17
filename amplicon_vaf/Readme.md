@@ -25,9 +25,9 @@ Fields Appended to MAF in Output
 
 Running the maf2matrix.R Helper Script
 ======================================
-The maf2matrix.R script will convert the output of amplicon_vaf.py into a matrix (variants x samples) of VAF values.
+The `maf2matrix.R` script will convert the output of `amplicon_vaf.py` into a matrix (variants x samples) of VAF values.
 If the optional `Variant_ID` field is included, then that will be used for the row label.  If no `Variant_ID` is provided
-then ids will be constructed based on position and base change (eg: `3:178952085A>G`).
+then IDs will be constructed based on position and base change (eg: `3:178952085A>G`).
 ```
 Rscript maf2matrix.R {amplicon_vaf_output.maf}
 ```
