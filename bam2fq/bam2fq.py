@@ -24,13 +24,13 @@ Known Issues
 -Ignored read shuffling
 
 """
-from __future__ import print_function
 import os
 import argparse
 import string
 import subprocess
 import sys
 import glob
+import re
 
 def main():
     """Parse BAM file and convert to FASTQ"""
@@ -65,6 +65,7 @@ def main():
     p_sp = spawn_gzip(chnk_num, outdir, gzip_cmd, "paired_")
     chnk_num += 1
     up_sp = spawn_gzip(chnk_num, outdir, gzip_cmd, "unpaired_")
+
     # Look over each line in bam
     for line in bam_infile:
         bam_line = line.split("\t")
@@ -75,8 +76,8 @@ def main():
 
         # Supplementary alignment check
         if sam_flag_list[3]:
-	    tot_read_count += 1
-	    continue
+            tot_read_count += 1
+            continue
 
         # Reverse complement sequence and reverse quality string
         # if revcomp flag is set
@@ -87,6 +88,7 @@ def main():
         # Add qname as key if it doesn't exist.
         # If it already exists then current read is part of
         # a pair.
+        
         if qname in paired_dict:
             paired = True
         else:
@@ -132,7 +134,6 @@ def main():
 
     # Write interval file
     write_interval_file(outdir)
-    #print('read_total:' + str(tot_read_count), file=sys.stderr)
     return
 
 
