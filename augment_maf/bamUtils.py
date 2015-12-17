@@ -133,6 +133,110 @@ def pair_align(ref_seq, alt_seq, reads):
     return scores
 
 
+def get_indel_vaf_pileup(samfile,reffile,chromosome,pos,ref,alt,minimum_mapping_qual):
+    """This function uses the I/D CIGAR operations at a 
+    sepcific position to calculate the VAF of an indel 
+    specified by the user. Only cigar operations that match
+    the length of the event will be counted and all other reads
+    will be considered equivalent to the 'reference' allele
+    I am at this time not able to determine how to match the length
+    of an insertion to a pre-specified event so this function currently
+    assumes all I and D operations overlapping with a site are equivalent"""
+    chromosome_long = "chr" + chromosome
+
+    pileup_summary = []
+    
+    pad_length = 250
+
+    #first generate a pileup object in the region specified with padding
+    region_start = pos-pad_length
+    region_end = pos+pad_length
+    pos_depths = {} #store coverage depth at every position in the region
+    pos_delcounts = {} #store number of deletion operations at every position in the region
+    pos_inscounts = {} #store number of insertion operations at every position in the region
+    try:
+        pileup = samfile.pileup(chromosome_long,region_start,region_end,fastafile=reffile,max_depth = 1000000)
+    except ValueError:
+        pileup = samfile.pileup(chromosome,region_start,region_end,fastafile=reffile,max_depth = 1000000)
+    for x in pileup:
+        genome_coordinate = x.pos+1
+        #skip positions in padded region
+        if genome_coordinate < region_start or genome_coordinate > region_end:
+            continue
+        chrompos = "%s:%s" % (chromosome,genome_coordinate)
+        dep = x.n
+        if not pos_depths.has_key(genome_coordinate):
+            pos_depths[genome_coordinate]=dep
+        reads = x.pileups
+        nreads = len(reads)
+        nref_reads = {"A":{},"C":{},"T":{},"G":{},"I":{},"D":{},"N":{}}
+        ref_count = 0
+        for read in reads:
+            mapq = read.alignment.mapq
+            if mapq >= minimum_mapping_qual:
+                try:
+                    base = read.alignment.seq[read.query_position]
+                except TypeError:
+                    pass
+                if not read.indel and not read.is_del:
+                    continue
+                
+                if read.indel > 1:
+                
+                    if not pos_inscounts.has_key(genome_coordinate):
+                        pos_inscounts[genome_coordinate]=1
+                
+                    else:
+                        pos_inscounts[genome_coordinate]+=1
+                elif read.indel < 1:
+                
+                    if not pos_delcounts.has_key(genome_coordinate):
+                        pos_delcounts[genome_coordinate] = 1
+                
+                    else:
+                        pos_delcounts[genome_coordinate]+=1
+                
+                if read.indel>1:
+                    if nref_reads["I"].has_key(read.alignment.qname):
+                         nref_reads["I"][read.alignment.qname] += 1
+                    else:
+                        nref_reads["I"][read.alignment.qname] = 1
+                elif read.is_del:
+                    if nref_reads["D"].has_key(read.alignment.qname):
+                         nref_reads["D"][read.alignment.qname] += 1
+                    else:
+                        nref_reads["D"][read.alignment.qname] = 1
+                else:
+                    ref_count+=1
+    nref_count = 0
+    for position in range(pos-2,pos+2):
+        if not pos_depths.has_key(position):
+            continue
+        if not pos_delcounts.has_key(position):
+            pos_delcounts[position] = 0
+        if not pos_inscounts.has_key(position):
+            pos_inscounts[position] = 0
+
+        if alt == "-":
+            #deletion
+            vaf = pos_delcounts[position]/pos_depths[position]
+            if position == pos:
+                nref_count = pos_delcounts[position]
+    
+        elif len(alt) > len(ref):
+            #insertion
+            vaf = pos_inscounts[position]/pos_depths[position]
+            if position == pos:
+                nref_count = pos_inscounts[position]
+    
+        else:
+            print "ERROR, is this an indel? %s %s" % (ref,alt)
+            exit()
+    ref_count = pos_depths[pos] - nref_count
+
+    return(ref_count,nref_count)
+        
+
 def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
     """This function infers whether a read supports the
     reference or alternate allele and then counts them up.
@@ -240,7 +344,11 @@ def count_indels(samfile, reffile, chrom, pos, ref, alt, mode, min_mapq=20):
 
     # Calculate read counts for ref and alt
     method = MODES[mode]
-    counts = method(ref_seq, alt_seq, reads)
+    if mode == "pileup":
+        #needs different data using the pileup method
+        counts = method(samfile,reffile,chrom,pos,ref,alt,min_mapq)
+    else:
+        counts = method(ref_seq, alt_seq, reads)
     return {ref: counts[0], alt: counts[1]}
 
 
@@ -286,5 +394,6 @@ MODES = {
     "mafft": multi_align,
     "muscle": multi_muscle_align,
     "swalign": pair_align,
-    "hybrid": kmer_count_and_aln
+    "hybrid": kmer_count_and_aln,
+    "pileup": get_indel_vaf_pileup
 }
