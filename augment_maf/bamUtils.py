@@ -134,8 +134,8 @@ def pair_align(ref_seq, alt_seq, reads):
 
 
 def get_indel_vaf_pileup(samfile,reffile,chromosome,pos,ref,alt,minimum_mapping_qual):
-    """This function uses the I/D CIGAR operations at a 
-    sepcific position to calculate the VAF of an indel 
+    """This function uses the I/D CIGAR operations at a
+    sepcific position to calculate the VAF of an indel
     specified by the user. Only cigar operations that match
     the length of the event will be counted and all other reads
     will be considered equivalent to the 'reference' allele
@@ -145,7 +145,7 @@ def get_indel_vaf_pileup(samfile,reffile,chromosome,pos,ref,alt,minimum_mapping_
     chromosome_long = "chr" + chromosome
 
     pileup_summary = []
-    
+
     pad_length = 250
 
     #first generate a pileup object in the region specified with padding
@@ -180,22 +180,22 @@ def get_indel_vaf_pileup(samfile,reffile,chromosome,pos,ref,alt,minimum_mapping_
                     pass
                 if not read.indel and not read.is_del:
                     continue
-                
+
                 if read.indel > 1:
-                
+
                     if not pos_inscounts.has_key(genome_coordinate):
                         pos_inscounts[genome_coordinate]=1
-                
+
                     else:
                         pos_inscounts[genome_coordinate]+=1
                 elif read.indel < 1:
-                
+
                     if not pos_delcounts.has_key(genome_coordinate):
                         pos_delcounts[genome_coordinate] = 1
-                
+
                     else:
                         pos_delcounts[genome_coordinate]+=1
-                
+
                 if read.indel>1:
                     if nref_reads["I"].has_key(read.alignment.qname):
                          nref_reads["I"][read.alignment.qname] += 1
@@ -222,20 +222,20 @@ def get_indel_vaf_pileup(samfile,reffile,chromosome,pos,ref,alt,minimum_mapping_
             vaf = pos_delcounts[position]/pos_depths[position]
             if position == pos:
                 nref_count = pos_delcounts[position]
-    
+
         elif len(alt) > len(ref):
             #insertion
             vaf = pos_inscounts[position]/pos_depths[position]
             if position == pos:
                 nref_count = pos_inscounts[position]
-    
+
         else:
             print "ERROR, is this an indel? %s %s" % (ref,alt)
             exit()
     ref_count = pos_depths[pos] - nref_count
 
     return(ref_count,nref_count)
-        
+
 
 def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
     """This function infers whether a read supports the
