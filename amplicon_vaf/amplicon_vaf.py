@@ -77,8 +77,16 @@ def main():
             row[ref_key] = counts[ref]
             row[alt_key] = counts[alt]
 
-            vaf = counts[alt] / (counts[alt] + counts[ref])
-            row[vaf_key] = round(vaf, 6)
+            try:
+                vaf = counts[alt] / (counts[alt] + counts[ref])
+            except ZeroDivisionError:
+                vaf = "NA"
+
+            if (vaf != "NA"):
+                row[vaf_key] = round(vaf, 6)
+            else:
+                row[vaf_key] = vaf
+
             row[sample_id_key] = sample_id
             writer.writerow(row)
 
