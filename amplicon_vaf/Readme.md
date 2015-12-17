@@ -23,6 +23,8 @@ Fields Appended to MAF in Output
 | ---------------- | ---------------- | -------- | ----------------------------- |
 |             4702 |             3272 | 0.410334 | (basename of .bam input file) |
 
+Note: VAF will be reported as `NA` for loci with zero coverage, for compatibility with `R`.
+
 Running the maf2matrix.R Helper Script
 ======================================
 The `maf2matrix.R` script will convert the output of `amplicon_vaf.py` into a matrix (variants x samples) of VAF values.
