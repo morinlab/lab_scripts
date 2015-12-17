@@ -173,6 +173,10 @@ score = [[0, 4, 2, 4, 8],
 
 def aln_score(read, ref, offset=None, margin=5):
 
+    # Normalize input strings according to alphabet
+    read = str(read).upper()
+    ref = str(ref).upper()
+
     # Edit ref if offset is given
     if offset:
         ref = ref[offset-margin:offset+len(read)+margin]
