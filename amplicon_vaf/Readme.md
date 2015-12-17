@@ -14,9 +14,20 @@ Below is an example .maf input file. The header line is required. Additional fie
 |          5 |      112173673 |          DEL |               TC |                TC |                 - |
 |          5 |      112176020 |          INS |                - |                 - |                AT |
 
+An optional `Variant_ID` field may be included to help with downstream analysis with maf2matrix.R.
+
 Fields Appended to MAF in Output
 ================================
 
 | Reference_Counts | Alternate_Counts |      VAF |                     Sample_ID |
 | ---------------- | ---------------- | -------- | ----------------------------- |
 |             4702 |             3272 | 0.410334 | (basename of .bam input file) |
+
+Running the maf2matrix.R Helper Script
+======================================
+The maf2matrix.R script will convert the output of amplicon_vaf.py into a matrix (variants x samples) of VAF values.
+If the optional `Variant_ID` field is included, then that will be used for the row label.  If no `Variant_ID` is provided
+then ids will be constructed based on position and base change (eg: `3:178952085A>G`).
+```
+Rscript maf2matrix.R {amplicon_vaf_output.maf}
+```
