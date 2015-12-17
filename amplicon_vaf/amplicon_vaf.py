@@ -72,7 +72,7 @@ def main():
             if mafUtils.is_snv(row):
                 counts = bamUtils.count_bases(bam, reffile, chrom, pos)
             else:
-                counts = bamUtils.count_indels(bam, reffile, chrom, pos, ref, alt, "hybrid")
+                counts = bamUtils.count_indels(bam, reffile, chrom, pos, ref, alt, "pileup")
      
             row[ref_key] = counts[ref]
             row[alt_key] = counts[alt]
