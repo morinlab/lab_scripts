@@ -82,9 +82,9 @@ def main():
             try:
                 vaf = counts[alt] / (counts[alt] + counts[ref])
             except ZeroDivisionError:
-                vaf = "NA"
+                vaf = "NaN"
 
-            if (vaf != "NA"):
+            if (vaf != "NaN"):
                 row[vaf_key] = round(vaf, 6)
             else:
                 row[vaf_key] = vaf
