@@ -23,6 +23,7 @@ def main():
     parser.add_argument('-m', '--maf', dest='maf', action='append', default = [], help='MAF file(s) containing details for mutations of interest')
     parser.add_argument('-r', '--ref', dest='genome', help='indexed fasta file alinged to')
     parser.add_argument('-o', '--output', dest='outfile', help='output file')
+    parser.add_argument('-M', '--mode', dest='indel_mode', help='analysis mode for indels' )
     args = parser.parse_args()
 
     try:
@@ -63,7 +64,8 @@ def main():
     alt_key = "Alternate_Count"
     vaf_key = "VAF"
     sample_id_key = "Sample_ID"
-
+    indel_mode = args.indel_mode if args.indel_mode is not None else "pileup"
+    print indel_mode
     for (sample_id, bam) in zip(sample_ids, bams):
         for row in reader:
             chrom = chr_prefix + row["Chromosome"]
@@ -74,7 +76,7 @@ def main():
             if mafUtils.is_snv(row):
                 counts = bamUtils.count_bases(bam, reffile, chrom, pos)
             else:
-                counts = bamUtils.count_indels(bam, reffile, chrom, pos, ref, alt, "pileup")
+                counts = bamUtils.count_indels(bam, reffile, chrom, pos, ref, alt, indel_mode)
             row[ref_key] = counts[ref]
             row[alt_key] = counts[alt]
 
