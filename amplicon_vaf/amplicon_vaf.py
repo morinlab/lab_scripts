@@ -54,7 +54,6 @@ def main():
     else:
         outfile = sys.stdout
     writer = csv.DictWriter(outfile, delimiter="\t", fieldnames=fields)
-    writer.writeheader()
 
     bams = [pysam.AlignmentFile(bam) for bam in args.bam_filenames]
     # Take bam filename up until first '.' as sample id
@@ -65,7 +64,11 @@ def main():
     vaf_key = "VAF"
     sample_id_key = "Sample_ID"
     indel_mode = args.indel_mode if args.indel_mode is not None else "pileup"
+    if indel_mode not in bamUtils.MODES:
+        print "Invalid indel analysis mode."
+        sys.exit(-1)
 
+    writer.writeheader()
     for (sample_id, bam) in zip(sample_ids, bams):
         for row in reader:
             chrom = chr_prefix + row["Chromosome"]
