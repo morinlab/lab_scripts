@@ -82,12 +82,13 @@ def main():
             try:
                 vaf = counts[alt] / (counts[alt] + counts[ref])
             except ZeroDivisionError:
-                vaf = "NaN"
+                vaf = float('nan')
 
-            if (vaf != "NaN"):
-                row[vaf_key] = round(vaf, 6)
+            if (math.isnan(vaf)):
+                row[vaf_key] = "NaN"
             else:
-                row[vaf_key] = vaf
+                row[vaf_key] = round(vaf, 6)
+                
 
             row[sample_id_key] = sample_id
             writer.writerow(row)
