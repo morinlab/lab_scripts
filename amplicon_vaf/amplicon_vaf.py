@@ -11,6 +11,8 @@ import argparse
 import os.path
 import warnings
 
+# Add augment_maf to sys.path
+sys.path.insert(1, os.path.join(sys.path[0], "..", "augment_maf"))
 from augment_maf import bamUtils
 from augment_maf import mafUtils
 
@@ -22,7 +24,7 @@ def main():
     parser.add_argument('-r', '--ref', dest='genome', help='indexed fasta file alinged to')
     parser.add_argument('-o', '--output', dest='outfile', help='output file')
     args = parser.parse_args()
-    
+
     try:
         reffile = pysam.Fastafile(args.genome)
     except AttributeError:
@@ -33,7 +35,7 @@ def main():
         chr_prefix = "chr"
     else:
         chr_prefix = ""
-    
+
     readers = []
     for f in args.maf:
         lines = [x for x in open(f) if not x.startswith("#")]
@@ -73,7 +75,6 @@ def main():
                 counts = bamUtils.count_bases(bam, reffile, chrom, pos)
             else:
                 counts = bamUtils.count_indels(bam, reffile, chrom, pos, ref, alt, "pileup")
-     
             row[ref_key] = counts[ref]
             row[alt_key] = counts[alt]
 
