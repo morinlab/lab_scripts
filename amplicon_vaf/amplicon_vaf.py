@@ -65,7 +65,7 @@ def main():
     vaf_key = "VAF"
     sample_id_key = "Sample_ID"
     indel_mode = args.indel_mode if args.indel_mode is not None else "pileup"
-    print indel_mode
+
     for (sample_id, bam) in zip(sample_ids, bams):
         for row in reader:
             chrom = chr_prefix + row["Chromosome"]
