@@ -1,8 +1,10 @@
 amplicon_vaf
 =================
 ```
-amplicon_vaf.py --maf {variants.maf} --bam {samples.bam} --ref {reference.fa}
+amplicon_vaf.py --maf {variants.maf} --bam {samples.bam} --ref {reference.fa} [--mode {indel_analysis_mode}]
 ```
+
+The indel analysis mode argument is optional. Valid values include `hybrid` and `pileup` (see `bamUtils.py` in `augment_maf` for full list of indel analysis modes.)
 
 Required MAF Fields
 ====================
