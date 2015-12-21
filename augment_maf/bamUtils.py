@@ -228,9 +228,13 @@ def get_indel_vaf_pileup(samfile,reffile,chromosome,pos,ref,alt,minimum_mapping_
             vaf = pos_inscounts[position]/pos_depths[position]
             if position == pos:
                 nref_count = pos_inscounts[position]
-
+        elif ref == "-":
+            #insertion
+            vaf = pos_inscounts[position]/pos_depths[position]
+            if position == pos:
+                nref_count = pos_inscounts[position]
         else:
-            print "ERROR, is this an indel? %s %s" % (ref,alt)
+            print "ERROR, is this an indel? %s %s %s" % (pos,ref,alt)
             exit()
     ref_count = pos_depths[pos] - nref_count
 
