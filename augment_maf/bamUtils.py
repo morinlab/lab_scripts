@@ -1,4 +1,4 @@
-#useful functions for dealing with BAM files.
+# useful functions for dealing with BAM files.
 
 import warnings
 import subprocess
@@ -60,7 +60,6 @@ def multi_align(ref1, ref2, queries):
     return scores
 
 
-#ADDED BY KRISTINA
 def multi_muscle_align(ref1, ref2, queries):
     """
     Do MSA of several query sequences to two references using multiple sequence aligner MUSCLE. Return the reference
@@ -77,10 +76,9 @@ def multi_muscle_align(ref1, ref2, queries):
 
     outfile = tempfile.TemporaryFile()
     muscle_cline = MuscleCommandline(tfile.name)
-    child = subprocess.Popen(str(muscle_cline), stdout=outfile, stderr=subprocess.PIPE,shell=(sys.platform!="win32"))
+    subprocess.Popen(str(muscle_cline), stdout=outfile, stderr=subprocess.PIPE, shell=(sys.platform != "win32"))
     outfile.seek(0)
     align = SeqIO.parse(outfile, "fasta")
-    #align = AlignIO.read(child.stdout, "fasta")
     ref1 = next(align)
     ref2 = next(align)
     scores = [0, 0]
@@ -101,7 +99,6 @@ def multi_muscle_align(ref1, ref2, queries):
     return scores
 
 
-#ADDED BY KRISTINA
 def pair_align(ref_seq, alt_seq, reads):
     """
     Does pairwise alignment of read sequences to two references (original and altered). extracts scores for each alignment and counts indel/ref/tie.
@@ -109,7 +106,7 @@ def pair_align(ref_seq, alt_seq, reads):
     match = 2
     mismatch = -1
     scoring = swalign.NucleotideScoringMatrix(match, mismatch)
-    sw = swalign.LocalAlignment(scoring, full_query=True, gap_penalty = -10, gap_extension_penalty = - 0.5)
+    sw = swalign.LocalAlignment(scoring, full_query=True, gap_penalty=-10, gap_extension_penalty=-0.5)
     n_queries = 0
     scores = [0, 0]
     ties = 0
@@ -125,7 +122,7 @@ def pair_align(ref_seq, alt_seq, reads):
         elif alt_score < ref_score:
             scores[0] += 1
         else:
-            ties +=1
+            ties += 1
     if ties > 0:
         msg = "Discarding {} reads aligning equally to ref and alt".format(ties)
         warnings.warn(msg)
@@ -133,7 +130,7 @@ def pair_align(ref_seq, alt_seq, reads):
     return scores
 
 
-def get_indel_vaf_pileup(samfile,reffile,chromosome,pos,ref,alt,minimum_mapping_qual):
+def get_indel_vaf_pileup(samfile, reffile, chromosome, pos, ref, alt, minimum_mapping_qual):
     """This function uses the I/D CIGAR operations at a
     sepcific position to calculate the VAF of an indel
     specified by the user. Only cigar operations that match
@@ -143,39 +140,34 @@ def get_indel_vaf_pileup(samfile,reffile,chromosome,pos,ref,alt,minimum_mapping_
     of an insertion to a pre-specified event so this function currently
     assumes all I and D operations overlapping with a site are equivalent"""
     chromosome_long = "chr" + chromosome
-
-    pileup_summary = []
-
     pad_length = 250
 
-    #first generate a pileup object in the region specified with padding
+    # first generate a pileup object in the region specified with padding
     region_start = pos-pad_length
     region_end = pos+pad_length
-    pos_depths = {} #store coverage depth at every position in the region
-    pos_delcounts = {} #store number of deletion operations at every position in the region
-    pos_inscounts = {} #store number of insertion operations at every position in the region
+    pos_depths = {}  # store coverage depth at every position in the region
+    pos_delcounts = {}  # store number of deletion operations at every position in the region
+    pos_inscounts = {}  # store number of insertion operations at every position in the region
     try:
-        pileup = samfile.pileup(chromosome_long,region_start,region_end,fastafile=reffile,max_depth = 1000000)
+        pileup = samfile.pileup(chromosome_long, region_start, region_end, fastafile=reffile, max_depth=1000000)
     except ValueError:
-        pileup = samfile.pileup(chromosome,region_start,region_end,fastafile=reffile,max_depth = 1000000)
+        pileup = samfile.pileup(chromosome, region_start, region_end, fastafile=reffile, max_depth=1000000)
     for x in pileup:
         genome_coordinate = x.pos+1
-        #skip positions in padded region
+        # skip positions in padded region
         if genome_coordinate < region_start or genome_coordinate > region_end:
             continue
-        chrompos = "%s:%s" % (chromosome,genome_coordinate)
         dep = x.n
-        if not pos_depths.has_key(genome_coordinate):
-            pos_depths[genome_coordinate]=dep
+        if genome_coordinate not in pos_depths:
+            pos_depths[genome_coordinate] = dep
         reads = x.pileups
-        nreads = len(reads)
-        nref_reads = {"A":{},"C":{},"T":{},"G":{},"I":{},"D":{},"N":{}}
+        nref_reads = {"A": {}, "C": {}, "T": {}, "G": {}, "I": {}, "D": {}, "N": {}}
         ref_count = 0
         for read in reads:
             mapq = read.alignment.mapq
             if mapq >= minimum_mapping_qual:
                 try:
-                    base = read.alignment.seq[read.query_position]
+                    read.alignment.seq[read.query_position]
                 except TypeError:
                     pass
                 if not read.indel and not read.is_del:
@@ -183,62 +175,58 @@ def get_indel_vaf_pileup(samfile,reffile,chromosome,pos,ref,alt,minimum_mapping_
 
                 if read.indel > 1:
 
-                    if not pos_inscounts.has_key(genome_coordinate):
-                        pos_inscounts[genome_coordinate]=1
+                    if genome_coordinate not in pos_inscounts:
+                        pos_inscounts[genome_coordinate] = 1
 
                     else:
-                        pos_inscounts[genome_coordinate]+=1
+                        pos_inscounts[genome_coordinate] += 1
                 elif read.indel < 1:
 
-                    if not pos_delcounts.has_key(genome_coordinate):
+                    if genome_coordinate not in pos_delcounts:
                         pos_delcounts[genome_coordinate] = 1
 
                     else:
-                        pos_delcounts[genome_coordinate]+=1
+                        pos_delcounts[genome_coordinate] += 1
 
-                if read.indel>1:
-                    if nref_reads["I"].has_key(read.alignment.qname):
-                         nref_reads["I"][read.alignment.qname] += 1
+                if read.indel > 1:
+                    if read.alignment.qname in nref_reads["I"]:
+                        nref_reads["I"][read.alignment.qname] += 1
                     else:
                         nref_reads["I"][read.alignment.qname] = 1
                 elif read.is_del:
-                    if nref_reads["D"].has_key(read.alignment.qname):
-                         nref_reads["D"][read.alignment.qname] += 1
+                    if read.alignment.qname in nref_reads["D"]:
+                        nref_reads["D"][read.alignment.qname] += 1
                     else:
                         nref_reads["D"][read.alignment.qname] = 1
                 else:
-                    ref_count+=1
+                    ref_count += 1
     nref_count = 0
-    for position in range(pos-2,pos+2):
-        if not pos_depths.has_key(position):
+    for position in range(pos-2, pos+2):
+        if position not in pos_depths:
             continue
-        if not pos_delcounts.has_key(position):
+        if position not in pos_delcounts:
             pos_delcounts[position] = 0
-        if not pos_inscounts.has_key(position):
+        if position not in pos_inscounts:
             pos_inscounts[position] = 0
 
         if alt == "-":
-            #deletion
-            vaf = pos_delcounts[position]/pos_depths[position]
+            # deletion
             if position == pos:
                 nref_count = pos_delcounts[position]
-
         elif len(alt) > len(ref):
-            #insertion
-            vaf = pos_inscounts[position]/pos_depths[position]
+            # insertion
             if position == pos:
                 nref_count = pos_inscounts[position]
         elif ref == "-":
-            #insertion
-            vaf = pos_inscounts[position]/pos_depths[position]
+            # insertion
             if position == pos:
                 nref_count = pos_inscounts[position]
         else:
-            print "ERROR, is this an indel? %s %s %s" % (pos,ref,alt)
+            print "ERROR, is this an indel? %s %s %s" % (pos, ref, alt)
             exit()
     ref_count = pos_depths[pos] - nref_count
 
-    return(ref_count,nref_count)
+    return(ref_count, nref_count)
 
 
 def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
@@ -349,8 +337,8 @@ def count_indels(samfile, reffile, chrom, pos, ref, alt, mode, min_mapq=20):
     # Calculate read counts for ref and alt
     method = MODES[mode]
     if mode == "pileup":
-        #needs different data using the pileup method
-        counts = method(samfile,reffile,chrom,pos,ref,alt,min_mapq)
+        # needs different data using the pileup method
+        counts = method(samfile, reffile, chrom, pos, ref, alt, min_mapq)
     else:
         counts = method(ref_seq, alt_seq, reads)
     return {ref: counts[0], alt: counts[1]}
@@ -389,7 +377,6 @@ def count_bases(samfile, reffile, chrom, pos):
     start = max(pos-200, 0)
     end = pos+200
     reffile.fetch(reference=chrom, start=pos-1, end=pos)
-    ref_base = reffile.fetch(reference=chrom, start=pos-1, end=pos).decode("utf-8")
     pileup = samfile.pileup(chrom, start, end, fastafile=reffile)
     return count_bases_pileup(pileup, pos)
 

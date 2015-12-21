@@ -31,7 +31,9 @@ if __name__ == "__main__":
 
     # Setup logging
     log_lvl = getattr(logging, args.log_lvl)
-    logging.basicConfig(stream=args.log_file, level=log_lvl, format="%(message)s")
+    log_fmt = '%(asctime)s - %(levelname)s (%(module)s.%(funcName)s):  %(message)s'
+    date_fmt = '%Y/%m/%d %H:%M:%S'  # 2010/12/12 13:46:36
+    logging.basicConfig(stream=args.log_file, level=log_lvl, format=log_fmt, datefmt=date_fmt)
 
     if (args.maf == []):
         sys.exit("You must specify at least one MAF file")
@@ -50,7 +52,7 @@ if __name__ == "__main__":
     count_keys = ["n_ref_count", "n_alt_count", "t_ref_count", "t_alt_count"]
     fields = readers[0].fieldnames
     for key in count_keys:
-        if not key in fields:
+        if key not in fields:
             fields.append(key)
 
     outfile = open(args.outfile, "w")
