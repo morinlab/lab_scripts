@@ -8,11 +8,11 @@ for quantifying indel VAF.
 Written by Bruno Grande.
 """
 
-from __future__ import print_function
 from __future__ import division
 
 from collections import defaultdict
 from random import shuffle
+import logging
 
 import numpy as np
 

@@ -222,8 +222,8 @@ def get_indel_vaf_pileup(samfile, reffile, chromosome, pos, ref, alt, minimum_ma
             if position == pos:
                 nref_count = pos_inscounts[position]
         else:
-            print "ERROR, is this an indel? %s %s %s" % (pos, ref, alt)
-            exit()
+            logging.error("Is this an indel? %s %s %s" % (pos, ref, alt))
+            raise ValueError
     ref_count = pos_depths[pos] - nref_count
 
     return(ref_count, nref_count)
