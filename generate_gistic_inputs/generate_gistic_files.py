@@ -3,17 +3,16 @@ import math
 
 """
 
-Input: a two column, tab delimited file where the first column contains the
-absolute paths of the Sequenza seg file and the second column contains the
-sample name for the associated Sequenza seg file.
+Input: a three column, tab delimited file where the first column contains
+the sample name, the second column contains the path to the Sequenza seg 
+file for that sample and the and third column contains the path to the 
+Sequenza mutations.txt file for that sample.
+
 Output: GISTIC compatible segmentation file with the start position of the
 first segment and the end position of the last segment for every chromosome
 is adjusted to be the same for all samples. It will also produce a marker
-file where the markers are the set of start positions of the segments
-from all samples. 
-
-TODO: Add functionality that uses the BAF position from Sequenza segmentation 
-output as markers instead of segment start and end position.
+file where the marker positions are derived from the set of B-Allele
+Frequency (BAF) positions derived from the Sequenza mutations.txt files.
 
 """
 
@@ -24,13 +23,16 @@ def main():
     out_seg = args.out_seg
 
     seg_files = []
+    mut_files = []
     sample_names = []
 
     for line in input_table:
-        file_name, name = line.split('\t')
+        name, file_name, muts_file_name = line.split('\t')
         file = open(file_name, 'r')
+        mut_file = open(muts_file_name.rstrip(), 'r')
         seg_files.append(file)
-        sample_names.append(name.rstrip())
+        mut_files.append(mut_file)
+        sample_names.append(name)
 
     # TODO: Make sure that samples names are unique.
     if not len(seg_files) == len(sample_names):
@@ -39,7 +41,8 @@ def main():
 
     parsed_seg = parse_segs(seg_files, sample_names)
 
-    markers = make_markers(parsed_seg)
+    markers = make_markers_from_baf(mut_files)
+    markers = add_start_and_end_markers(parsed_seg, markers)
 
     chrm_min_max = find_chrm_min_max(parsed_seg)
 
@@ -103,6 +106,42 @@ def find_num_markers(parsed_seg, markers):
 
     return num_marker_dict
 
+
+def make_markers_from_baf(mut_files):
+    baf_markers = { chrm : set() for chrm in make_chrm_list() }
+
+    for mut_file in mut_files:
+        header_found = False
+        for line in mut_file:
+            if not header_found:
+                header_found = True
+                continue
+            chrm, pos = line.split('\t')[0:2]
+            if chrm.startswith('"') and chrm.endswith('"'):
+                chrm = str(chrm[1:-1])
+            baf_markers[chrm].add(pos)
+    else:
+        mut_file.close()
+
+    return baf_markers
+
+def add_start_and_end_markers(parsed_seg, baf_markers):
+    out_markers = {}
+
+    for sn in parsed_seg.keys():
+        chrm_dict = parsed_seg[sn]
+        for chrm_k in make_chrm_list():
+            chrm_segs = parsed_seg[sn][chrm_k]
+            for chrm_seg in chrm_segs:
+                baf_markers[chrm_k].add(chrm_seg[0])
+                baf_markers[chrm_k].add(chrm_seg[1])
+
+    for chrm_k in make_chrm_list():
+        out_markers[chrm_k] = sorted(list(baf_markers[chrm_k]), key=int)
+
+    return out_markers
+
+# DEPRECATED
 def make_markers(parsed_seg):
     markers = { k : set() for k in make_chrm_list() }
     out_markers = {}
