@@ -1,5 +1,6 @@
 using ArgParse
 using Distributions
+using DataFrames
 
 function parse_commandline()
     s = ArgParseSettings()
@@ -24,26 +25,15 @@ function main()
     @assert size(vafs, 2) % args["replicates"] == 0
     betaDistributions = mapslices(x -> fit(Beta, x), vafs, 2)
     betaDistributions = squeeze(betaDistributions, 2)
-    print(size(betaDistributions))
-    for betaDist in betaDistributions
-        println(betaDist)
-    end
+    
     lowerConf = (100 - args["confidence"]) * 0.01 
     lowerCIs = map(x -> quantile(x, lowerConf), betaDistributions)
-    println("Lower CIs:")
-    for lowerCI in lowerCIs
-        println(lowerCI)
-    end
+
     upperConf = args["confidence"] * 0.01 
     upperCIs = map(x -> quantile(x, upperConf), betaDistributions)
-    println("Upper CIs:")
-    for upperCI in upperCIs
-        println(upperCI)
-    end
-    println("Means:")
-    for betaDist in betaDistributions
-        println(mean(betaDist))
-    end
+
+    means = map(mean, betaDistributions)
+
 end
 
 main()
