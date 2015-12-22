@@ -33,6 +33,8 @@ The `maf2matrix.R` script will convert the output of `amplicon_vaf.py` into a ma
 If the optional `Variant_ID` field is included, then that will be used for the row label.  If no `Variant_ID` is provided
 then IDs will be constructed based on position and base change (eg: `3:178952085A>G`).
 ```
-Rscript maf2matrix.R {amplicon_vaf_output.maf} [--rownames]
+Rscript maf2matrix.R {amplicon_vaf_output.maf} [--rownames] [--coverage]
 ```
 The optional flag `-r` or `--rownames` controls whether rownames will be included in the output. If rownames are *not* included in the output, they will be written to a separate file in the current directory named `variant_list.txt`
+
+The optional flag `-c` or `--coverage` causes total coverage data to be displayed alongside VAF values in the output.  There will be alternating VAF and coverage columns for each sample. The coverage column label is appended with `_total_coverage`
