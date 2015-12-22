@@ -34,6 +34,8 @@ function main()
 
     means = map(mean, betaDistributions)
 
+    output = DataFrame(mean = means, lowerCI = lowerCIs, upperCI = upperCIs)
+    print(output)
 end
 
 main()
