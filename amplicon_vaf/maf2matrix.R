@@ -10,7 +10,7 @@ if("-r" %in% args || "--rownames" %in% args){
   include_rownames_in_output <- FALSE
 }
 
-if("-c" %in% args || "--counts" %in% args){
+if("-c" %in% args || "--coverage" %in% args){
   include_counts_in_output <- TRUE
 } else {
   include_counts_in_output <- FALSE
