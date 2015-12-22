@@ -267,6 +267,7 @@ def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
     }
     defaults.update(params)
     params = defaults
+    logging.debug("params: {}".format(params))
     # Initialize some variables
     ref_count = 0
     alt_count = 0
@@ -278,39 +279,46 @@ def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
     logging.debug("alt_seq: {}".format(alt_seq))
     # Iterate over reads
     for read in reads:
+        logging.debug("")
+        logging.debug("read: {}".format(read))
         # Replace Ns with As (workaround)
         read = read.rstrip("\n").replace("N", "A")
         # Reverse read if applicable
         if not indelUtils.is_forward(read, ref_idxs, k=params["k"], ival=params["ival"]):
+            logging.debug("read was reversed")
             read = indelUtils.rev_comp(read)
         # Find offset
         offset = indelUtils.find_offset(read, ref_idxs, k=params["k"], step=1, ival=params["ival"])
+        logging.debug("offset: {}".format(offset))
         # Determine if overlaps with mutation position
         if offset and not indelUtils.is_overlap(read, ref_seq, offset, min_olap=params["min_olap"]):
+            logging.debug("read does not overlap mutation")
             continue
         # Calculate score delta using k-mer method
         kmer_delta = indelUtils.calc_kmer_delta(read, ref_idxs, alt_idxs, k=params["k"], min_delta=params["min_delta_kmer"], max_ival=params["max_ival"])
+        logging.debug("kmer_delta: {}".format(kmer_delta))
         if kmer_delta > 0:
             ref_count += 1
-            logging.debug("ref: {}".format(read))
+            logging.debug("read classified as reference by kmer method")
         elif kmer_delta < 0:
             alt_count += 1
-            logging.debug("alt: {}".format(read))
+            logging.debug("read classified as alternate by kmer method")
         else:
             # If k-mer method can't discriminate between ref and alt, use alignment method
             # Estimate appropriate margin (esp. if insertion)
             margin = max(len(alt_seq) - len(ref_seq) + 5, 5)
             # Calculate score delta using alignment method
             aln_delta = indelUtils.calc_aln_delta(read, ref_seq, alt_seq, min_delta=params["min_delta_aln"], offset=offset, margin=margin)
+            logging.debug("aln_delta: {}".format(aln_delta))
             if aln_delta > 0:
                 ref_count += 1
-                logging.debug("ref: {}".format(read))
+                logging.debug("read classified as reference by aln method")
             elif aln_delta < 0:
                 alt_count += 1
-                logging.debug("alt: {}".format(read))
+                logging.debug("read classified as alternate by aln method")
             else:
                 amb_count += 1
-                logging.debug("amb: {}".format(read))
+                logging.debug("read classified as ambiguous")
     return (ref_count, alt_count)
 
 
