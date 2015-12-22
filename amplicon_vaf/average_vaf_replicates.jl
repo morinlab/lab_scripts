@@ -18,10 +18,14 @@ end
 
 function main()
     args = parse_commandline()
-    vafs = readdlm(STDIN, '\t', header=true)
 
-    betaDistributions = fit(Beta, vafs)
+    (vafs, sampleIDs) = readdlm(STDIN, '\t', header=true)
 
-    lowerCI = quantile(betaDist, (100 - args.confidence) * 0.1)
-    upperCI = quantile(betaDist, (args.confidence * 0.1))
+    @assert size(vafs, 2) % args["replicates"] == 0
+    betaDistributions = mapslices(x -> fit(Beta, x), vafs, 2)
+
+#    lowerCI = quantile(betaDist, (100 - args["confidence"]) * 0.1)
+#    upperCI = quantile(betaDist, (args["confidence"] * 0.1))
 end
+
+main()
