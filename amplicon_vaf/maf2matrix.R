@@ -16,12 +16,11 @@ if("-c" %in% args || "--counts" %in% args){
   include_counts_in_output <- FALSE
 }
 
-weave = function(...) {
-      l = list(...)
-      output_matrix <- matrix(do.call(rbind, l), nrow = nrow(l[[1]]))
-      rownames(output_matrix) <- rownames(l[[1]])
-      coverage_colnames <- paste0(colnames(l[[1]]), rep("_total_coverage", length(colnames(l[[1]]))))
-      output_colnames <- c(rbind(colnames(l[[1]]), coverage_colnames))
+weave = function(m1, m2) {
+      output_matrix <- matrix(do.call(rbind, list(m1, m2)), nrow = nrow(m1))
+      rownames(output_matrix) <- rownames(m1)
+      coverage_colnames <- paste0(colnames(m1), rep("_total_coverage", length(colnames(m1))))
+      output_colnames <- c(rbind(colnames(m1), coverage_colnames))
       colnames(output_matrix) <- output_colnames
       output_matrix
 }
