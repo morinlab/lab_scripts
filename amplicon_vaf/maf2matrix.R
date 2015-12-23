@@ -44,5 +44,5 @@ if(variant_list_filename != "") {
   write.table(row.names(vaf_matrix), file=variant_list_filename, row.names=FALSE, col.names=FALSE, quote=FALSE, sep='\t')
 }
 
-write.table(vaf_matrix, quote=F, row.names=include_rownames_in_output, sep="\t", na="NaN")
+write.table(vaf_matrix, quote=F, row.names=include_rownames_in_output, col.names=NA, sep="\t", na="NaN")
 
