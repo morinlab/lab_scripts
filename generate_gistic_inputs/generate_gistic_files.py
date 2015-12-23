@@ -3,16 +3,18 @@ import math
 
 """
 
-Input: a three column, tab delimited file where the first column contains
+Input: a two column, tab delimited file where the first column contains
 the sample name, the second column contains the path to the Sequenza seg 
-file for that sample and the and third column contains the path to the 
-Sequenza mutations.txt file for that sample.
+file for that sample. Also requires a BED file containing the exon
+start and end positions to create the marker file. NOTE: assumes that
+chromosome names do not have 'chr' prefix in all files.
 
 Output: GISTIC compatible segmentation file with the start position of the
 first segment and the end position of the last segment for every chromosome
 is adjusted to be the same for all samples. It will also produce a marker
-file where the marker positions are derived from the set of B-Allele
-Frequency (BAF) positions derived from the Sequenza mutations.txt files.
+file where the marker positions are derived from the start and end positions
+of the segments across samples as well as the start and end positions of the
+exons in the BED file.
 
 """
 
@@ -21,17 +23,18 @@ def main():
     input_table = args.input_table
     marker_file = args.marker_file
     out_seg = args.out_seg
+    bed_file = args.bed_file
 
     seg_files = []
-    mut_files = []
+    #mut_files = []
     sample_names = []
 
     for line in input_table:
-        name, file_name, muts_file_name = line.split('\t')
-        file = open(file_name, 'r')
-        mut_file = open(muts_file_name.rstrip(), 'r')
+        name, file_name = line.split('\t')[0:2]
+        file = open(file_name.rstrip(), 'r')
+        #mut_file = open(muts_file_name.rstrip(), 'r')
         seg_files.append(file)
-        mut_files.append(mut_file)
+        #mut_files.append(mut_file)
         sample_names.append(name)
 
     # TODO: Make sure that samples names are unique.
@@ -41,7 +44,8 @@ def main():
 
     parsed_seg = parse_segs(seg_files, sample_names)
 
-    markers = make_markers_from_baf(mut_files)
+    #markers = make_markers_from_baf(mut_files)
+    markers = make_markers_from_bed_file(bed_file)
     markers = add_start_and_end_markers(parsed_seg, markers)
 
     chrm_min_max = find_chrm_min_max(parsed_seg)
@@ -106,6 +110,15 @@ def find_num_markers(parsed_seg, markers):
 
     return num_marker_dict
 
+def make_markers_from_bed_file(bed_file):
+    bed_markers = { chrm : set() for chrm in make_chrm_list() }
+
+    for line in bed_file:
+        chrm, start, end = line.split('\t')[0:3]
+        bed_markers[chrm].add(start)
+        bed_markers[chrm].add(end)
+
+    return bed_markers
 
 def make_markers_from_baf(mut_files):
     baf_markers = { chrm : set() for chrm in make_chrm_list() }
@@ -125,7 +138,7 @@ def make_markers_from_baf(mut_files):
 
     return baf_markers
 
-def add_start_and_end_markers(parsed_seg, baf_markers):
+def add_start_and_end_markers(parsed_seg, markers):
     out_markers = {}
 
     for sn in parsed_seg.keys():
@@ -133,11 +146,11 @@ def add_start_and_end_markers(parsed_seg, baf_markers):
         for chrm_k in make_chrm_list():
             chrm_segs = parsed_seg[sn][chrm_k]
             for chrm_seg in chrm_segs:
-                baf_markers[chrm_k].add(chrm_seg[0])
-                baf_markers[chrm_k].add(chrm_seg[1])
+                markers[chrm_k].add(chrm_seg[0])
+                markers[chrm_k].add(chrm_seg[1])
 
     for chrm_k in make_chrm_list():
-        out_markers[chrm_k] = sorted(list(baf_markers[chrm_k]), key=int)
+        out_markers[chrm_k] = sorted(list(markers[chrm_k]), key=int)
 
     return out_markers
 
@@ -235,6 +248,8 @@ def parse_args():
                         type=argparse.FileType('w'), help='Specify marker file output.')
     parser.add_argument('-o', '--out_seg', required=True,
                         type=argparse.FileType('w'), help='Specify GISTIC seg file output.')
+    parser.add_argument('-b', '--bed_file', required=True,
+                        type=argparse.FileType('r'), help='Specify BED file for marker output.')
     args = parser.parse_args()
     return args
 
