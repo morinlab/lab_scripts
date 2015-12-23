@@ -43,7 +43,7 @@ def main():
         readers.append(csv.DictReader(lines, delimiter="\t"))
     reader = list(*readers)
 
-    count_keys = ["Reference_Count", "Alternate_Count", "VAF", "Sample_ID"]
+    count_keys = ["Reference_Count", "Alternate_Count", "VAF", "Sample_ID", "Variant_ID"]
     fields = readers[0].fieldnames
     for key in count_keys:
         if not key in fields:
@@ -63,7 +63,8 @@ def main():
     alt_key = "Alternate_Count"
     vaf_key = "VAF"
     sample_id_key = "Sample_ID"
-
+    variant_id_key = "Variant_ID"
+    
     writer.writeheader()
     for (sample_id, bam) in zip(sample_ids, bams):
         for row in reader:
@@ -71,7 +72,7 @@ def main():
             pos = int(row["Start_Position"])
             ref = row["Reference_Allele"]
             alt = mafUtils.get_nref_allele(row)
-
+            
             if mafUtils.is_snv(row):
                 counts = bamUtils.count_bases(bam, reffile, chrom, pos)
             else:
@@ -91,6 +92,14 @@ def main():
                 
 
             row[sample_id_key] = sample_id
+
+            try:
+                variant_id = row[variant_id_key]
+            except KeyError:
+                variant_id = str(chrom) + ":" + str(pos) + ref + ">" + alt
+
+            row[variant_id_key] = variant_id
+            
             writer.writerow(row)
 
 if __name__ == "__main__":
