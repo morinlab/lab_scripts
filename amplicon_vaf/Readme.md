@@ -26,7 +26,7 @@ Fields Appended to MAF in Output
 |             4702 |             3272 | 0.410334 | (basename of .bam input file) |
 
 Note: VAF will be reported as `NaN` for loci with zero coverage. If no `Variant_ID` is provided
-then Variant_IDs will be constructed based on position and base change (eg: `3:178952085A>G`).
+ in the input `.maf` file then a `Variant_ID` field will be constructed based on position and base change (eg: `3:178952085A>G`) and appended to the output.
 
 Running the maf2matrix.R Helper Script
 ======================================
