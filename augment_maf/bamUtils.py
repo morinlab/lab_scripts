@@ -277,26 +277,20 @@ def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
     # Log ref and alt sequences
     logging.debug("ref_seq: {}".format(ref_seq))
     logging.debug("alt_seq: {}".format(alt_seq))
+    # Determine if there are too many orphan k-mers overlapping the indel
+    # skip_kmer_counting = False
+    # orphans = indelUtils.get_orphan_kmers(reads, ref_idxs, alt_idxs, params["k"], params["min_olap"])
+    # logging.debug("orphans: {}".format(orphans))
+    # if any(count > 5 for kmer, count in orphans.items()):
+    #     logging.debug("skipping kmer method")
+    #     skip_kmer_counting = True
     # Iterate over reads
-    for read in reads:
-        logging.debug("")
-        logging.debug("read: {}".format(read))
-        # Replace Ns with As (workaround)
-        read = read.rstrip("\n").replace("N", "A")
-        # Reverse read if applicable
-        if not indelUtils.is_forward(read, ref_idxs, k=params["k"], ival=params["ival"]):
-            logging.debug("read was reversed")
-            read = indelUtils.rev_comp(read)
-        # Find offset
-        offset = indelUtils.find_offset(read, ref_idxs, k=params["k"], step=1, ival=params["ival"])
-        logging.debug("offset: {}".format(offset))
-        # Determine if overlaps with mutation position
-        if offset and not indelUtils.is_overlap(read, ref_seq, offset, min_olap=params["min_olap"]):
-            logging.debug("read does not overlap mutation")
-            continue
+    for read, offset in indelUtils.get_olap_reads(reads, ref_idxs, k=params["k"], ival=params["ival"], min_olap=params["min_olap"]):
         # Calculate score delta using k-mer method
         kmer_delta = indelUtils.calc_kmer_delta(read, ref_idxs, alt_idxs, k=params["k"], min_delta=params["min_delta_kmer"], max_ival=params["max_ival"])
         logging.debug("kmer_delta: {}".format(kmer_delta))
+        # if skip_kmer_counting:
+        #     kmer_delta = 0
         if kmer_delta > 0:
             ref_count += 1
             logging.debug("read classified as reference by kmer method")
