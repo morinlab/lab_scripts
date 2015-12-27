@@ -11,7 +11,6 @@ Written by Bruno Grande.
 from __future__ import division
 
 from collections import defaultdict
-from random import shuffle
 import logging
 
 import numpy as np
@@ -97,32 +96,32 @@ def kmer_iter(seq, k, step, ival):
     """
     num_kmers = (len(seq) - k * ival)//step + 1
     gap = "-" * (ival - 1)
-    kmer_ids = range(num_kmers)
-    shuffle(kmer_ids)
-    for i in kmer_ids:
+    for i in range(num_kmers):
         start = i*step
         end = i*step+k*ival
-        # kmer_short = seq[start:end:ival]
         kmer = gap.join([seq[i] for i in range(start, end, ival)])
         yield start, kmer
 
 
-def kmer_count(seq, kmer_idx, k, step, ival):
+def kmer_count(seq, offset, ref_idxs, k, step, ival, min_olap=2):
     """Returns score for k-mers present
     in the given k-mer index.
 
     Returns the count/score.
     """
     kmer_count = 0
-    for offset, kmer in kmer_iter(seq, k, step, ival):
-        # TODO: only consider kmers that overlap with indel
-        # is_olap = is_overlap(kmer, ref_seq, offset)
-        if kmer in kmer_idx:
+    ref_idx = ref_idxs.get_idx(k=k, step=1, ival=ival)
+    ref_seq = ref_idxs.seq
+    for start, kmer in kmer_iter(seq, k, step, ival):
+        if offset and is_overlap(kmer, ref_seq, offset + start, min_olap=min_olap) and kmer in ref_idx:
+            logging.debug("overlapping kmer: {}".format(kmer))
+            kmer_count += 1
+        elif kmer in ref_idx:
             kmer_count += 1
     return kmer_count
 
 
-def calc_kmer_delta(read_seq, ref_idxs, alt_idxs, k, min_delta=1, max_ival=3):
+def calc_kmer_delta(read_seq, offset, ref_idxs, alt_idxs, k, min_delta=1, max_ival=3, min_olap=2):
     """Determines whether read has more k-mers
     in common with reference sequence or alternate
     sequence.
@@ -141,19 +140,19 @@ def calc_kmer_delta(read_seq, ref_idxs, alt_idxs, k, min_delta=1, max_ival=3):
     logging.debug("calculating kmer delta...")
     while (abs(ref_score - alt_score) < min_delta) and ival <= max_ival:
         logging.debug("ival: {}".format(ival))
-        # Generate k-mer indexes for this ival
-        ref_idx = ref_idxs.get_idx(k=k, step=1, ival=ival)
-        alt_idx = alt_idxs.get_idx(k=k, step=1, ival=ival)
         # Find ref scores for forward and reverse and take max
-        ref_score += kmer_count(read_seq, ref_idx, k=k, step=1, ival=ival)
+        ref_score += kmer_count(read_seq, offset, ref_idxs, k=k, step=1, ival=ival, min_olap=min_olap)
         logging.debug("kmer ref_score: {}".format(ref_score))
         # Find alt scores for forward and reverse and take max
-        alt_score += kmer_count(read_seq, alt_idx, k=k, step=1, ival=ival)
+        alt_score += kmer_count(read_seq, offset, alt_idxs, k=k, step=1, ival=ival, min_olap=min_olap)
         logging.debug("kmer alt_score: {}".format(alt_score))
         # Increment ival
         ival += 1
     if abs(ref_score - alt_score) < min_delta:
         logging.debug("kmer delta less than min_delta")
+        delta = 0
+    elif ref_score == 0 and alt_score == 0:
+        logging.debug("kmers didn't match anything")
         delta = 0
     else:
         delta = ref_score - alt_score
@@ -165,9 +164,8 @@ def is_forward(read_seq, ref_idxs, k, ival):
     """Returns whether read is forward."""
     fread = read_seq
     rread = rev_comp(read_seq)
-    ref_idx = ref_idxs.get_idx(k=k, step=1, ival=ival)
-    fscore = kmer_count(fread, ref_idx, k=k, step=1, ival=ival)
-    rscore = kmer_count(rread, ref_idx, k=k, step=1, ival=ival)
+    fscore = kmer_count(fread, None, ref_idxs, k=k, step=1, ival=ival)
+    rscore = kmer_count(rread, None, ref_idxs, k=k, step=1, ival=ival)
     return fscore > rscore
 
 
@@ -283,17 +281,20 @@ def get_olap_reads(reads, ref_idxs, k, ival, min_olap):
         # Replace Ns with As (workaround)
         read = read.rstrip("\n").replace("N", "A")
         # Reverse read if applicable
+        logging.debug("determining read orientation...")
         if not is_forward(read, ref_idxs, k=k, ival=ival):
             logging.debug("read was reversed")
             read = rev_comp(read)
         # Find offset
+        logging.debug("determining read offset...")
         offset = find_offset(read, ref_idxs, k=k, step=1, ival=ival)
         logging.debug("offset: {}".format(offset))
         if not offset:
-            logging.debug("read has no offset")
+            logging.debug("read has no offset; skipping")
             continue
         # Determine if overlaps with mutation position
-        if offset and not is_overlap(read, ref_idxs.seq, offset, min_olap=min_olap):
+        logging.debug("determining if read overlaps mutation...")
+        if not is_overlap(read, ref_idxs.seq, offset, min_olap=min_olap):
             logging.debug("read does not overlap mutation")
             continue
         # Yield overlapping read and its offset

@@ -258,7 +258,7 @@ def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
     """
     # Set parameters
     defaults = {
-        "k": 10,
+        "k": 13,
         "ival": 2,
         "min_olap": 5,
         "min_delta_kmer": 3,
@@ -277,17 +277,10 @@ def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
     # Log ref and alt sequences
     logging.debug("ref_seq: {}".format(ref_seq))
     logging.debug("alt_seq: {}".format(alt_seq))
-    # Determine if there are too many orphan k-mers overlapping the indel
-    # skip_kmer_counting = False
-    # orphans = indelUtils.get_orphan_kmers(reads, ref_idxs, alt_idxs, params["k"], params["min_olap"])
-    # logging.debug("orphans: {}".format(orphans))
-    # if any(count > 5 for kmer, count in orphans.items()):
-    #     logging.debug("skipping kmer method")
-    #     skip_kmer_counting = True
     # Iterate over reads
     for read, offset in indelUtils.get_olap_reads(reads, ref_idxs, k=params["k"], ival=params["ival"], min_olap=params["min_olap"]):
         # Calculate score delta using k-mer method
-        kmer_delta = indelUtils.calc_kmer_delta(read, ref_idxs, alt_idxs, k=params["k"], min_delta=params["min_delta_kmer"], max_ival=params["max_ival"])
+        kmer_delta = indelUtils.calc_kmer_delta(read, offset, ref_idxs, alt_idxs, k=params["k"], min_delta=params["min_delta_kmer"], max_ival=params["max_ival"], min_olap=params["min_olap"])
         logging.debug("kmer_delta: {}".format(kmer_delta))
         # if skip_kmer_counting:
         #     kmer_delta = 0
