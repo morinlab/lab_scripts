@@ -116,7 +116,7 @@ def kmer_count(seq, offset, ref_idxs, k, step, ival, min_olap=2):
         if offset and is_overlap(kmer, ref_seq, offset + start, min_olap=min_olap) and kmer in ref_idx:
             logging.debug("overlapping kmer: {}".format(kmer))
             kmer_count += 1
-        elif kmer in ref_idx:
+        elif not offset and kmer in ref_idx:
             kmer_count += 1
     return kmer_count
 
