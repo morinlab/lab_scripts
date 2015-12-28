@@ -9,7 +9,7 @@ Description: Checks the integrity of FASTQ or BAM file(s)
 compared to an original BAM file. Checking entails finding
 the query name and position in pair of a read and applying
 a hash function to produce an integer for the read. These
-reads are summed producing a unique hash sum for the BAM
+integers are summed producing a unique hash sum for the BAM
 or FASTQ file(s). These hash sums can be compared to
 determine if there is a difference between two sequence
 files. This script also identifies supplementary alignments,
@@ -31,11 +31,12 @@ def main():
     new_bams = args.new_bams
 
     if original_bam and hash_sum_outfile:
-        original_hash_sum = sum_bam(original_bam)
+        original_hash_sum, paired_reads = sum_bam(original_bam)
         write_hash_sum(original_hash_sum, hash_sum_outfile)
 
-    elif ( new_fastqs and hash_sum_infile) or ( new_bams and hash_sum_infile):
-        old_hash_sum = long(open(os.path.abspath(hash_sum_infile)).readline().rstrip())
+    elif hash_sum_infile and ( new_fastqs or new_bams ):
+        old_hash_sum = long(hash_sum_infile.readline().rstrip())
+        hash_sum_infile.close()
 
         if new_fastqs:
             new_hash_sum = sum_new_fastqs(new_fastqs)
@@ -43,7 +44,8 @@ def main():
             new_hash_sum = sum_new_bams(new_bams)
 
         if not old_hash_sum == new_hash_sum:
-            raise ValueError('New hash sum does not match original hash sum')
+            print new_hash_sum
+            raise ValueError('New hash sum does not match original hash sum.')
     else:
         raise ValueError('Parameter error.')
 
@@ -57,6 +59,7 @@ def write_hash_sum(hash_sum, hash_sum_outfile):
 def sum_new_bams(new_bams):
     bams = None
     hash_sum = 0
+    paired_reads = {}
 
     if len(new_bams) == 1:
         if '*' in new_bams[0]:
@@ -66,28 +69,28 @@ def sum_new_bams(new_bams):
     else:
         bams = [ os.path.abspath(b) for b in new_bams ]
 
+    print bams
+
     for bam in bams:
-        hash_sum += sum_bam(bam, hash_sum)
+        c, paired_reads = sum_bam(bam, hash_sum, paired_reads)
+        hash_sum += c
 
     return hash_sum
 
-def sum_bam(bam, hash_sum=0):
+def sum_bam(bam, hash_sum=0, paired_reads={}):
     sam = pysam.AlignmentFile(bam, 'rb')
 
     reads = sam.fetch(until_eof=True)
 
-    paired_reads = {}
-    split_reads = set()
-
     for read in reads:
+
+        if read.is_secondary:
+            continue
 
         if read.is_supplementary:
             continue
 
         qname = read.query_name
-
-        if qname + '/1' in split_reads or qname + '/2' in split_reads:
-            continue
 
         if qname not in paired_reads:
             paired_reads[qname] = [False, False]
@@ -95,19 +98,13 @@ def sum_bam(bam, hash_sum=0):
         if read.is_read1:
             paired_reads[qname][0] = True
 
-            if read.has_tag('SA'):
-                split_reads.add(qname + '/1')
-
         elif read.is_read2:
             paired_reads[qname][1] = True
-
-            if read.has_tag('SA'):
-                split_reads.add(qname + '/2')
 
         else:
             hash_sum += hash(qname)
             continue
-        
+ 
         if all(paired_reads[qname]):
             hash_sum += hash(qname + '/1')
             hash_sum += hash(qname + '/2')
@@ -118,7 +115,7 @@ def sum_bam(bam, hash_sum=0):
 
     sam.close()
 
-    return hash_sum
+    return hash_sum, paired_reads
 
 def sum_new_fastqs(new_fastqs):
     fastqs = None
@@ -142,9 +139,10 @@ def sum_new_fastqs(new_fastqs):
 
         i = 0
         for line in fq:
-            if not i % 4:
-                hash_sum += hash(line.rstrip()[1:])
-                i += 1
+            if i % 4 == 0:
+                qname = line.rstrip()[1:]
+                hash_sum += hash(qname)
+            i += 1
 
         fq.close()
 
