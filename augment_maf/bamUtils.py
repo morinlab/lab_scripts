@@ -272,13 +272,14 @@ def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
     ref_count = 0
     alt_count = 0
     amb_count = 0
+    indel_len = len(alt_seq) - len(ref_seq)  # + for ins and - for del
     ref_idxs = indelUtils.SeqIndexSet(ref_seq)
     alt_idxs = indelUtils.SeqIndexSet(alt_seq)
     # Log ref and alt sequences
     logging.debug("ref_seq: {}".format(ref_seq))
     logging.debug("alt_seq: {}".format(alt_seq))
     # Iterate over reads
-    for read, offset in indelUtils.get_olap_reads(reads, ref_idxs, k=params["k"], ival=params["ival"], min_olap=params["min_olap"]):
+    for read, offset in indelUtils.get_olap_reads(reads, ref_idxs, indel_len, k=params["k"], ival=params["ival"], min_olap=params["min_olap"]):
         # Calculate score delta using k-mer method
         kmer_delta = indelUtils.calc_kmer_delta(read, offset, ref_idxs, alt_idxs, k=params["k"], min_delta=params["min_delta_kmer"], max_ival=params["max_ival"], min_olap=params["min_olap"])
         logging.debug("kmer_delta: {}".format(kmer_delta))

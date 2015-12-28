@@ -38,8 +38,8 @@ def get_seqs(ref_file, chrom, pos, ref, alt, margin):
         suffix = ref_seq[margin+1:]
         alt_seq = prefix + alt + suffix
     elif ref_len > alt_len:  # Deletion
-        prefix = ref_seq[:margin]
-        suffix = ref_seq[margin+len(ref):]
+        prefix = ref_seq[:margin-1]
+        suffix = ref_seq[margin-1+len(ref):]
         alt_seq = prefix + suffix
     else:  # SNP
         prefix = ref_seq[:margin]
@@ -83,6 +83,10 @@ class SeqIndexSet(object):
             idx = defaultdict(set)
             for offset, kmer in kmer_iter(self.seq, k, step, ival):
                 idx[kmer].add(offset)
+            # Convert to regular dict
+            # This will raise KeyErrors if ever a k-mer that doesn't exist is accessed
+            # Instead of silently adding the default value
+            idx = dict(idx)
             # Store it for later
             self.kmer_idxs[key] = idx
         return idx
@@ -111,11 +115,15 @@ def kmer_count(seq, offset, ref_idxs, k, step, ival, min_olap=2):
     """
     kmer_count = 0
     ref_idx = ref_idxs.get_idx(k=k, step=1, ival=ival)
+    # logging.debug("ref_idx: {}".format(ref_idx))
     ref_seq = ref_idxs.seq
     for start, kmer in kmer_iter(seq, k, step, ival):
-        if offset and is_overlap(kmer, ref_seq, offset + start, min_olap=min_olap) and kmer in ref_idx:
-            logging.debug("overlapping kmer: {}".format(kmer))
-            kmer_count += 1
+        # If offset is set, check for overlap
+        if offset and is_overlap(kmer, ref_seq, offset + start, min_olap=min_olap):
+            # logging.debug("overlapping kmer: {}".format(kmer))
+            if kmer in ref_idx:
+                kmer_count += 1
+        # If offset is not set, simply check if kmer in idx
         elif not offset and kmer in ref_idx:
             kmer_count += 1
     return kmer_count
@@ -141,9 +149,11 @@ def calc_kmer_delta(read_seq, offset, ref_idxs, alt_idxs, k, min_delta=1, max_iv
     while (abs(ref_score - alt_score) < min_delta) and ival <= max_ival:
         logging.debug("ival: {}".format(ival))
         # Find ref scores for forward and reverse and take max
+        logging.debug("calculating score for ref...")
         ref_score += kmer_count(read_seq, offset, ref_idxs, k=k, step=1, ival=ival, min_olap=min_olap)
         logging.debug("kmer ref_score: {}".format(ref_score))
         # Find alt scores for forward and reverse and take max
+        logging.debug("calculating score for alt...")
         alt_score += kmer_count(read_seq, offset, alt_idxs, k=k, step=1, ival=ival, min_olap=min_olap)
         logging.debug("kmer alt_score: {}".format(alt_score))
         # Increment ival
@@ -237,25 +247,43 @@ def calc_aln_delta(read_seq, ref_seq, alt_seq, min_delta=8, offset=None, margin=
 
 # Seeding Functions
 
-def find_offset(read, ref_idxs, k, step, ival, min_support=3):
+def find_offset(read, ref_idxs, indel_len, k, max_ival=3, min_delta=5):
     """Find offset of pattern p in k-mer index.
 
     Returns offset as int.
     """
+    ival = 1
+    step = 1
     offset_support = defaultdict(int)
-    ref_idx = ref_idxs.get_idx(k, step, ival)
-    for pos, kmer in kmer_iter(read, k, step, ival):
-        offsets = ref_idx[kmer]
-        for offset in offsets:
-            offset_support[offset - pos] += 1
-        vals = offset_support.values()
-        if any(map(lambda x: x >= min_support, vals)):
-            max_support = max(vals)
-            best_offsets = [offset for offset, support in offset_support.items() if support == max_support]
-            if len(best_offsets) > 1:
-                continue
-            else:
-                return best_offsets[0]
+    while ival <= max_ival:
+        logging.debug("ival: {}".format(ival))
+        ref_idx = ref_idxs.get_idx(k, step, ival)
+        # Calculate all offset support for this ival
+        for pos, kmer in kmer_iter(read, k, step, ival):
+            # Check if kmer is in idx first
+            if kmer in ref_idx:
+                offsets = ref_idx[kmer]
+                for offset in offsets:
+                    offset_support[offset - pos] += 1
+                    offset_support[offset - pos + indel_len] += 1
+        # Check if one stands out
+        offsets_sorted = sorted([(support, offset) for offset, support in offset_support.items()], reverse=True)
+        logging.debug("offsets_sorted: {}".format(offsets_sorted))
+        if len(offsets_sorted) > 1:
+            # Check if there is enough difference in support between the top 2
+            if offsets_sorted[0][0] - offsets_sorted[1][0] >= min_delta:
+                return offsets_sorted[0][1]
+            # Check if the offsets are within indel_len of each other
+            # This implies that the difference between the top 2 isn't big enough
+            elif abs(offsets_sorted[0][1] - offsets_sorted[1][1]) == abs(indel_len):
+                if indel_len > 0:
+                    return min(offsets_sorted[0][1], offsets_sorted[1][1])
+                elif indel_len < 0:
+                    return max(offsets_sorted[0][1], offsets_sorted[1][1])
+        elif len(offsets_sorted) == 1 and offsets_sorted[0][0] >= min_delta:
+            return offsets_sorted[0][1]
+        # If none stands out, increment ival and re-enter loop
+        ival += 1
     return None
 
 
@@ -269,7 +297,7 @@ def is_overlap(read, ref_seq, offset, min_olap=2):
 
 # Read Iteration Function
 
-def get_olap_reads(reads, ref_idxs, k, ival, min_olap):
+def get_olap_reads(reads, ref_idxs, indel_len, k, ival, min_olap):
     """Returns a generator that yields reads that overlap
     the mutation with some processing:
         - Replace Ns with As
@@ -287,7 +315,7 @@ def get_olap_reads(reads, ref_idxs, k, ival, min_olap):
             read = rev_comp(read)
         # Find offset
         logging.debug("determining read offset...")
-        offset = find_offset(read, ref_idxs, k=k, step=1, ival=ival)
+        offset = find_offset(read, ref_idxs, indel_len, k=max(k//2, 5))
         logging.debug("offset: {}".format(offset))
         if not offset:
             logging.debug("read has no offset; skipping")
