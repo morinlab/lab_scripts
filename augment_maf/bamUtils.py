@@ -258,9 +258,9 @@ def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
     """
     # Set parameters
     defaults = {
-        "k": 10,
+        "k": 13,
         "ival": 2,
-        "min_olap": 5,
+        "min_olap": 0,
         "min_delta_kmer": 3,
         "max_ival": 5,
         "min_delta_aln": 8
@@ -272,31 +272,19 @@ def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
     ref_count = 0
     alt_count = 0
     amb_count = 0
+    indel_len = len(alt_seq) - len(ref_seq)  # + for ins and - for del
     ref_idxs = indelUtils.SeqIndexSet(ref_seq)
     alt_idxs = indelUtils.SeqIndexSet(alt_seq)
     # Log ref and alt sequences
     logging.debug("ref_seq: {}".format(ref_seq))
     logging.debug("alt_seq: {}".format(alt_seq))
     # Iterate over reads
-    for read in reads:
-        logging.debug("")
-        logging.debug("read: {}".format(read))
-        # Replace Ns with As (workaround)
-        read = read.rstrip("\n").replace("N", "A")
-        # Reverse read if applicable
-        if not indelUtils.is_forward(read, ref_idxs, k=params["k"], ival=params["ival"]):
-            logging.debug("read was reversed")
-            read = indelUtils.rev_comp(read)
-        # Find offset
-        offset = indelUtils.find_offset(read, ref_idxs, k=params["k"], step=1, ival=params["ival"])
-        logging.debug("offset: {}".format(offset))
-        # Determine if overlaps with mutation position
-        if offset and not indelUtils.is_overlap(read, ref_seq, offset, min_olap=params["min_olap"]):
-            logging.debug("read does not overlap mutation")
-            continue
+    for read, offset in indelUtils.get_olap_reads(reads, ref_idxs, indel_len, k=params["k"], ival=params["ival"], min_olap=params["min_olap"]):
         # Calculate score delta using k-mer method
-        kmer_delta = indelUtils.calc_kmer_delta(read, ref_idxs, alt_idxs, k=params["k"], min_delta=params["min_delta_kmer"], max_ival=params["max_ival"])
+        kmer_delta = indelUtils.calc_kmer_delta(read, offset, ref_idxs, alt_idxs, k=params["k"], min_delta=params["min_delta_kmer"], max_ival=params["max_ival"], min_olap=params["min_olap"])
         logging.debug("kmer_delta: {}".format(kmer_delta))
+        # if skip_kmer_counting:
+        #     kmer_delta = 0
         if kmer_delta > 0:
             ref_count += 1
             logging.debug("read classified as reference by kmer method")
@@ -328,18 +316,21 @@ def count_indels(samfile, reffile, chrom, pos, ref, alt, mode, min_mapq=20):
     position, by alignment score.
     """
     # Log
+    logging.debug("")
+    logging.debug("")
+    logging.debug("")
     logging.debug("indel: {} {} {} {}".format(chrom, pos, ref, alt))
 
     # Extract reads
     reads = samfile.fetch(chrom, pos, pos+len(ref))
-    reads = [r.seq for r in reads if r.mapq >= min_mapq]
+    reads = [r.seq for r in reads if r.mapq >= min_mapq and not r.is_duplicate]
 
     # If there are no reads, return zero counts
     if len(reads) == 0:
         return {ref: 0, alt: 0}
 
     # Extract ref and alt sequences
-    margin = len(reads[0]) + 10  # Dynamically set margin based on read length
+    margin = max(map(len, reads)) + 10  # Dynamically set margin based on read length
     ref_seq, alt_seq = indelUtils.get_seqs(reffile, chrom, pos, ref, alt, margin)
 
     # Calculate read counts for ref and alt
