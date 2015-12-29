@@ -69,11 +69,8 @@ def sum_new_bams(new_bams):
     else:
         bams = [ os.path.abspath(b) for b in new_bams ]
 
-    print bams
-
     for bam in bams:
-        c, paired_reads = sum_bam(bam, hash_sum, paired_reads)
-        hash_sum += c
+        hash_sum, paired_reads = sum_bam(bam, hash_sum, paired_reads)
 
     return hash_sum
 
