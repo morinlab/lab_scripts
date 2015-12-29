@@ -260,7 +260,7 @@ def kmer_count_and_aln(ref_seq, alt_seq, reads, params={}):
     defaults = {
         "k": 13,
         "ival": 2,
-        "min_olap": 5,
+        "min_olap": 0,
         "min_delta_kmer": 3,
         "max_ival": 5,
         "min_delta_aln": 8
@@ -316,18 +316,21 @@ def count_indels(samfile, reffile, chrom, pos, ref, alt, mode, min_mapq=20):
     position, by alignment score.
     """
     # Log
+    logging.debug("")
+    logging.debug("")
+    logging.debug("")
     logging.debug("indel: {} {} {} {}".format(chrom, pos, ref, alt))
 
     # Extract reads
     reads = samfile.fetch(chrom, pos, pos+len(ref))
-    reads = [r.seq for r in reads if r.mapq >= min_mapq]
+    reads = [r.seq for r in reads if r.mapq >= min_mapq and not r.is_duplicate]
 
     # If there are no reads, return zero counts
     if len(reads) == 0:
         return {ref: 0, alt: 0}
 
     # Extract ref and alt sequences
-    margin = len(reads[0]) + 10  # Dynamically set margin based on read length
+    margin = max(map(len, reads)) + 10  # Dynamically set margin based on read length
     ref_seq, alt_seq = indelUtils.get_seqs(reffile, chrom, pos, ref, alt, margin)
 
     # Calculate read counts for ref and alt

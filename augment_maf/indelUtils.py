@@ -34,8 +34,8 @@ def get_seqs(ref_file, chrom, pos, ref, alt, margin):
     alt_len = len(alt.strip("-"))
     # Categorize the variant
     if ref_len < alt_len:  # Insertion
-        prefix = ref_seq[:margin+1]
-        suffix = ref_seq[margin+1:]
+        prefix = ref_seq[:margin]
+        suffix = ref_seq[margin:]
         alt_seq = prefix + alt + suffix
     elif ref_len > alt_len:  # Deletion
         prefix = ref_seq[:margin-1]
@@ -107,24 +107,23 @@ def kmer_iter(seq, k, step, ival):
         yield start, kmer
 
 
-def kmer_count(seq, offset, ref_idxs, k, step, ival, min_olap=2):
+def kmer_count(seq, offset, seq_idxs, ref_seq, k, step, ival, min_olap=2):
     """Returns score for k-mers present
     in the given k-mer index.
 
     Returns the count/score.
     """
     kmer_count = 0
-    ref_idx = ref_idxs.get_idx(k=k, step=1, ival=ival)
-    # logging.debug("ref_idx: {}".format(ref_idx))
-    ref_seq = ref_idxs.seq
+    seq_idx = seq_idxs.get_idx(k=k, step=1, ival=ival)
+    # logging.debug("seq_idx: {}".format(seq_idx))
     for start, kmer in kmer_iter(seq, k, step, ival):
         # If offset is set, check for overlap
         if offset and is_overlap(kmer, ref_seq, offset + start, min_olap=min_olap):
-            # logging.debug("overlapping kmer: {}".format(kmer))
-            if kmer in ref_idx:
+            logging.debug("overlapping kmer: {}".format(kmer))
+            if kmer in seq_idx:
                 kmer_count += 1
         # If offset is not set, simply check if kmer in idx
-        elif not offset and kmer in ref_idx:
+        elif not offset and kmer in seq_idx:
             kmer_count += 1
     return kmer_count
 
@@ -145,16 +144,17 @@ def calc_kmer_delta(read_seq, offset, ref_idxs, alt_idxs, k, min_delta=1, max_iv
     ival = 1
     ref_score = 0
     alt_score = 0
+    ref_seq = ref_idxs.seq
     logging.debug("calculating kmer delta...")
     while (abs(ref_score - alt_score) < min_delta) and ival <= max_ival:
         logging.debug("ival: {}".format(ival))
         # Find ref scores for forward and reverse and take max
         logging.debug("calculating score for ref...")
-        ref_score += kmer_count(read_seq, offset, ref_idxs, k=k, step=1, ival=ival, min_olap=min_olap)
+        ref_score += kmer_count(read_seq, offset, ref_idxs, ref_seq, k=k, step=1, ival=ival, min_olap=min_olap)
         logging.debug("kmer ref_score: {}".format(ref_score))
         # Find alt scores for forward and reverse and take max
         logging.debug("calculating score for alt...")
-        alt_score += kmer_count(read_seq, offset, alt_idxs, k=k, step=1, ival=ival, min_olap=min_olap)
+        alt_score += kmer_count(read_seq, offset, alt_idxs, ref_seq, k=k, step=1, ival=ival, min_olap=min_olap)
         logging.debug("kmer alt_score: {}".format(alt_score))
         # Increment ival
         ival += 1
@@ -174,8 +174,8 @@ def is_forward(read_seq, ref_idxs, k, ival):
     """Returns whether read is forward."""
     fread = read_seq
     rread = rev_comp(read_seq)
-    fscore = kmer_count(fread, None, ref_idxs, k=k, step=1, ival=ival)
-    rscore = kmer_count(rread, None, ref_idxs, k=k, step=1, ival=ival)
+    fscore = kmer_count(fread, None, ref_idxs, None, k=k, step=1, ival=ival)
+    rscore = kmer_count(rread, None, ref_idxs, None, k=k, step=1, ival=ival)
     return fscore > rscore
 
 
@@ -276,10 +276,15 @@ def find_offset(read, ref_idxs, indel_len, k, max_ival=3, min_delta=5):
             # Check if the offsets are within indel_len of each other
             # This implies that the difference between the top 2 isn't big enough
             elif abs(offsets_sorted[0][1] - offsets_sorted[1][1]) == abs(indel_len):
-                if indel_len > 0:
-                    return min(offsets_sorted[0][1], offsets_sorted[1][1])
-                elif indel_len < 0:
-                    return max(offsets_sorted[0][1], offsets_sorted[1][1])
+                # If they are equal, choose accordingly
+                if offsets_sorted[0][0] == offsets_sorted[1][0]:
+                    if indel_len > 0:
+                        return min(offsets_sorted[0][1], offsets_sorted[1][1])
+                    elif indel_len < 0:
+                        return max(offsets_sorted[0][1], offsets_sorted[1][1])
+                # If not, choose the best one
+                else:
+                    return offsets_sorted[0][1]
         elif len(offsets_sorted) == 1 and offsets_sorted[0][0] >= min_delta:
             return offsets_sorted[0][1]
         # If none stands out, increment ival and re-enter loop

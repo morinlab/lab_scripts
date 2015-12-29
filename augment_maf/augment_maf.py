@@ -91,3 +91,5 @@ if __name__ == "__main__":
 
         writer.writerow(row)
         done.append((chrom, pos, ref, alt))
+        if args.log_file:
+            args.log_file.close()
