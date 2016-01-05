@@ -7,7 +7,7 @@ import sys
 import logging
 from Bio import SeqIO
 from Bio.Align.Applications import MuscleCommandline
-import swalign
+#import swalign
 import indelUtils
 
 
