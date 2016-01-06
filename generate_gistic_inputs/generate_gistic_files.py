@@ -5,9 +5,10 @@ import math
 
 Input: a two column, tab delimited file where the first column contains
 the sample name, the second column contains the path to the Sequenza seg 
-file for that sample. Also requires a BED file containing the exon
-start and end positions to create the marker file. NOTE: assumes that
-chromosome names do not have 'chr' prefix in all files.
+file for that sample. Alternatively, a single file containing the segments
+from all the samples in IGV format. Also requires a BED file containing 
+the exon start and end positions to create the marker file. NOTE: assumes 
+that chromosome names do not have 'chr' prefix in all files.
 
 Output: GISTIC compatible segmentation file with the start position of the
 first segment and the end position of the last segment for every chromosome
@@ -21,30 +22,20 @@ exons in the BED file.
 def main():
     args = parse_args()
     input_table = args.input_table
+    concat_file = args.concatenated_file
     marker_file = args.marker_file
     out_seg = args.out_seg
     bed_file = args.bed_file
 
-    seg_files = []
-    #mut_files = []
-    sample_names = []
+    check_arguments(args)
 
-    for line in input_table:
-        name, file_name = line.split('\t')[0:2]
-        file = open(file_name.rstrip(), 'r')
-        #mut_file = open(muts_file_name.rstrip(), 'r')
-        seg_files.append(file)
-        #mut_files.append(mut_file)
-        sample_names.append(name)
+    parsed_seg = None
 
-    # TODO: Make sure that samples names are unique.
-    if not len(seg_files) == len(sample_names):
-        print "The number of sample names do not match the number of specified segmentation files."
-        return
+    if input_table:
+        parsed_seg = parse_segs_from_input_table(input_table)
+    elif concat_file:
+        parsed_seg = parse_segs_from_concatenated_file(concat_file)
 
-    parsed_seg = parse_segs(seg_files, sample_names)
-
-    #markers = make_markers_from_baf(mut_files)
     markers = make_markers_from_bed_file(bed_file)
     markers = add_start_and_end_markers(parsed_seg, markers)
 
@@ -56,6 +47,40 @@ def main():
 
     write_marker_file(markers, marker_file)
     write_segmentation_file(parsed_seg, num_marker_dict, out_seg)
+
+    return
+
+def parse_segs_from_concatenated_file(concat_file):
+    parsed_seg = {}
+
+    for seg in concat_file:
+        fields = seg.split('\t')
+
+        sample_name, chrm, start, end = fields[0:4]
+        ratio = fields[-1]
+
+        if sample_name not in parsed_seg:
+            parsed_seg[sample_name] = {}
+
+        if chrm.startswith('"') and chrm.endswith('"'):
+            chrm = chrm[1:-1]
+
+        if chrm not in parsed_seg[sample_name]:
+            parsed_seg[sample_name][chrm] = []
+
+        parsed_seg[sample_name][chrm].append([start, end, ratio])
+
+    return parsed_seg
+
+def check_arguments(args):
+    input_table = args.input_table
+    concat_file = args.concatenated_file
+
+    if not input_table and not concat_file:
+        raise ValueError('Specify --input_table or --concatenated_file.')
+
+    if input_table and concat_file:
+        raise ValueError('Cannot specify both --input_table and --concatenated_file.')
 
     return
 
@@ -203,15 +228,21 @@ def find_chrm_min_max(parsed_seg):
     return chrm_min_max
 
 
-def parse_segs(seg_files, sample_names):
+def parse_segs_from_input_table(input_table):
     parsed_seg = {}
-    sample_index = 0
 
-    for seg_file in seg_files:
+    samples = []
+
+    for line in input_table:
+        name, file_name = line.split('\t')[0:2]
+        samples.append([name, file_name.rstrip()])
+
+    for sample in samples:
 
         header_found = False
-        sample_name = sample_names[sample_index]
-        sample_index += 1
+        sample_name = sample[0]
+        seg_file = open(sample[1], 'r')
+
         parsed_seg[sample_name] = {}
 
         for seg in seg_file:
@@ -222,7 +253,7 @@ def parse_segs(seg_files, sample_names):
 
             fields = seg.split('\t')
             chrm, start, end = fields[0:3]
-            log_ratio = math.log(float(fields[6]), 2) - 1
+            log_ratio = math.log(float(fields[6]), 2) - 1  # TODO: Fix or leave this.
 
             if chrm.startswith('"') and chrm.endswith('"'):
                 chrm = chrm[1:-1]
@@ -231,8 +262,6 @@ def parse_segs(seg_files, sample_names):
                 parsed_seg[sample_name][chrm] = []
 
             parsed_seg[sample_name][chrm].append([start, end, log_ratio])
-    else:
-        seg_file.close()
 
     return parsed_seg
 
@@ -242,8 +271,10 @@ def make_chrm_list():
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-i', '--input_table', required=True, type=argparse.FileType('r'),
+    parser.add_argument('-i', '--input_table', nargs='?', type=argparse.FileType('r'),
                         help='Tab delimited file of Sequenza segs and associated sample name.')
+    parser.add_argument('-c', '--concatenated_file', nargs='?', type=argparse.FileType('r'),
+                        help='Concatenated IGV formatted sample file.')
     parser.add_argument('-m', '--marker_file', required=True,
                         type=argparse.FileType('w'), help='Specify marker file output.')
     parser.add_argument('-o', '--out_seg', required=True,
