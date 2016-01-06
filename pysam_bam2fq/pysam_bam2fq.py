@@ -26,6 +26,8 @@ def main():
 
     read_count = 0
 
+    chunk_files = [ paired_string ]
+
     for read in reads:
 
         if read.is_secondary:
@@ -36,7 +38,7 @@ def main():
 
         if read.is_supplementary:
             continue
- 
+
         qname = read.query_name
 
         seq = read.query_sequence
@@ -62,6 +64,7 @@ def main():
                 paired_string = 'paired_{}.fastq.gz'.format(chunk)
                 paired_process = spawn_gzip(os.path.join(output_dir, paired_string))
                 read_count = 0
+                chunk_files.append(paired_string)
 
             v = [qname, paired_dict[qname][0][0], paired_dict[qname][0][1],
                  paired_dict[qname][1][0], paired_dict[qname][1][1]]
@@ -83,6 +86,8 @@ def main():
         unpaired_string = 'unpaired_{}.fastq.gz'.format(chunk)
         unpaired_process = spawn_gzip(os.path.join(output_dir, unpaired_string))
 
+        chunk_files.append(unpaired_string)
+
         for qname in paired_dict.keys():
 
             if read_count >= num_reads:
@@ -90,6 +95,7 @@ def main():
                 unpaired_string = 'unpaired_{}.fastq.gz'.format(chunk)
                 unpaired_process = spawn_gzip(os.path.join(output_dir, unpaired_string))
                 read_count = 0
+                chunk_files.append(unpaired_string)
 
             t = next(i for i in paired_dict[qname] if i is not None)
 
@@ -104,11 +110,7 @@ def main():
     # Write interval.txt
     interval = open(os.path.join(output_dir, 'interval.txt'), 'w')
 
-    chunks = glob.glob(os.path.join(output_dir, '*.fastq.gz'))
-
-    chunks = [ os.path.basename(c) for c in chunks ]
-    
-    o = ''.join([ str(c)[:-len('.fastq.gz')] + '\n' for c in chunks ])
+    o = ''.join([ str(c)[:-len('.fastq.gz')] + '\n' for c in chunk_files ])
 
     interval.write(o)
 
