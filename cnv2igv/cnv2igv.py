@@ -121,18 +121,18 @@ def parse_args():
 MODES = {
           'titan' : 
                     {
-                      sample_col: 0,
-                      chrm_col: 1,
-                      start_col: 2,
-                      end_col: 3,
-                      log_r_col: 6 # Log Ratio
+                      'sample_col': 0,
+                      'chrm_col': 1,
+                      'start_col': 2,
+                      'end_col': 3,
+                      'log_r_col': 6 # Log Ratio
                      },
           'sequenza' :
                        {
-                         chrm_col: 0,
-                         start_col: 1,
-                         end_col: 2,
-                         d_ratio_col: 6 # Depth Ratio
+                         'chrm_col': 0,
+                         'start_col': 1,
+                         'end_col': 2,
+                         'd_ratio_col': 6 # Depth Ratio
                         }
         }
 
