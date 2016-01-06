@@ -97,7 +97,7 @@ def parse_args():
 
     parser.add_argument('seg_file', type=argparse.FileType('r'),
                         help='Segmentation file to convert to IGV format.')
-    parser.add_argument('--mode', choices=MODES.keys,
+    parser.add_argument('--mode', choices=MODES.keys(),
                         help='Indiciate whether segmentation file is Sequenza or TITAN.')
     parser.add_argument('--sequenza_sample',
                         help='Specify sample name for Sequenza segmentation file.')
