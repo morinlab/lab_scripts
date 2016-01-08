@@ -88,6 +88,9 @@ if __name__ == "__main__":
                     counts = bamUtils.count_indels(samfile, reffile, chrom, pos, ref, alt, args.mode)
                 row[ref_key] += counts[ref]
                 row[alt_key] += counts[alt]
+            # Update depth columns as well
+            depth_key = "{}_depth".format(sample[0])
+            row[depth_key] = row[ref_key] + row[alt_key]
 
         writer.writerow(row)
         done.append((chrom, pos, ref, alt))
