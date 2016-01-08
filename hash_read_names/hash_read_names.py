@@ -34,7 +34,7 @@ def main():
         original_hash_sum, paired_reads = sum_bam(original_bam)
         write_hash_sum(original_hash_sum, hash_sum_outfile)
 
-    elif hash_sum_infile and ( new_fastqs or new_bams ):
+    elif hash_sum_infile and hash_sum_outfile and ( new_fastqs or new_bams ):
         old_hash_sum = long(hash_sum_infile.readline().rstrip())
         hash_sum_infile.close()
 
@@ -43,9 +43,8 @@ def main():
         elif new_bams:
             new_hash_sum = sum_new_bams(new_bams)
 
-        if not old_hash_sum == new_hash_sum:
-            print new_hash_sum
-            raise ValueError('New hash sum does not match original hash sum.')
+        write_hash_sum(new_hash_sum, hash_sum_outfile)
+
     else:
         raise ValueError('Parameter error.')
 
