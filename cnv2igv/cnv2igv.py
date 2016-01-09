@@ -60,10 +60,10 @@ def main():
 
         if mode == 'sequenza' and use_abs_cn:
             log_ratio = None
-            abs_cn = int(fields[ MODES[ mode ][ 'abs_cn' ] ])
+            abs_cn = int(fields[ MODES[ mode ][ 'abs_cn_col' ] ])
 
             if abs_cn == 0:
-                 log_ratio = float('-inf')
+                 log_ratio = '-Inf'
             else:
                  log_ratio = math.log(abs_cn, 2)
 
