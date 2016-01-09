@@ -9,6 +9,7 @@ def main():
     args = parse_args()
     bam = args.bam
     output_dir = os.path.abspath(args.output_dir)
+    interval_file = args.interval_file
     num_reads = args.num_reads
 
     logging.basicConfig(filename='split_reads.log', level=logging.INFO,
@@ -107,14 +108,12 @@ def main():
 
             read_count += 1
 
-    # Write interval.txt
-    interval = open(os.path.join(output_dir, 'interval.txt'), 'w')
-
+    # Write to interval file
     o = ''.join([ str(c)[:-len('.fastq.gz')] + '\n' for c in chunk_files ])
 
-    interval.write(o)
+    interval_file.write(o)
 
-    interval.close()
+    interval_file.close()
 
     return
 
@@ -139,6 +138,8 @@ def parse_args():
     parser.add_argument('bam', help='BAM to convert to FASTQ.')
     parser.add_argument('output_dir', default='./',
                         help='Output directory of the FASTQ files.')
+    parser.add_argument('interval_file', type=argparse.FileType('w'),
+                        help='Interval file that will be created.')
     parser.add_argument('--num_reads', '-n', type=int, default=75000000,
                         help='Maximum number of reads per FASTQ file.')
     args = parser.parse_args()
