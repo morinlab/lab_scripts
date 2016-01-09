@@ -31,6 +31,7 @@ def main():
 
     mode = args.mode
     seg_file = args.seg_file
+    use_abs_cn = args.use_abs_cn
 
     print 'ID\tchrom\tstart\tend\tlog.ratio'
 
@@ -55,9 +56,20 @@ def main():
             vals = [ args.sequenza_sample ] + vals
 
         elif mode == 'titan' or mode == 'other':
-            vals = [ fields[ MODES[ mode  ][ 'sample_col' ] ] ] + vals
+            vals = [ fields[ MODES[ mode ][ 'sample_col' ] ] ] + vals
 
-        if 'd_ratio_col' in MODES[mode]:
+        if mode == 'sequenza' and use_abs_cn:
+            log_ratio = None
+            abs_cn = int(fields[ MODES[ mode ][ 'abs_cn' ] ])
+
+            if abs_cn == 0:
+                 log_ratio = float('-inf')
+            else:
+                 log_ratio = math.log(abs_cn, 2)
+
+            vals = vals + [ log_ratio ]
+
+        elif 'd_ratio_col' in MODES[mode]:
             log_ratio = math.log(float(fields[MODES[mode]['d_ratio_col']]),2)
             vals = vals + [ log_ratio ]
 
@@ -86,6 +98,8 @@ def add_to_MODES(args):
             MODES[mode]['log_r_col'] = args.log_r_col - 1
         elif args.d_ratio_col:
             MODES[mode]['d_ratio_col'] = args.d_ratio_col - 1
+        elif args.abs_cn_col:
+            MODES[mode]['abs_cn_col'] = args.abs_cn_col - 1
 
     return args
 
@@ -96,8 +110,8 @@ def check_arguments(args):
         raise ValueError("Must specify '--sequenza_sample' when '--mode' is set to 'sequenza'.")
 
     if not args.mode:
-        if not all([args.sample_col, args.chrm_col, args.start_col, args.end_col]) and not any([args.log_r_col, args.d_ratio_col]):
-            raise ValueError("Specify '--sample_col', '--chrm_col', '--start_col', '--end_col'. Also specify either '--log_r_col' or '--d_ratio_col'.")
+        if not all([args.sample_col, args.chrm_col, args.start_col, args.end_col]) and not any([args.log_r_col, args.d_ratio_col, args.abs_cn_col]):
+            raise ValueError("Specify '--sample_col', '--chrm_col', '--start_col', '--end_col'. Also specify either '--log_r_col', '--d_ratio_col' or '--abs_cn_col'.")
 
         if args.log_r_col and args.d_ratio_col:
             raise ValueError("Cannot specify both '--log_r_col' and '--d_ratio_col'.")
@@ -114,6 +128,9 @@ def parse_args():
                         help='Indiciate whether segmentation file is Sequenza or TITAN.')
     parser.add_argument('--sequenza_sample',
                         help='Specify sample name for Sequenza segmentation file.')
+    parser.add_argument('--use_abs_cn', action='store_true',
+                        help="Use absolute copy number when calculating log2 value instead of \
+                        depth ratio when '--mode' is set to 'sequenza'.")
     parser.add_argument('--sample_col', type=int,
                         help='1-based index of sample name column in segmentation file.')
     parser.add_argument('--chrm_col', type=int,
@@ -126,6 +143,8 @@ def parse_args():
                         help='1-based index of log ratio column in segmentation file.')
     parser.add_argument('--d_ratio_col', type=int,
                         help='1-based index of depth ratio column in segmentation file.')
+    parser.add_argument('--abs_cn_col', type=int,
+                        help='1-based index of absolute copy number column in segmentation file.')
 
     args = parser.parse_args()
 
@@ -145,7 +164,8 @@ MODES = {
                          'chrm_col': 0,
                          'start_col': 1,
                          'end_col': 2,
-                         'd_ratio_col': 6 # Depth Ratio
+                         'd_ratio_col': 6, # Depth Ratio
+                         'abs_cn_col': 9 # Absolute copy number
                         }
         }
 
