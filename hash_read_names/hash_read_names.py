@@ -18,8 +18,8 @@ calculating the hash sum.
 
 Parameters:
 --original_bam and --hash_sum_outfile parameters must be set together.
---new_fastqs and --hash_sum_infile or --new_bams and --hash_sum_infile
-must be set together.
+--hash_sum_infile, --hash_sum_outfile, --directory and --files and 
+either --new_fastqs or --new_bams must be all set together.
 """
 
 def main():
@@ -27,6 +27,8 @@ def main():
     original_bam = args.original_bam
     hash_sum_outfile = args.hash_sum_outfile
     hash_sum_infile = args.hash_sum_infile
+    directory = args.directory
+    files = args.files
     new_fastqs = args.new_fastqs
     new_bams = args.new_bams
 
@@ -34,14 +36,18 @@ def main():
         original_hash_sum, paired_reads = sum_bam(original_bam)
         write_hash_sum(original_hash_sum, hash_sum_outfile)
 
-    elif hash_sum_infile and hash_sum_outfile and ( new_fastqs or new_bams ):
+    elif hash_sum_infile and hash_sum_outfile and directory and files and ( new_fastqs or new_bams ):
+
+        if new_fastqs and new_bams:
+            raise ValueError("Cannot specify both '--new_fastqs' and '--new_bams.'")
+
         old_hash_sum = long(hash_sum_infile.readline().rstrip())
         hash_sum_infile.close()
 
         if new_fastqs:
-            new_hash_sum = sum_new_fastqs(new_fastqs)
+            new_hash_sum = sum_new_fastqs(directory, files)
         elif new_bams:
-            new_hash_sum = sum_new_bams(new_bams)
+            new_hash_sum = sum_new_bams(directory, files)
 
         write_hash_sum(new_hash_sum, hash_sum_outfile)
 
@@ -55,10 +61,12 @@ def write_hash_sum(hash_sum, hash_sum_outfile):
     hash_sum_outfile.close()
     return
 
-def sum_new_bams(new_bams):
+def sum_new_bams(directory, files):
     bams = None
     hash_sum = 0
     paired_reads = {}
+
+    new_bams = [ os.path.join(directory, f) for f in files ]
 
     if len(new_bams) == 1:
         if '*' in new_bams[0]:
@@ -113,9 +121,11 @@ def sum_bam(bam, hash_sum=0, paired_reads={}):
 
     return hash_sum, paired_reads
 
-def sum_new_fastqs(new_fastqs):
+def sum_new_fastqs(directory, files):
     fastqs = None
     hash_sum = 0
+
+    new_fastqs = [ os.path.join(directory, f) for f in files ]
 
     if len(new_fastqs) == 1:
         if '*' in new_fastqs[0]:
@@ -149,16 +159,18 @@ def parse_args():
     parser.add_argument('--original_bam',
                         help='Path to original BAM.')
     parser.add_argument('--hash_sum_outfile', type=argparse.FileType('w'),
-                        help='Output file for the hash sum of original BAM reads.')
+                        help='Output file for the hash sum.')
     parser.add_argument('--hash_sum_infile', type=argparse.FileType('r'),
                         help='File containing a hash sum that will be used to check \
                         integrity of either new fastq or new bam files.')
-    parser.add_argument('--new_fastqs', nargs='*',
-                        help='Path(s) or a single glob to FASTQ files to check for \
-                        read name integrity.')
-    parser.add_argument('--new_bams', nargs='*',
-                        help='Path(s) or a single glob to FASTQ files to check for \
-                        read name integrity.')
+    parser.add_argument('--directory',
+                        help='Directory containing FASTQ or BAM files to hash.')
+    parser.add_argument('--files', nargs='*',
+                        help="FASTQ or BAM files in '--directory' to hash. Can be a glob.")
+    parser.add_argument('--new_fastqs', action=store_true,
+                        help="Flag indicating files specified in '--files' are FASTQs.")
+    parser.add_argument('--new_bams', action=store_true,
+                        help="Flag indicating files specified in '--files' are BAMs.")
     args = parser.parse_args()
     return args
 
