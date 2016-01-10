@@ -51,6 +51,9 @@ def main():
 
         write_hash_sum(new_hash_sum, hash_sum_outfile)
 
+        if not old_hash_sum == new_hash_sum:
+            raise ValueError('New hash sum does not match original hash sum.')
+
     else:
         raise ValueError('Parameter error.')
 
