@@ -18,6 +18,7 @@ if [ ! -d "../$LATEST_TAG" ]; then
 	cd ..
 	echo "Renaming repo..."
 	mv clone "$LATEST_TAG"
+	echo "Updating `latest` symlink..."
 	rm "latest"
 	ln -s "$LATEST_TAG" "latest"
 else
