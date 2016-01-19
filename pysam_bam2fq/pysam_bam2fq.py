@@ -8,9 +8,12 @@ import os
 def main():
     args = parse_args()
     bam = args.bam
-    output_dir = os.path.abspath(args.output_dir)
+    output_dir = args.output_dir
     interval_file = args.interval_file
     num_reads = args.num_reads
+
+    #if not os.path.exists(output_dir):
+    #    os.path.mkdirs(output_dir, 0775)
 
     logging.basicConfig(filename='split_reads.log', level=logging.INFO,
                         filemode='w')
@@ -22,12 +25,18 @@ def main():
     paired_dict = {}
 
     chunk = 0
+
     paired_string = 'paired_{}.fastq.gz'.format(chunk)
     paired_process = spawn_gzip(os.path.join(output_dir, paired_string)) 
 
+    chunk += 1
+    
+    unpaired_string = 'unpaired_{}.fastq.gz'.format(chunk)
+    unpaired_process = spawn_gzip(os.path.join(output_dir, unpaired_string))
+
     read_count = 0
 
-    chunk_files = [ paired_string ]
+    chunk_files = [ paired_string, unpaired_string ]
 
     for read in reads:
 
@@ -83,11 +92,6 @@ def main():
     if len(paired_dict.keys()):
 
         read_count = 0
-        chunk += 1
-        unpaired_string = 'unpaired_{}.fastq.gz'.format(chunk)
-        unpaired_process = spawn_gzip(os.path.join(output_dir, unpaired_string))
-
-        chunk_files.append(unpaired_string)
 
         for qname in paired_dict.keys():
 
