@@ -73,11 +73,11 @@ def sum_new_bams(directory, files):
 
     if len(new_bams) == 1:
         if '*' in new_bams[0]:
-            bams = glob.glob(os.path.abspath(new_bams[0]))
+            bams = glob.glob(new_bams[0])
         else:
             bams = [ new_bams[0] ]
     else:
-        bams = [ os.path.abspath(b) for b in new_bams ]
+        bams = new_bams
 
     for bam in bams:
         hash_sum, paired_reads = sum_bam(bam, hash_sum, paired_reads)
@@ -132,11 +132,11 @@ def sum_new_fastqs(directory, files):
 
     if len(new_fastqs) == 1:
         if '*' in new_fastqs[0]:
-            fastqs = glob.glob(os.path.abspath(new_fastqs[0]))
+            fastqs = glob.glob(new_fastqs[0])
         else:
             fastqs = [ new_fastqs[0] ]
     else:
-        fastqs = [ os.path.abspath(f) for f in new_fastqs ]
+        fastqs = new_fastqs
 
     for fastq in fastqs:
         fq = None
@@ -170,9 +170,9 @@ def parse_args():
                         help='Directory containing FASTQ or BAM files to hash.')
     parser.add_argument('--files', nargs='*',
                         help="FASTQ or BAM files in '--directory' to hash. Can be a glob.")
-    parser.add_argument('--new_fastqs', action=store_true,
+    parser.add_argument('--new_fastqs', action='store_true',
                         help="Flag indicating files specified in '--files' are FASTQs.")
-    parser.add_argument('--new_bams', action=store_true,
+    parser.add_argument('--new_bams', action='store_true',
                         help="Flag indicating files specified in '--files' are BAMs.")
     args = parser.parse_args()
     return args
