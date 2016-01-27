@@ -97,7 +97,17 @@ def sum_bam(bam, hash_sum=0, paired_reads={}):
         if read.is_supplementary:
             continue
 
+        if read.is_duplicate:
+            continue
+
+        if read.is_qcfail:
+            continue
+
         qname = read.query_name
+
+        if not read.is_read1 and not read.is_read2:
+            hash_sum += hash(qname)
+            continue
 
         if qname not in paired_reads:
             paired_reads[qname] = [False, False]
@@ -107,10 +117,6 @@ def sum_bam(bam, hash_sum=0, paired_reads={}):
 
         elif read.is_read2:
             paired_reads[qname][1] = True
-
-        else:
-            hash_sum += hash(qname)
-            continue
  
         if all(paired_reads[qname]):
             hash_sum += hash(qname + '/1')

@@ -35,6 +35,7 @@ def main():
     unpaired_process = spawn_gzip(os.path.join(output_dir, unpaired_string))
 
     read_count = 0
+    unpaired_read_count = 0
 
     chunk_files = [ paired_string, unpaired_string ]
 
@@ -43,10 +44,16 @@ def main():
         if read.is_secondary:
             continue
 
-        if read.has_tag('SA') and not read.is_supplementary:
-            logging.info(str(read))
+        #if read.has_tag('SA') and not read.is_supplementary:
+        #    logging.info(str(read))
 
         if read.is_supplementary:
+            continue
+
+        if read.is_duplicate:
+            continue
+
+        if read.is_qcfail:
             continue
 
         qname = read.query_name
@@ -54,12 +61,27 @@ def main():
         seq = read.query_sequence
         qual = get_ascii_quality(read.query_qualities)
 
-        if qname not in paired_dict:
-            paired_dict[qname] = [ None, None ]
-
         if read.is_reverse:
             seq = get_complement(seq)[::-1]
             qual = qual[::-1]
+
+        if not read.is_read1 and not read.is_read2:
+
+            if unpaired_read_count >= num_reads:
+                chunk += 1
+                unpaired_string = 'unpaired_{}.fastq.gz'.format(chunk)
+                unpaired_process = spawn_gzip(os.path.join(output_dir, unpaired_string))
+                unpaired_read_count = 0
+                chunk_files.append(unpaired_string)
+
+            unpaired_process.stdin.write('@{0}\n{1}\n+\n{2}\n'.format(qname, seq, qual))
+
+            unpaired_read_count += 1
+
+            continue
+
+        if qname not in paired_dict:
+            paired_dict[qname] = [ None, None ]
 
         if read.is_read1:
             paired_dict[qname][0] = (seq, qual)
@@ -102,7 +124,14 @@ def main():
                 read_count = 0
                 chunk_files.append(unpaired_string)
 
-            t = next(i for i in paired_dict[qname] if i is not None)
+            #t = next(i for i in paired_dict[qname] if i is not None)
+
+            t = None
+
+            for i in paired_dict[qname]:
+                if i:
+                    t = i
+                    break
 
             v = [qname, t[0], t[1]]
 
