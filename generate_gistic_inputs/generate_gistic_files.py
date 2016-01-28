@@ -1,5 +1,6 @@
 import argparse
 import math
+import re
 
 """
 
@@ -53,8 +54,18 @@ def main():
 def parse_segs_from_concatenated_file(concat_file):
     parsed_seg = {}
 
+    header_found = False
+
+    p = re.compile("start", re.I)
+
     for seg in concat_file:
-        fields = seg.split('\t')
+
+        if not header_found:
+            header_found = True
+            if re.search(p, seg):
+                continue
+
+        fields = seg.rstrip().split('\t')
 
         sample_name, chrm, start, end = fields[0:4]
         ratio = fields[-1]
