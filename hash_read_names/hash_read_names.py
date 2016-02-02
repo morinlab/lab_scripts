@@ -3,6 +3,7 @@ import pysam
 import os
 import glob
 import gzip
+import sys
 
 """
 Description: Checks the integrity of FASTQ or BAM file(s)
