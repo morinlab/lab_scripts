@@ -98,11 +98,11 @@ def sum_bam(bam, hash_sum=0, paired_reads={}):
         if read.is_supplementary:
             continue
 
-        if read.is_duplicate:
-            continue
+        #if read.is_duplicate:
+        #    continue
 
-        if read.is_qcfail:
-            continue
+        #if read.is_qcfail:
+        #    continue
 
         qname = read.query_name
 
