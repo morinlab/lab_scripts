@@ -1,11 +1,13 @@
 #!/usr/bin/env Rscript
 #simple wrapper to run the expands software using Sequenza-flavour copy number results as input
 #there is no error checking and the script blindly assumes you have the appropriate dependencies installed in the R on your path and will run it as follows:
-# this_script.R segments_file.txt augmented_maf_file.maf sample_name max_score precision [mode]
-
+# this_script.R sequenza_or_titan_segments_file.txt augmented_maf_file.maf sample_name max_score precision input_format loh_flag
+#for input_format, use one of I, S or T. S and T are the preferred options as they work directly from the raw output file from Sequenza or Titan, respectively.
+#for the loh_flag, I recommend you set it to 1. This will include all copy-neutral LOH segments and their BAF in the clustering. This can help resolve clonal clusters with few mutations in them. 
+#Setting this to zero will ignore LOH events 
 
 args = commandArgs(trailingOnly=TRUE)
-
+print(args)
 library(matlab) #this dependency can probably be removed. Note the single line marked that uses a matlab function can probably be replaced with pure R
 library(expands)
 
@@ -27,7 +29,7 @@ input_mode = args[6]  # S for sequenza, I for IGV-friendly seg file, T for Titan
 
 #could also be made an argument if the user wants to really slow down the program by decreasing this :)
 min_freq = 0.1
-maxpm=5  #6 was causing some weird results
+max_PM=5  #6 was causing some weird results
 
 print("expecting input format:")
 print(input_mode)
@@ -50,6 +52,7 @@ if(input_mode == "T"){
 			keep_loh = neut & loh1
 			loh_string = "neut_LOH_"
 		} else if(include_loh ==2){
+		#warning: These other two options should not be used. I don't think they work well. Please stick with 0 or 1
 			del = seg1[,"Copy_Number"] == 1
 			loh1 = seg1[,"MajorCN"] + seg1[,"MinorCN"] ==1
 			keep_loh = del & loh1
@@ -73,6 +76,7 @@ if(input_mode == "T"){
 		loh_snv_data[,"ALT"] = as.numeric(rep(45,length(vaf_loh_event)))
 		loh_snv_data[,"PN_B"] = as.numeric(rep(1,length(vaf_loh_event)))
 	}
+
 	chroms = as.numeric(seg1[,"Chromosome"])
 
 	keep_seg = seg1[,4] - seg1[,3] > 1
@@ -88,7 +92,8 @@ if(input_mode == "T"){
 
 	seg2[,"startpos"] = as.numeric(seg1[keep_both,3])
 	seg2[,"endpos"] = as.numeric(seg1[keep_both,4])
-	seg2[,4]=seg1[keep_both,"Copy_Number"]
+	seg2[,4]=as.numeric(seg1[keep_both,"Copy_Number"])
+
 
 }else if(input_mode == "S"){
 	print(paste("loading Sequenza ",seg))
@@ -96,8 +101,7 @@ if(input_mode == "T"){
 	#note that the CNt value is being used directly by Expands. For Titan, one would have to convert the log ratio to absolute copy number
 
 	loh_string = "no_LOH_"
-	#this only works for Sequenza right now. Not sure how to set this up to work with Titan because CNt are not integers unless the states are read here instead of the CNt value.
-	#Perhaps Bruno can work this out. Failing that, just disable for Titan inputs.
+
 	if(include_loh > 0){
 		if(include_loh == 1){
 			neut = seg1[,"CNt"] == 2
@@ -105,12 +109,13 @@ if(input_mode == "T"){
 			keep_loh = neut & loh1
 			loh_string = "neut_LOH_"
 		} else if(include_loh ==2){
+		#don't use these other two options!
 			del = seg1[,"CNt"] == 1
 			loh1 = seg1[,"A"] + seg1[,"B"] ==1
 			keep_loh = del & loh1
 			loh_string = "del_LOH_"
 		} else if(include_loh==3){
-			loh_string = "any_LOH_"
+			loh_string = "any_LOH_Real"
 			not_amp = seg1[,"CNt"] <=2
 			loh1 = seg1[,"B"]==0
 			keep_loh = not_amp & loh1
@@ -118,7 +123,7 @@ if(input_mode == "T"){
 	
 		sequenza_loh = seg1[keep_loh,]
 
-		vaf_loh_event= 1- sequenza_loh[,"Bf"]  #the Expands method expects VAFs that were increased relative to the normal but Sequenza reports BAF relative to lower Reference_Allel
+		vaf_loh_event= 1- sequenza_loh[,"Bf"]  #the Expands method expects VAFs that were increased relative to the normal but Sequenza reports BAF relative to lower Reference_Allele
 
 		loh_snv_data=matrix(nrow=length(vaf_loh_event),ncol=7,dimnames=list(c(),c("chr","startpos","endpos","REF","ALT","AF_Tumor","PN_B")))
 		loh_snv_data[,"chr"] = as.numeric(sequenza_loh[,"chromosome"])
@@ -128,8 +133,12 @@ if(input_mode == "T"){
 		loh_snv_data[,"REF"] = as.numeric(rep(65,length(vaf_loh_event)))
 		loh_snv_data[,"ALT"] = as.numeric(rep(45,length(vaf_loh_event)))
 		loh_snv_data[,"PN_B"] = as.numeric(rep(1,length(vaf_loh_event)))
+		#loh_snv_data[,"PN_B"] = as.numeric(rep(0,length(vaf_loh_event))) #don't set as LOH because it works better if you don't. Unsure why
 	}
-	chroms = as.numeric(seg1[,"chromosome"])
+	chroms_a = seg1[,2]
+        chroms = as.numeric(chroms_a)
+
+#	chroms = as.numeric(seg1[,"chromosome"])
 
 	keep_seg = seg1[,"end.pos"] - seg1[,"start.pos"] > 1
 
@@ -144,22 +153,48 @@ if(input_mode == "T"){
 
 	seg2[,"startpos"] = as.numeric(seg1[keep_both,"start.pos"])
 	seg2[,"endpos"] = as.numeric(seg1[keep_both,"end.pos"])
-	seg2[,4]=seg1[keep_both,"CNt"]
+	seg2[,4]=as.numeric(seg1[keep_both,"CNt"])
+	#cn_estimate = 2*2^seg1[keep_both,"depth.ratio"]
+	#seg2[,4] = cn_estimate
+	#print(loh_snv_data)
+	#q()
+	
 } else if (input_mode == "I"){
-	#LOH information not included in these files, just load the copy number states and convert to absolute CN
-	#example format: sample	chr	start	end	num.mark	median
+	#LOH information needs to be included in these files and BAF
+	#example format: sample	chr	start	end	LOH_flag	BAF	median
 	seg1=read.csv(seg,stringsAsFactors=FALSE,sep="\t")
 	#convert last column from log ratio to absolute CN
 	logratios = seg1[,length(seg1[1,])]
 	abs = 2*2^logratios
-	chroms = as.numeric(seg1[,2])
+	chroms_a = seg1[,2]
+	chroms = as.numeric(chroms_a)
 	keep_chrom= !is.na(chroms<23)
 	
-	
+	loh_string = "no_LOH_"
+
 	loh_status = seg1[,"LOH_flag"]
-	#no_loh = !loh_status
-	#keep_both = no_loh & keep_chrom
+
+
+	if(include_loh > 0){
+		#Warning: This is the most experimental mode of running currently. 
+
+		sequenza_loh = seg1[loh_status ==1,]
+		vaf_loh_event= 1- sequenza_loh[,"BAF"]  #the Expands method expects VAFs that were increased relative to the normal but Sequenza reports BAF relative to lower Reference_Allel
+
+		loh_snv_data=matrix(nrow=length(vaf_loh_event),ncol=7,dimnames=list(c(),c("chr","startpos","endpos","REF","ALT","AF_Tumor","PN_B")))
+		loh_snv_data[,"chr"] = as.numeric(sequenza_loh[,"chromosome"])
+		loh_snv_data[,"startpos"] = as.numeric(sequenza_loh[,"start"] + 1)
+		loh_snv_data[,"endpos"] = as.numeric(sequenza_loh[,"end"] + 1)
+		loh_snv_data[,"AF_Tumor"]= as.numeric(vaf_loh_event)
+		loh_snv_data[,"REF"] = as.numeric(rep(65,length(vaf_loh_event)))
+		loh_snv_data[,"ALT"] = as.numeric(rep(45,length(vaf_loh_event)))
+		loh_snv_data[,"PN_B"] = as.numeric(rep(1,length(vaf_loh_event)))
+		#print(loh_snv_data)
+		#q()
+	}
 	seg2=matrix(nrow=length(seg1[keep_chrom,1]),ncol=4)
+	
+	#seg2=matrix(nrow=length(seg1[keep_chrom,1]),ncol=4)
 	colnames(seg2) = c("chr","startpos","endpos","CN_Estimate")
 	
 	seg2[,"chr"] = as.numeric(seg1[keep_chrom,2])
@@ -168,8 +203,22 @@ if(input_mode == "T"){
 	seg2[,"endpos"] = as.numeric(seg1[keep_chrom,4])
 	seg2[,4]=abs[keep_chrom]
 
+} else{
+	print("no input mode specified!")
+	q()
 }
 
+mask_deletions = 1 # added by Ryan in response to weird behaviour in simulations when regions have a CN < 2. The model seems to perform much better if deletions are hidden/masked. This can be made a command-line option if desirable
+
+if(mask_deletions){
+		seg2.mask = seg2[,4] < 2
+		seg2.save = seg2[,"CN_Estimate"]
+
+		seg2[seg2.mask,"CN_Estimate"] = 2
+		seg2=cbind(seg2,seg2.save)
+		colnames(seg2)= c("chr","startpos","endpos","CN_Estimate","CN_Estimate_nomask")
+
+}
 
 print(paste("loading MAF ",maf))
 maf_data = read.csv(maf,sep="\t",stringsAsFactors=FALSE )
@@ -184,8 +233,9 @@ maf_keep[,"Tumor_Seq_Allele2"]=sapply(maf_keep[,"Tumor_Seq_Allele2"],function(x)
 
 snv_data=matrix(nrow=dim(maf_keep[1]),ncol=7,dimnames=list(c(),c("chr","startpos","endpos","REF","ALT","AF_Tumor","PN_B")))
 
-#load numeric chromosomes into matrix
-snv_data[,"chr"] = as.numeric(maf_keep[,"Chromosome"])
+
+snv_data[,"chr"] = as.numeric(maf_data[,"Chromosome"])
+
 
 #load start and end position into matrix
 snv_data[,"startpos"] = as.numeric(maf_keep[,"Start_Position"])
@@ -197,83 +247,67 @@ snv_data[,"AF_Tumor"]=maf_keep[,"t_alt_count"]/(maf_keep[,"t_alt_count"]+maf_kee
 #set flag to somatic for all SNVs
 snv_data[,"PN_B"] = 0
 
-if(input_mode == "I" & include_loh >0){
-	#set PN_B for any SNVs in LOH regions as per the seg file. May be worth doing this in all scenarios, in fact, depending on if it helps
-	loh_regions = seg1[loh_status,]
 
-	for (k in 1:nrow(loh_regions)){
-  
-    	idx=which(snv_data[,"chr"]==loh_regions[k,"chromosome"] & snv_data[,"startpos"]>=loh_regions[k,"start"] & snv_data[,"startpos"]<=loh_regions[k,"end"]);
-    	if (length(idx)==0){
-        	next;
-    	}
-    	#the next line is the only bit of code that relies on the matlab dependencie
-    	snv_data[idx,"PN_B"]=rep(1,length(idx));
-	}
-	merge_snv = snv_data
-	samp_param = paste(sample,loh_string,"_Generic_state_INDEL_maxpm_", maxpm, "_score_", max_score, ",precision_", precision,sep="")
-}
-else if(include_loh > 0){
+#for convenience, make a pyclone input file using some code recycled from expands. There might be a more reasonable place to declare this function
+        assignStatesToMutation<-function(dm,cbs,cols){
+        print("Assigning copy number to mutations for PyClone...")
+        ##Assign copy numbers in cbs to mutations in dm
+        for (k in 1:nrow(cbs)){
+
+        idx=which(dm[,"chr"]==cbs[k,"chr"] & dm[,"startpos"]>=cbs[k,"startpos"] & dm[,"startpos"]<=cbs[k,"endpos"]);
+        if (length(idx)==0){
+                next;
+        }
+        #the next line is the only bit of code that relies on the matlab dependencie
+        dm[idx,cols]=repmat(as.numeric(cbs[k,cols]),length(idx),1);
+        dm[idx,"normal_cn"] = rep(2,length(idx))
+        }
+        dm=dm[,colnames(dm)!="segmentLength"];
+        print("... Done.")
+
+        return(dm);
+        }
+
+
+        py_snv_data=matrix(nrow=dim(maf_keep[1]),ncol=10,dimnames=list(c(),c("gene","chr","startpos","endpos","mutation_id","ref_counts","var_counts","normal_cn","major_cn","minor_cn")))
+
+        #load numeric chromosomes into matrix
+        py_snv_data[,"chr"] = as.numeric(maf_keep[,"Chromosome"])
+
+        #load start and end position into matrix
+        py_snv_data[,"startpos"] = as.numeric(maf_keep[,"Start_Position"])
+        py_snv_data[,"endpos"] = as.numeric(maf_keep[,"End_Position"])
+
+        py_snv_data[,"ref_counts"]=maf_keep[,"t_ref_count"]
+        py_snv_data[,"var_counts"]=maf_keep[,"t_alt_count"]
+        if(input_mode == "S"){
+                #rename columns in Sequenza data to match normal_cn, minor_cn, major_cn and position/chromoosome name style of Expands
+                colnames(seg1)=c("chr","startpos","endpos","Bf","N.BAF","sd.BAF","depth.ratio","N.ratio","sd.ratio","CNt","major_cn","minor_cn","segmentLength") #note, we need to fill normal_cn with 2 for everything
+                #set segment length
+                seg1[,"segmentLength"] = seg1[,"endpos"] - seg1[,"startpos"]
+                py_snv_data_assigned=assignStatesToMutation(py_snv_data,seg1,c("minor_cn","major_cn"))
+                py_snv_data_assigned[,"gene"]=maf_keep[,"Hugo_Symbol"]
+                py_snv_data_assigned[,"mutation_id"]=paste(py_snv_data_assigned[,"gene"],py_snv_data_assigned[,"startpos"],sep="_")
+                out_pyclone = paste("./",sample,"_pyclone_in.tsv",sep="")
+                keepers = !is.na(py_snv_data_assigned[,"normal_cn"])
+                write.table(py_snv_data_assigned[keepers,],file=out_pyclone,sep="\t",quote=FALSE)
+        }
+
+
+if(include_loh > 0){
+
 	merge_snv=rbind(loh_snv_data,snv_data)
-	samp_param = paste(sample,loh_string,"_state_INDEL_maxpm_", maxpm, "_score_", max_score, ",precision_", precision,sep="")
+	loh_string = "LOH_"
+	samp_param = paste(sample,loh_string,"_state_INDEL_maxpm_", max_PM, "_score_", max_score, ",precision_", precision,sep="")
 } else{
 	merge_snv = snv_data
-	samp_param = paste(sample,loh_string,"_noLOH_state_INDEL_maxpm_", maxpm, "_score_", max_score, ",precision_", precision,sep="")
-	#for convenience, make a pyclone input file using some code recycled from expands. There might be a more reasonable place to declare this function
-	assignStatesToMutation<-function(dm,cbs,cols){
-	print("Assigning copy number to mutations...")
-	##Assign copy numbers in cbs to mutations in dm
-	for (k in 1:nrow(cbs)){
-  
-    	idx=which(dm[,"chr"]==cbs[k,"chr"] & dm[,"startpos"]>=cbs[k,"startpos"] & dm[,"startpos"]<=cbs[k,"endpos"]);
-    	if (length(idx)==0){
-        	next;
-    	}
-    	#the next line is the only bit of code that relies on the matlab dependencie
-    	dm[idx,cols]=repmat(as.numeric(cbs[k,cols]),length(idx),1);
-    	dm[idx,"normal_cn"] = rep(2,length(idx))
-	}
-	dm=dm[,colnames(dm)!="segmentLength"];
-	print("... Done.")
-
-	return(dm);
-	}
-
-
-	py_snv_data=matrix(nrow=dim(maf_keep[1]),ncol=10,dimnames=list(c(),c("gene","chr","startpos","endpos","mutation_id","ref_counts","var_counts","normal_cn","major_cn","minor_cn")))
-
-	#load numeric chromosomes into matrix
-	py_snv_data[,"chr"] = as.numeric(maf_keep[,"Chromosome"])
-	
-	#load start and end position into matrix
-	py_snv_data[,"startpos"] = as.numeric(maf_keep[,"Start_Position"])
-	py_snv_data[,"endpos"] = as.numeric(maf_keep[,"End_Position"])
-	
-	py_snv_data[,"ref_counts"]=maf_keep[,"t_ref_count"]
-	py_snv_data[,"var_counts"]=maf_keep[,"t_alt_count"]
-	if(input_mode == "S"){
-		#rename columns in Sequenza data to match normal_cn, minor_cn, major_cn and position/chromoosome name style of Expands
-		colnames(seg1)=c("chr","startpos","endpos","Bf","N.BAF","sd.BAF","depth.ratio","N.ratio","sd.ratio","CNt","major_cn","minor_cn","segmentLength") #note, we need to fill normal_cn with 2 for everything
-		#set segment length
-		seg1[,"segmentLength"] = seg1[,"endpos"] - seg1[,"startpos"]
-		py_snv_data_assigned=assignStatesToMutation(py_snv_data,seg1,c("minor_cn","major_cn"))
-		py_snv_data_assigned[,"gene"]=maf_keep[,"Hugo_Symbol"]
-		py_snv_data_assigned[,"mutation_id"]=paste(py_snv_data_assigned[,"gene"],py_snv_data_assigned[,"startpos"],sep="_")
-		out_pyclone = paste("./",sample,"_pyclone_in.tsv",sep="")
-		keepers = !is.na(py_snv_data_assigned[,"normal_cn"])
-		write.table(py_snv_data_assigned[keepers,],file=out_pyclone,sep="\t",quote=FALSE)
-	}
+	samp_param = paste(sample,loh_string,"_noLOH_Generic_state_maxpm_", max_PM, "_score_", max_score, ",precision_", precision,sep="")
 }
+print("merged")
+print(merge_snv)
+print(".....")
+print(seg2)
 
-precision=0.1/log(nrow(dm)/7); #use default?
-
-
-print(samp_param)
-dirF=getwd();
-
-output_file=paste(dirF, "/", samp_param,"_new_assign_anyLOH.sps",sep="");
-
-file = paste(samp_param,"new_assign_anyLOH.pdf",sep="")
 
 #run individual expands steps separately
 dm=assignQuantityToMutation(merge_snv,seg2,"CN_Estimate")
@@ -303,6 +337,14 @@ ii=which(is.na(dm[,"CN_Estimate"]));
     dm=dm[-ii,];
   }
 
+precision=0.1/log(nrow(dm)/7); #use default?
+
+print(samp_param)
+dirF=getwd();
+
+output_file=paste(dirF, "/", samp_param,"unmodified.sps",sep="");
+
+file = paste(samp_param,".pdf",sep="")
 
 cfd=computeCellFrequencyDistributions(dm, max_PM, precision, min_CellFreq=min_freq)
 
@@ -310,6 +352,10 @@ toUseIdx=which(apply(is.finite(cfd$densities),1,all) )
 
 
 SPs=clusterCellFrequencies(cfd$densities[toUseIdx,], precision, min_CellFreq=min_freq)
+
+#test modified version of this function
+#SPs=newClusterCellFrequencies(cfd$densities[toUseIdx,], precision, min_CellFreq=min_freq)
+
 SPs=SPs[SPs[,"score"]<=max_score,] 
 
 print("subpopulation details:")
@@ -318,26 +364,21 @@ print(SPs)
 
 print("running assignMutations...")
 
-aM= assignMutations( dm, SPs,max_PM=maxpm)
 
-#this often doesn't work but I don't think it affects the output (i.e. subclone assignment. Instead, it just doesn't generate a phylogenetic tree for the sample. Deactivated for now.)
-#aQ=try(assignQuantityToSP(copyNumber, dm),silent=FALSE);
-#  tr=NULL;
-#  if(class(aQ)=="try-error" || is.null(ncol(aQ$ploidy))){
-#    print("Error encountered while reconstructing phylogeny")
-#  }else {
-#    dm=aQ$dm;
-#    aQ=aQ$ploidy;
-#    output=paste(dirF, .Platform$file.sep, snvF, sep="");    # output=paste(dirF, .Platform$file.sep, gsub("\\.","_",snvF), sep="");
-#    tr=try(buildPhylo(aQ,output,dm=dm),silent=FALSE);
-#    if(class(tr)!="try-error" ){
-#      if(class(tr$dm)!="try-error" && !is.na(tr$dm)){
-#        dm=tr$dm;
-#      }
-#      tr=tr$tree;
-#    }
-#  }
+#MAJOR CHANE HERE where Ryan's version of the code is called instead of default 
+#aM= newAssignMutations( dm, SPs,max_PM=max_PM)
 
+aM= assignMutations( dm, SPs,max_PM=max_PM)
+
+#unmaks the deletions for vizualization
+#if(mask_deletions){
+#	seg2[,"CN_Estimate"] = seg2[,"CN_Estimate_nomask"]
+#	dm = assignQuantityToMutation(merge_snv,seg2,"CN_Estimate")
+#	some=dm[,"startpos"] %in% aM$dm[,"startpos"]
+
+#  	aM$dm[,"CN_Estimate"] = dm[some,"CN_Estimate"]
+	
+#}
 #save SPS file from Expands with mutations assigned to subclones
 
  suppressWarnings(write.table(aM$dm,file = output_file, append=TRUE, quote = FALSE, sep = "\t", row.names=FALSE));
@@ -349,3 +390,10 @@ pdf(file)
 plotSPs(aM$dm, sampleID=sample,cex=1)
 dev.off()
 
+file1 = paste("newPlot_",file,sep="")
+pdf(file1)
+newPlotSPs(aM$dm,sampleID=sample,cex=1)
+dev.off()
+
+print("final SPs")
+print(aM$finalSPs)
