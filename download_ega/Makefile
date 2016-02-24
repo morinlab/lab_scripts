@@ -25,18 +25,19 @@ task.complete: targets.txt
 targets.txt: all.files.txt
 	cut -f3 $< | perl -pe "s:(.*):${SYMLINK_DIR}/\1.${BAM_TYPE}.bam:" > $@
 
-# Create a list of files for each dataset and merge them together
+# Create a list of BAM files for each dataset and merge them together
 all.files.txt: datasets.txt
 	FILES=$(addsuffix .files.txt, $(shell cat $<)); \
 	${MAKE} $$FILES; \
 	cat $$FILES > $@
 
-# Create a list of files for a given dataset
+# Create a list of BAM files for a given dataset
 %.files.txt: 
 	java -jar ${EGA_CLIENT} \
 			-pf ${EGA_LOGIN} \
 			--listdatasetfiles $* \
 		| grep ".bam" \
+		| grep -v ".bai" \
 		| awk 'BEGIN {FS="  "; OFS="\t";} {gsub(/\//,"_",$$2); sid=$$2; sid=gensub(/_EGAR[0-9]+_([^.]+).*/,"\\1", "g", sid); print $$4,$$2,sid; }' \
 	> $@
 
