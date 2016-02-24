@@ -50,11 +50,11 @@ def main():
         if read.is_supplementary:
             continue
 
-        if read.is_duplicate:
-            continue
+        #if read.is_duplicate:
+        #    continue
 
-        if read.is_qcfail:
-            continue
+        #if read.is_qcfail:
+        #    continue
 
         qname = read.query_name
 
@@ -68,6 +68,8 @@ def main():
         if not read.is_read1 and not read.is_read2:
 
             if unpaired_read_count >= num_reads:
+                unpaired_process.stdin.close()
+                unpaired_process.wait()
                 chunk += 1
                 unpaired_string = 'unpaired_{}.fastq.gz'.format(chunk)
                 unpaired_process = spawn_gzip(os.path.join(output_dir, unpaired_string))
@@ -92,6 +94,8 @@ def main():
         if all(paired_dict[qname]):
 
             if read_count >= num_reads:
+                paired_process.stdin.close()
+                paired_process.wait()
                 chunk += 1
                 paired_string = 'paired_{}.fastq.gz'.format(chunk)
                 paired_process = spawn_gzip(os.path.join(output_dir, paired_string))
@@ -118,6 +122,8 @@ def main():
         for qname in paired_dict.keys():
 
             if read_count >= num_reads:
+                unpaired_process.stdin.close()
+                unpaired_process.wait()
                 chunk += 1
                 unpaired_string = 'unpaired_{}.fastq.gz'.format(chunk)
                 unpaired_process = spawn_gzip(os.path.join(output_dir, unpaired_string))
@@ -152,6 +158,7 @@ def main():
 
 def spawn_gzip(filename):
     p = subprocess.Popen('gzip > ' + filename,
+                         close_fds=True,
                          bufsize=-1,
                          shell=True,
                          stdin=subprocess.PIPE)

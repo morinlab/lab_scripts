@@ -3,6 +3,7 @@ import pysam
 import os
 import glob
 import gzip
+import sys
 
 """
 Description: Checks the integrity of FASTQ or BAM file(s)
@@ -52,7 +53,7 @@ def main():
         write_hash_sum(new_hash_sum, hash_sum_outfile)
 
         if not old_hash_sum == new_hash_sum:
-            raise ValueError('New hash sum does not match original hash sum.')
+            raise DiscordantHashSum()
 
     else:
         raise ValueError('Parameter error.')
@@ -97,11 +98,11 @@ def sum_bam(bam, hash_sum=0, paired_reads={}):
         if read.is_supplementary:
             continue
 
-        if read.is_duplicate:
-            continue
+        #if read.is_duplicate:
+        #    continue
 
-        if read.is_qcfail:
-            continue
+        #if read.is_qcfail:
+        #    continue
 
         qname = read.query_name
 
@@ -182,6 +183,11 @@ def parse_args():
                         help="Flag indicating files specified in '--files' are BAMs.")
     args = parser.parse_args()
     return args
+
+class DiscordantHashSum(Exception):
+    def __init__(self):
+        Exception.__init__(self, 'New hash sum does not match original hash sum.')
+        sys.exit(3)
 
 if __name__ == '__main__':
     main()
