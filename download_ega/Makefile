@@ -22,6 +22,7 @@ task.complete: targets.txt
 	touch $@
 
 # Extract the sample name and and create the target symlink
+.PHONY: targets.txt
 targets.txt: all.files.txt
 	cut -f3 $< | perl -pe "s:(.*):${SYMLINK_DIR}/\1.${BAM_TYPE}.bam:" > $@
 
@@ -61,7 +62,7 @@ ${BAM_DIR}/.%.decrypted: ${BAM_DIR}/.%.downloaded
 	perl -pe "s:(.*\.bam).*:\1:" $< > $@
 
 # Download the encrypted BAM file and store the list of encrypted files in the target file
-${BAM_DIR}/.%.downloaded: ${BAM_DIR}/.%.requested all.files.txt
+${BAM_DIR}/.%.downloaded: ${BAM_DIR}/.%.requested 
 	cd ${BAM_DIR}; \
 	java -jar ${EGA_CLIENT} \
 		-pf ${EGA_LOGIN} \
@@ -70,8 +71,8 @@ ${BAM_DIR}/.%.downloaded: ${BAM_DIR}/.%.requested all.files.txt
 	ls $(shell awk 'BEGIN {FS="\t"} $$3 == "$*" {$$2=gensub(/(.*\.bam).*/, "\\1", "g", $$2); print "${BAM_DIR}/" $$2 ".*"}' all.files.txt) > $@
 
 # Make a request for a file and store the request ID in the target file
-${BAM_DIR}/.%.requested: all.files.txt
-	EGAF=`awk 'BEGIN {FS="\t"} $$3 == "$*" {print $$1}' $<`; \
+${BAM_DIR}/.%.requested: 
+	EGAF=`awk 'BEGIN {FS="\t"} $$3 == "$*" {print $$1}' all.files.txt`; \
 	REQ=`echo $$EGAF | perl -pe "s:^:req_:"`; \
 	java -jar ${EGA_CLIENT} \
 		-pf ${EGA_LOGIN} \
