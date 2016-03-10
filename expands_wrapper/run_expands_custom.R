@@ -14,7 +14,10 @@ library(matlab) #this dependency can probably be removed. Note the single line m
 library(expands)
 #load custom versions of functions modified by Ryan
 source("/projects/rmorin/git/lab_scripts/expands_wrapper/expands_custom_functions.R")
-source("/projects/rmorin/git/lab_scripts/expands_wrapper/expands_visualization.R")
+#source("/projects/rmorin/git/lab_scripts/expands_wrapper/expands_visualization.R")
+source("/projects/rmorin/git/lab_scripts/expands_wrapper/plotSPs.R")
+source("/projects/rmorin/git/lab_scripts/expands_wrapper/assignMutations.R")
+.addF = expands:::.addF
 
 seg = args[1]
 
@@ -32,6 +35,26 @@ precision = as.double(args[5])
 
 input_mode = args[6]  # S for sequenza, I for IGV-friendly seg file, T for Titan full segments file
 
+
+run_options = args[7]
+#
+# 1 use only default parameters and code from current Expands version
+# 2 use default clustering, new assignMutations functionality
+# 3 use new clustering and default assignMutations
+# 4 use both new clustering and new assignMutations functionality
+
+new_am = 0
+new_clust = 0
+if(run_options == 2 || run_options == 4){
+	print("using new AssignMutations")
+	new_am = 1
+}
+if(run_options == 3 || run_options == 4){
+	print("using new clustering")
+	new_clust = 1
+}
+
+
 #could also be made an argument if the user wants to really slow down the program by decreasing this :)
 min_freq = 0.1
 max_PM=5  #6 was causing some weird results
@@ -39,9 +62,9 @@ max_PM=5  #6 was causing some weird results
 print("expecting input format:")
 print(input_mode)
 
-if(length(args)>6){
+if(length(args)>7){
 	#loh flag set to a true value. Default is to not do anything with LOH events
-	include_loh = as.double(args[7])
+	include_loh = as.double(args[8])
 	print(paste("running in LOH mode", include_loh, sep=" "))
 	#if set to 1, neutral LOH only will be included, if set to 2, deletion LOH only will be included, if set to 3, all LOH will be included
 }
@@ -257,10 +280,10 @@ snv_data[,"PN_B"] = 0
 if(include_loh > 0){
 	merge_snv=rbind(loh_snv_data,snv_data)
 	loh_string = "LOH_"
-	samp_param = paste(sample,loh_string,"_state_INDEL_maxpm_", max_PM, "_score_", max_score, ",precision_", precision,sep="")
+	samp_param = paste(sample,loh_string,"maxpm_", max_PM, "_score_", max_score, ",precision_", precision, "newAM:_", new_am, "_newClust:_", new_clust,sep="")
 } else{
 	merge_snv = snv_data
-	samp_param = paste(sample,loh_string,"_noLOH_Generic_state_maxpm_", max_PM, "_score_", max_score, ",precision_", precision,sep="")
+	samp_param = paste(sample,loh_string,"maxpm_", max_PM, "_score_", max_score, ",precision_", precision,"newAM:_", new_am, "_newClust:_", new_clust,sep="")
 	#for convenience, make a pyclone input file using some code recycled from expands. There might be a more reasonable place to declare this function
 	assignStatesToMutation<-function(dm,cbs,cols){
 	print("Assigning copy number to mutations for PyClone...")
@@ -344,9 +367,9 @@ precision=0.1/log(nrow(dm)/7); #use default?
 print(samp_param)
 dirF=getwd();
 
-output_file=paste(dirF, "/", samp_param,"_newAM_localSum.sps",sep="");
+output_file=paste(dirF, "/", samp_param,".sps",sep="");
 
-file = paste(samp_param,"newAM_localSum.pdf",sep="")
+file = paste(samp_param,".pdf",sep="")
 
 cfd=computeCellFrequencyDistributions(dm, max_PM, precision, min_CellFreq=min_freq)
 
@@ -356,7 +379,12 @@ toUseIdx=which(apply(is.finite(cfd$densities),1,all) )
 #SPs=clusterCellFrequencies(cfd$densities[toUseIdx,], precision, min_CellFreq=min_freq)
 
 #test modified version of this function
-SPs=newClusterCellFrequencies(cfd$densities[toUseIdx,], precision, min_CellFreq=min_freq)
+
+if(new_clust){
+	SPs=newClusterCellFrequencies(cfd$densities[toUseIdx,], precision, min_CellFreq=min_freq)
+} else{
+	SPs=newClusterCellFrequencies(cfd$densities[toUseIdx,], precision, min_CellFreq=min_freq, local_sum=FALSE)
+}
 
 SPs=SPs[SPs[,"score"]<=max_score,] 
 
@@ -368,23 +396,89 @@ print("running assignMutations...")
 
 
 #MAJOR CHANE HERE where Ryan's version of the code is called instead of default 
-aM= newAssignMutations( dm, SPs,max_PM=max_PM)
+if(new_am){
+	#aM= newAssignMutations( dm, SPs,max_PM=max_PM,prune_by_ploidy=1)
+	aM= newAssignMutations( dm, SPs,max_PM=max_PM)
+} else{
+	aM= assignMutations( dm, SPs,max_PM=max_PM)
+}
+print(aM$finalSPs)
+
+iterative_mode =0
+
+if(iterative_mode){
+	saved = aM$dm
+	if(mask_deletions){
+			seg2[,"CN_Estimate"] = seg2[,"CN_Estimate_nomask"]
+			dm1 = assignQuantityToMutation(merge_snv,seg2,"CN_Estimate")
+			some=dm1[,"startpos"] %in% aM$dm[,"startpos"]
+
+  			saved[,"CN_Estimate"] = dm1[some,"CN_Estimate"]
+	
+	}
+	#if (!any(colnames(saved)=="AF_Tumor_Adjusted")){
+  	#saved=.addColumn(saved,"AF_Tumor_Adjusted",NA);
+  	#}
+  	
+    #saved[,"AF_Tumor_Adjusted"]=(saved[,"AF_Tumor"]*saved[,"CN_Estimate"]-saved[,"PN_B"])/(saved[,"PM_B"]-saved[,"PN_B"])
+    #scenario4 = which(saved[,"scenario"]==4)
+    #saved[scenario4,"AF_Tumor_Adjusted"]=(saved[scenario4,"AF_Tumor"]*saved[scenario4,"CN_Estimate"]-saved[scenario4,"PN_B"])/(saved[scenario4,"PM_cnv"]-saved[scenario4,"PN_B"])
+
+	pdf(file)
+	plotSPs(saved, sampleID=sample,cex=1)
+	dev.off()
+	file = paste(samp_param,"NewPlot.pdf",sep="")
+	pdf(file)
+	newPlotSPs(saved, sampleID=sample,cex=1)
+	dev.off()
+	suppressWarnings(write.table(saved,file = output_file, quote = FALSE, sep = "\t", row.names=FALSE));
+	print(paste("Output saved under ",output_file));
+
+	#run another iteration of the assignMutations function after SPs with a large fraction of somatic LOH variants have been excluded
+	iter = 1
+	if(length(aM$finalSPs[,1])< length(SPs)){
+		print(paste("rerun assignMutations",iter))
+		aM= newAssignMutations( dm, aM$finalSPs,max_PM=max_PM)
+		print(aM$finalSPs)
+		if(mask_deletions){
+			seg2[,"CN_Estimate"] = seg2[,"CN_Estimate_nomask"]
+			dm1 = assignQuantityToMutation(merge_snv,seg2,"CN_Estimate")
+			some=dm1[,"startpos"] %in% aM$dm[,"startpos"]
+
+  			aM$dm[,"CN_Estimate"] = dm1[some,"CN_Estimate"]
+	
+		}
+		
+		
+		print(paste("Output saved under ",output_file));
+		file_iter = paste(samp_param,"iter1.pdf",sep="")
+		pdf(file_iter)
+		dm = plotSPs(aM$dm, sampleID=sample,cex=1)
+		dev.off()
+		file_iter = paste(samp_param,"iter1_NewPlot.pdf",sep="")
+		pdf(file_iter)
+		newPlotSPs(aM$dm, sampleID=sample,cex=1)
+		dev.off()
+		output_file_iter = paste(dirF, "/", samp_param,"_iter1.sps",sep="");
+		suppressWarnings(write.table(aM$dm,file = output_file_iter, quote = FALSE, sep = "\t", row.names=FALSE));
+		q()
+	}
+}
 
 #aM= assignMutations( dm, SPs,max_PM=max_PM)
 
 #unmaks the deletions for vizualization
-#if(mask_deletions){
-#	seg2[,"CN_Estimate"] = seg2[,"CN_Estimate_nomask"]
-#	dm = assignQuantityToMutation(merge_snv,seg2,"CN_Estimate")
-#	some=dm[,"startpos"] %in% aM$dm[,"startpos"]
+if(mask_deletions){
+	seg2[,"CN_Estimate"] = seg2[,"CN_Estimate_nomask"]
+	dm = assignQuantityToMutation(merge_snv,seg2,"CN_Estimate")
+	some=dm[,"startpos"] %in% aM$dm[,"startpos"]
 
-#  	aM$dm[,"CN_Estimate"] = dm[some,"CN_Estimate"]
+  	aM$dm[,"CN_Estimate"] = dm[some,"CN_Estimate"]
 	
-#}
+}
 #save SPS file from Expands with mutations assigned to subclones
 
- suppressWarnings(write.table(aM$dm,file = output_file, append=TRUE, quote = FALSE, sep = "\t", row.names=FALSE));
- print(paste("Output saved under ",output_file));
+ 
 
 #file = "expands_plot_simu_incl_chr6LOH.pdf"
 #plot the Expands image showing mutations assigned to their SPs
@@ -394,8 +488,11 @@ dev.off()
 
 file1 = paste("newPlot_",file,sep="")
 pdf(file1)
-newPlotSPs(aM$dm,sampleID=sample,cex=1)
+dm = newPlotSPs(aM$dm,sampleID=sample,cex=1)
 dev.off()
 
 print("final SPs")
 print(aM$finalSPs)
+
+suppressWarnings(write.table(dm,file = output_file, quote = FALSE, sep = "\t", row.names=FALSE));
+ print(paste("Output saved under ",output_file));

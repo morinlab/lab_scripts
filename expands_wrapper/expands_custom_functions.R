@@ -2,11 +2,9 @@
 
 
 #this doesn't actually seem to work any better
-  newClusterCellFrequencies <- function(densities, precision, nrep=30, min_CellFreq=0.1, p_cutoff=0.8){ ##, plotF=0
-#   if(plotF>0 && !require(rgl)){
-#     plotF=0;
-#     message("Plot supressed:  Package rgl required for 3D plot of subpopulation clusters. Load this package befor using this option.")
-#   }
+newClusterCellFrequencies <- function(densities, precision, nrep=30, min_CellFreq=0.1, p_cutoff=0.8, local_sum = TRUE){ ##, plotF=0
+    #local_sum forces the clustering to use the local maximum in the probability distribution rather than global maximum
+    #p_cutoff is used to remove extremely high P estimates in the added localSum method
 
   library(flexmix)
   library(matlab)
@@ -49,17 +47,24 @@
       }
       clusterM=densities[ia,];
       ##Sort
-      #ia=apply(clusloerM,1,which.max);
-
-      ia=apply(clusterM,1,localSum,threshold=p_cutoff);
-      ia=order(freq[ia]);
+      ia = NULL
+      if(local_sum){
+        ia=apply(clusterM,1,localSum,max_p_threshold=p_cutoff)
+        
+      } else {
+        ia=apply(clusterM,1,which.max)
+      }
+      ia=order(freq[ia])
       clusterM=clusterM[ia,];
       
       ##Extend around maxima
       
-      #possibly replace weightedMean here too?/
-
-      peak=weightedMean(clusterM,freq);
+      # replace weightedMean here too
+      if(local_sum){
+       peak=newWeightedMean(clusterM,freq);
+       } else{
+        peak=weightedMean(clusterM,freq);
+       }
       #peak_old = .weightedMean(clusterM,freq)
       #print(paste("K=",k,"old_wm:",peak_old,"new_wm:",peak))
       peakMin=peak-0.05;peakMax=peak + 0.05;
@@ -84,13 +89,14 @@
 
       mean1 = apply(cl1,2,mean)
       mean2 = apply(cl2,2,mean)
-
-      # Instead of global max, get weighted max (sum of P around peak)  
-     
-      ia_old=which.max(apply(cl1,2,mean));
-      ia = localSum(mean1,threshold=p_cutoff)
-      ib_old=which.max(apply(cl2,2,mean));
-      ib = localSum(mean2,threshold=p_cutoff)
+      if(local_sum){
+        # Instead of global max, get weighted max (sum of P around peak)  
+        ia = localSum(mean1,max_p_threshold=p_cutoff)
+        ib = localSum(mean2,max_p_threshold=p_cutoff)
+      } else{
+        ia=which.max(apply(cl1,2,mean));
+        ib=which.max(apply(cl2,2,mean));
+      }
       
   
 
@@ -100,8 +106,11 @@
       peakIdx=which.min(abs(meanCl-peak));
       peakCl=densitiesOk[which(Tx==peakIdx),];
       meanClPeak=meanCl[peakIdx]; 
-      
-      wMean=weightedMean(peakCl[,idx],freq[idx]);
+      if(local_sum){
+       wMean=newWeightedMean(peakCl[,idx],freq[idx]);
+      } else{
+       wMean=weightedMean(peakCl[,idx],freq[idx]);
+      }
       #print(peakCl[,idx])
       #print(freq[idx])
       tryCatch({   
@@ -131,12 +140,7 @@
           score=score+1;
         }
         SPs[k,"score"]=score;
-        
-#         #plot option
-#         if (exists("plotF") && plotF>0 && nrep==tRep){
-#            col=cols[mod(k,length(cols))+1];
-#            count=.addTo3DPlot(count,clusterM,freq,col);
-#         }
+
       },error = function(e) {
         print(e);
       })
@@ -151,14 +155,10 @@
     }
     nrep=nrep-1;
   }
-if (length(allSPs)==0){
+  if (length(allSPs)==0){
     return(NULL);
   }
   
-#   ##plot option
-#   if (plotF>0){
-#     title3d("",label);
-#   }
   
   robSPs=.chooseRobustSPs(allSPs,precision,min_CellFreq);
   SPs=.collapseSimilar(robSPs$SPs,precision);
@@ -175,271 +175,398 @@ if (length(allSPs)==0){
   return(SPs);
 }
 
+.addColumn<-function(M,newCol,initVal){
+  if (!any(colnames(M)==newCol)){
+    M=matrix(cbind(M,matrix(initVal,nrow(M),1)),nrow=nrow(M),ncol=ncol(M)+1,
+             dimnames = list(rownames(M), c(colnames(M),newCol)));
+  }
+  return(M);
+}
+
+
 #appears in testing to work a lot better than the default function
-newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8){
-  library(moments)
-  if (is.null(dim(finalSPs))) {
-    spFreq = finalSPs[ "Mean Weighted"]
-    precision=finalSPs["precision"]
-  }  else {
-    spFreq = finalSPs[, "Mean Weighted"]
-    precision=finalSPs[1,"precision"]
-  }
-  spFreq=sort(spFreq);
+newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploidy = 0,min_kurtosis=3,debug=0){
+    library(moments)
+    if (is.null(dim(finalSPs))) {
+        spFreq = finalSPs[ "Mean Weighted"]
+        precision=finalSPs["precision"]
+    }  else {
+        spFreq = finalSPs[, "Mean Weighted"]
+        precision=finalSPs[1,"precision"]
+    }
+    spFreq=sort(spFreq);
   
-  ##PM_B is the ploidy of the B-allele in SP; PM is the total ploidy in SP_cnv
-  #addCols=c("%maxP","SP","PM_B","SP_cnv","PM","PM_cnv","scenario");
-  #for (k in 1:length(addCols)){
-  #  dm=.addColumn(dm,addCols[k],NA);
-  #}
-  added = matrix(nrow=length(dm[,1]),ncol=7)
-  colnames(added) = c("%maxP","SP","PM_B","SP_cnv","PM","PM_cnv","scenario");
-  dm=cbind(dm,added)
-
-  dm[,"SP"]=NA;  dm[,"SP_cnv"]=NA; ##delete any potentially existing SP info
-  freq=c()
-  for (sp in spFreq){
-     freq=c(freq,seq(sp-precision/2,sp+precision/2,by=precision/20))
-  }
-  success=0;
-  densities=matrix(matrix(NA,nrow(dm),length(freq)),nrow=nrow(dm),ncol=length(freq),dimnames=list(1:nrow(dm),freq));
-  for(k in 1:nrow(dm)){
-    ##Joined fit
-    snvJ=try(cellfrequency_pdf(dm[k,"AF_Tumor"],dm[k,"CN_Estimate"],dm[k,"PN_B"],freq, max_PM=max_PM),silent=TRUE)
-    ##Separate fit
-    f_CNV=NA; pm=NA;
-    cnv=try(cellfrequency_pdf(NA,dm[k,"CN_Estimate"],NA,freq, max_PM=max_PM, snv_cnv_flag=2),silent=TRUE)
-    snvSbeforeC=NULL;
-    if(class(cnv)!="try-error" && any(!is.na(cnv$p))){
-      if (max(cnv$p, na.rm=T)>0){
-        cnv_bestp_ind = localSum(cnv$p)[1]
-        idx = which.min(abs(spFreq-freq[cnv_bestp_ind]))
-        #idx=which.min(abs(spFreq-freq[which.max(cnv$p)]))
-        f_CNV=spFreq[idx];
-        idx=which.min(abs(cnv$fit[,"f"]-f_CNV));
-        pm=cnv$fit[idx,"PM"]; ##pm=(dm[k,"CN_Estimate"]-(1-f_CNV)*2)/f_CNV;  pm=max(0,pm); pm=min(max_PM,pm,na.rm=T);
-        ##Fit under the assumption that SNV happened before CNV
-        snvSbeforeC=try(cellfrequency_pdf(dm[k,"AF_Tumor"],dm[k,"CN_Estimate"],dm[k,"PN_B"],freq, max_PM=NA, snv_cnv_flag=4, SP_cnv=f_CNV, PM_cnv=pm),silent=TRUE);
-      }
+    ##PM_B is the ploidy of the B-allele in SP; PM is the total ploidy in SP_cnv
+    #addCols=c("%maxP","SP","PM_B","SP_cnv","PM","PM_cnv","scenario");
+    #for (k in 1:length(addCols)){
+    #  dm=.addColumn(dm,addCols[k],NA);
+    #}
+    added = matrix(nrow=length(dm[,1]),ncol=7)
+    colnames(added) = c("%maxP","SP","PM_B","SP_cnv","PM","PM_cnv","scenario");
+    dm=cbind(dm,added)
+    if (!any(colnames(dm)=="f")){
+        dm=.addF(dm,  max_PM);
     }
-    ##Max_PM is either 2 if SP with SNV is not a descendant of SP with CNV, and is PM of SP with CNV otherwise. Since we don't know which applies we choose the maximum value
-    snvS=try(cellfrequency_pdf(dm[k,"AF_Tumor"],dm[k,"CN_Estimate"],dm[k,"PN_B"],freq, max_PM=max(c(pm,2),na.rm=T), snv_cnv_flag=1),silent=TRUE)
-    
-    maxP_J=0; ##Maximum probability from joined fit
-    maxP_S=0; ##Maximum probability from separate fit
-    maxP_SbeforeC=0; ##Maximum probability from separate fit, under the assumption that CNV happened in descendant of SP with SNV
-    
-    if(class(snvJ)!="try-error" && any(!is.na(snvJ$p))){
-      #maxP_J=max(snvJ$p,na.rm=T)
-      
-      maxP_J  = localSum(snvJ$p,threshold=p_cutoff)[2]
-      #print(paste("LS on:",k))
-      #print(snvJ$p)
-      #print(snvJ$p)
-      if(max(snvJ$p) == as.numeric(1)){
-        print(paste(k,"IGNORING JOINT BECAUSE maxP==1"))
-        maxP_J = 0
-      } else{
-        kurt_J = localSum(snvJ$p,threshold=p_cutoff,simple=FALSE)[4]
-        if(is.na(kurt_J) | kurt_J < 3){
-	        print(paste(k,"IGNORING JOINT BECAUSE",kurt_J))
-          maxP_J = 0
+    if (!any(colnames(dm)=="AF_Tumor_Adjusted")){
+        dm=.addColumn(dm,"AF_Tumor_Adjusted",NA);
+    }
+    dm[,"SP"]=NA;  dm[,"SP_cnv"]=NA; dm[,"PM_B"]=NA; dm[,"PM"]=NA; dm[,"PM_cnv"]=NA; dm[,"scenario"]=NA;##delete any potentially existing SP info
+    freq=c()
+    for (sp in spFreq){
+        freq=c(freq,seq(sp-precision/2,sp+precision/2,by=precision/20))
+    }
+    success=0;
+    densities=matrix(matrix(NA,nrow(dm),length(freq)),nrow=nrow(dm),ncol=length(freq),dimnames=list(1:nrow(dm),freq));
+    for(k in 1:nrow(dm)){
+        ##Joined fit
+        snvJ=try(cellfrequency_pdf(dm[k,"AF_Tumor"],dm[k,"CN_Estimate"],dm[k,"PN_B"],freq, max_PM=max_PM),silent=TRUE)
+        ##Separate fit
+        f_CNV=NA; pm=NA;
+        cnv=try(cellfrequency_pdf(NA,dm[k,"CN_Estimate"],NA,freq, max_PM=max_PM, snv_cnv_flag=2),silent=TRUE)
+        snvSbeforeC=NULL;
+        if(class(cnv)!="try-error" && any(!is.na(cnv$p))){
+            if (max(cnv$p, na.rm=T)>0){
+                cnv_bestp_ind = localSum(cnv$p)[1]
+                idx = which.min(abs(spFreq-freq[cnv_bestp_ind]))
+                #idx=which.min(abs(spFreq-freq[which.max(cnv$p)]))
+                f_CNV=spFreq[idx];
+                idx=which.min(abs(cnv$fit[,"f"]-f_CNV));
+                pm=cnv$fit[idx,"PM"]; ##pm=(dm[k,"CN_Estimate"]-(1-f_CNV)*2)/f_CNV;  pm=max(0,pm); pm=min(max_PM,pm,na.rm=T);
+                ##Fit under the assumption that SNV happened before CNV
+                snvSbeforeC=try(cellfrequency_pdf(dm[k,"AF_Tumor"],dm[k,"CN_Estimate"],dm[k,"PN_B"],freq, max_PM=NA, snv_cnv_flag=4, SP_cnv=f_CNV, PM_cnv=pm),silent=TRUE);
+            }
         }
-      }
-    }
-    if(class(snvS)!="try-error" && any(!is.na(snvS$p))){
-      #maxP_S=max(snvS$p,na.rm=T)
-      #print(paste("LS on:",k))
-      #print(snvS$p)
-      #print(snvS$p)
-      
-      maxP_S  = localSum(snvS$p,threshold=p_cutoff)[2]
-      #kurt_S = localSum(snvS$p,simple=FALSE)[4]
-    }
-    if(!is.null(snvSbeforeC) && class(snvSbeforeC)!="try-error" && any(!is.na(snvSbeforeC$p))){
-      #print(paste("LS on:",k))
-      #print(snvSbeforeC$p)
-      #print(snvSbeforeC$p)
-      if(max(snvSbeforeC$p) == as.numeric(1)){
-        print(paste(k,"IGNORING SBC BECAUSE maxP==1"))
-        maxP_SbeforeC = 0
-      } else{
-        maxP_SbeforeC  = localSum(snvSbeforeC$p,threshold=p_cutoff)[2]
-        kurt_SC = localSum(snvSbeforeC$p,threshold=p_cutoff,simple=FALSE)[4]
-      }
-	   if(is.na(kurt_SC) | kurt_SC < 3){
-	     print(paste(k,"IGNORING SbeforeC BECAUSE",kurt_SC))
-        maxP_SbeforeC = 0
-      }
-      #maxP_SbeforeC=max(snvSbeforeC$p,na.rm=T)
-    }
+        ##Max_PM is either 2 if SP with SNV is not a descendant of SP with CNV, and is PM of SP with CNV otherwise. Since we don't know which applies we choose the maximum value
+        snvS=try(cellfrequency_pdf(dm[k,"AF_Tumor"],dm[k,"CN_Estimate"],dm[k,"PN_B"],freq, max_PM=max(c(pm,2),na.rm=T), snv_cnv_flag=1),silent=TRUE)
     
-    ##Skip if no solution found
-    if (maxP_J==0 && maxP_S==0 && maxP_SbeforeC==0){
-      dm[k,"SP"]=NA;
-      next;
-    }
-    
-    joinedFit=FALSE;
-    
-    if (class(snvJ)!="try-error" && (dm[k,"PN_B"]==1 || maxP_J >=max(maxP_S,maxP_SbeforeC,na.rm=T))){ ##SP carrying SNV and SP carrying CNV have same size, i.e. are identical:
-      joinedFit=TRUE; ##LOH has to be associated with copy number variation --> SNV and CNV must be fit together
-      snv=snvJ; 
-      dm[k,"scenario"]=3;
-    }else{ 
-      if(maxP_S>=maxP_SbeforeC){
-        snv=snvS;
-        dm[k,"scenario"]=1;
-      }else{
-        snv=snvSbeforeC;
-        dm[k,"scenario"]=4;
-      }
-    }
-    debug = 0
-    if(debug){
-      wd = getwd()
-      file=paste(wd,"/","debug","/","simulation_snv_",k,"PN_B",dm[k,"PN_B"],"AF",dm[k,"AF_Tumor"],"CN",dm[k,"CN_Estimate"],sep="")
-      j_file = paste(file,precision,"_J.pdf",sep="")
-      s_file = paste(file,precision,"_S.pdf",sep="")
-      sb_file = paste(file,precision,"_SbeforeC.pdf",sep="")
-      if(class(snvJ)!="try-error" && any(!is.na(snvJ$p))){
-        best_p_index = localSum(snvJ$p)[1]
-        maxp = max(snvJ$p)
-        best_freq = freq[best_p_index]
-        if(best_freq < 0.5){
-        pdf(j_file)
-        barplot(snvJ$p,names=freq,las=2,main=paste("PS",snvJ$p[best_p_index],"K",kurt_J,"Freq:",best_freq,dm[k,"scenario"],precision))
-        dev.off()
+        maxP_J=0; ##Maximum probability from joined fit
+        maxP_J_original = 0; 
+        maxP_S=0; ##Maximum probability from separate fit
+        maxP_S_original=0;
+        maxP_SbeforeC=0; ##Maximum probability from separate fit, under the assumption that CNV happened in descendant of SP with SNV
+        maxP_SB_original = 0;
+        if(class(snvJ)!="try-error" && any(!is.na(snvJ$p))){
+            maxP_J_original=max(snvJ$p,na.rm=T)
+            best_ind_original = which.max(snvJ$p)
+            lsres = localSum(snvJ$p,max_p_threshold=p_cutoff,simple=FALSE)
+            maxP_J = lsres[2]
+            # contents: maxp_idx,maxP_J,maxP_best_ind,kurt_J
+            message = paste("snvJ",k,dm[k,"AF_Tumor"],"Local:",lsres[2],lsres[1])
+            message = paste(message,"MaxP: ",maxP_J_original,best_ind_original)
+            changed = 0
+            if(is.na(lsres[4]) | lsres[4] < min_kurtosis){ #kurtosis is too low, ignoring
+                maxP_J = 0
+                message = paste(message,"Kurt:",signif(lsres[4],3))
+                changed = 1
+            }
+            if(debug){
+                if(changed || !(best_ind_original ==lsres[1])){
+                    #print(message)
+                    wd = getwd()
+                    file=paste(wd,"/","debug","/","snv",k,"PN_B",dm[k,"PN_B"],"AF",dm[k,"AF_Tumor"],"CN",dm[k,"CN_Estimate"],"_J.pdf",sep="")
+                    pdf(file)
+                    barplot(snvJ$p,names=freq,las=2,main=paste("LSp",snvJ$p[lsres[1]],"K",signif(lsres[4],3),"Freq:",signif(freq[lsres[1]],3)))
+                    dev.off()
+                }
+            }
         }
-      }
-      if(class(snvS)!="try-error" && any(!is.na(snvS$p))){
-        best_p_index = localSum(snvS$p)[1]
-        maxp = max(snvS$p)
-        best_freq = freq[best_p_index]
-        if(best_freq < 0.5){
-        pdf(s_file)
-        barplot(snvS$p,names=freq,las=2,main=paste("PS",snvS$p[best_p_index],"Freq:",best_freq,dm[k,"scenario"],precision))
-        dev.off()
-      }
-      }
-      if(class(snvSbeforeC)!="try-error" && any(!is.na(snvSbeforeC$p))){
-        best_p_index = localSum(snvSbeforeC$p)[1]
-        best_freq = freq[best_p_index]
-        kurt = kurtosis(snvSbeforeC$p)
-        maxp = max(snvSbeforeC$p)
-        if(best_freq < 0.5){
-        pdf(sb_file)
-        barplot(snvSbeforeC$p,names=freq,las=2,main=paste("K",kurt_SC,"Freq:",best_freq,dm[k,"scenario"],precision))
-        dev.off()
-      }
-      }
-    }
-    ##Save end result:
-    best_p_index = localSum(snv$p,threshold=p_cutoff)[1]
-    idx_new = which.min(abs(spFreq-freq[best_p_index]))
-    idx=which.min(abs(spFreq-freq[which.max(snv$p)]))
-
-    #print(paste("best_by_localS:",idx_new,"best_old:",idx))
-    #dm[k,"SP"]=spFreq[idx];  
-    dm[k,"SP"]=spFreq[idx_new]; 
-    idx=which.min(abs(snv$fit[,"f"]-dm[k,"SP"]));
-
+        if(class(snvS)!="try-error" && any(!is.na(snvS$p))){
+            maxP_S_original=max(snvS$p,na.rm=T)
+            best_ind_original = which.max(snvS$p)
+            lsres = localSum(snvS$p,max_p_threshold=p_cutoff,simple=FALSE)
+            maxP_S = lsres[2]
+            # contents: maxp_idx,maxP_J,maxP_best_ind,kurt_J
+            message = paste("snvS",k,dm[k,"AF_Tumor"],"Local:",lsres[2],lsres[1])
+            message = paste(message,"MaxP: ",maxP_S_original,best_ind_original)
+            if(debug){
+                if(!(best_ind_original ==lsres[1])){
+                    #print(message)
+                    wd = getwd()
+                    file=paste(wd,"/","debug","/","snv",k,"PN_B",dm[k,"PN_B"],"AF",dm[k,"AF_Tumor"],"CN",dm[k,"CN_Estimate"],"_S.pdf",sep="")
+                    pdf(file)
+                    barplot(snvS$p,names=freq,las=2,main=paste("LSp",snvS$p[lsres[1]],"K",signif(lsres[4],3),"Freq:",signif(freq[lsres[1]],3)))
+                    dev.off()
+                }
+          
+            }
+        }
+        if(!is.null(snvSbeforeC) && class(snvSbeforeC)!="try-error" && any(!is.na(snvSbeforeC$p))){
+            maxP_SB_original=max(snvS$p,na.rm=T)
+            best_ind_original = which.max(snvS$p)
+            lsres = localSum(snvS$p,max_p_threshold=p_cutoff,simple=FALSE)
+            maxP_SBeforeC = lsres[2]
+            # contents: maxp_idx,maxP_J,maxP_best_ind,kurt_J
+            message = paste("snvSBeforeC",k,dm[k,"AF_Tumor"],"Local:",lsres[2],lsres[1])
+            message = paste(message,"MaxP: ",maxP_SB_original,best_ind_original)
+            changed = 0
+            if(is.na(lsres[4]) | lsres[4] < min_kurtosis){
+                #kurtosis is too low, ignoring
+                maxP_SBeforeC = 0
+                message = paste(message,"Kurt:",signif(lsres[4],3))
+                changed = 1
+            }
+            if(debug){
+                if(changed || !(best_ind_original ==lsres[1])){
+                    #print(message)
+                    wd = getwd()
+                    file=paste(wd,"/","debug","/","snv",k,"PN_B",dm[k,"PN_B"],"AF",dm[k,"AF_Tumor"],"CN",dm[k,"CN_Estimate"],"_SbeforeC.pdf",sep="")
+                    pdf(file)
+                    barplot(snvSbeforeC$p,names=freq,las=2,main=paste("LSp",snvSbeforeC$p[lsres[1]],"K",signif(lsres[4],3),"Freq:",signif(freq[lsres[1]],3)))
+                    dev.off()
+                }
+            }
+        }
     
-    dm[k,c("PM_B","PM")]=snv$fit[idx,c("PM_B","PM")]; ##(dm[k,"CN_Estimate"]*dm[k,"AF_Tumor"]-(1-dm[k,"SP"])*dm[k,"PN_B"])/dm[k,"SP"];  dm[k,"PM_B"]=max(1,dm[k,"PM_B"]);
-    if (!is.na(dm[k,"PM"]) && dm[k,"PM"]<0){
-      dm[k,"PM"]=NA; ##PM can be -1 if obtained with snv_cnv_flag=1; TODO --> get NA directy for jar and remove this. 
-    }
-    #dm[k,"%maxP"]=max(snv$p,na.rm=T); #snv$p[which.min(abs(freq-dm[k,"SP"]))];
-    dm[k,"%maxP"] = snv$p[best_p_index]
-
-    densities[k,]=snv$p;
+        ##Skip if no solution found
+        if (maxP_J==0 && maxP_S==0 && maxP_SbeforeC==0){
+            dm[k,"SP"]=NA;
+            #print("Skipping")
+            next;
+        }
+        joinedFit=FALSE;
+        joinedFitDefault =FALSE;
+        if (class(snvJ)!="try-error" && (dm[k,"PN_B"]==1 || maxP_J >=max(maxP_S,maxP_SbeforeC,na.rm=T))){ ##SP carrying SNV and SP carrying CNV have same size, i.e. are identical:
+            joinedFit=TRUE; ##LOH has to be associated with copy number variation --> SNV and CNV must be fit together
+            snv=snvJ; 
+            dm[k,"scenario"]=3;
+        } else{ 
+            if(maxP_S>=maxP_SbeforeC){
+                snv=snvS;
+                dm[k,"scenario"]=1;
+            }else{
+                snv=snvSbeforeC;
+        
+                dm[k,"scenario"]=4;
+            }
+        }
+        message = ""
+        #compare to default behaviour
+        scenario_switch = 0
+        #if(debug){
+            scenario = 0
+            if (class(snvJ)!="try-error" && (dm[k,"PN_B"]==1 || maxP_J_original >=max(maxP_S_original,maxP_SB_original,na.rm=T))){ ##SP carrying SNV and SP carrying CNV have same size, i.e. are identical:
+                scenario =3
+                snv_default = snvJ
+                joinedFitDefault =TRUE;
+            }else{ 
+                if(maxP_S_original>=maxP_SB_original){
+                    scenario =1
+                    snv_default = snvS
+          
+                    }else{
+                        scenario =4
+                        snv_default = snvSbeforeC          
+                    }
+            }
+            if(!(scenario == dm[k,"scenario"])){
+                scenario_switch = 1
+            }
+        #}
     
-    if(joinedFit){
-      dm[k,"SP_cnv"]=dm[k,"SP"];
-      dm[k,"PM_cnv"]=dm[k,"PM"];
-    }else if (!is.na(pm) && pm==2){
-      dm[k,"SP_cnv"]=dm[k,"SP"];
-      dm[k,"PM_cnv"]=pm; dm[k,"PM"]=pm;
-      #dm[k,"PM"]=pm;
-    }else{
-      dm[k,"SP_cnv"]=f_CNV;
-      dm[k,"PM_cnv"]=pm; 
+    
+        #new behaviour
+        best_p_index = localSum(snv$p,max_p_threshold=p_cutoff)[1]
+        idx = which.min(abs(spFreq-freq[best_p_index]))
+        dm[k,"SP"] = spFreq[idx] 
+        idx1=which(abs(snv$fit[,"f"]-dm[k,"SP"])<=precision/2); ##index of fits matching SP size
+    
+        idx_new=idx1[which.min(snv$fit[idx1,"dev"])] ##index of fit of matching SP size with minimal residual (dev)
 
-      ##PM of SP does not have to be 2, because SP may also be a descendant of SP_cnv, i.e. the clone that acquired the CNV
-      ##IF SP is larger than SP_cnv, then SP cannot be descandant of SP_cnv and therefor cannot harbor the CNV --> ploidy = 2
-      ##IF SP is smaller than SP_cnv than SP may descend from SP_cnv: 
-      ##-->Reject descendant hypothesis (ploidy of SP = 2) --> if 2 >= PM_B > PM 
-      ##-->Accept descendant hypothesis (ploidy of SP = PM) --> if PM >= PM_B > 2 
-      ##-->Irresolvable otherwise (ploidy of SP cannot be assigned) 
-      if(!is.na(dm[k,"SP"]) && !is.na(dm[k,"SP_cnv"])){
-        if(dm[k,"SP"]>dm[k,"SP_cnv"]){
-          dm[k,"PM"]=2;
+        #default behaviour
+
+        idx=which.min(abs(spFreq-freq[which.max(snv_default$p)]))
+        SP = spFreq[idx]; 
+        if(! (SP == dm[k,"SP"])){
+            if(debug){
+             print(paste("oldSP:",SP,"newSP:",dm[k,"SP"]),freq[which.max(snv_default$p)],freq[best_p_index])
+            }
+        }
+    
+        idx=which(abs(snv_default$fit[,"f"]-SP)<=precision/2); ##index of fits matching SP size
+    
+        idx=idx[which.min(snv_default$fit[idx,"dev"])] ##index of fit of matching SP size with minimal residual (dev)
+    
+
+        if(isempty(idx_new)){
+            #no good fit found
+            
+            dm[k,"SP"]=NA
+            next
+        }
+
+       
+        dm[k,c("PM_B","PM")]=snv$fit[idx_new,c("PM_B","PM")]; ##(dm[k,"CN_Estimate"]*dm[k,"AF_Tumor"]-(1-dm[k,"SP"])*dm[k,"PN_B"])/dm[k,"SP"];  dm[k,"PM_B"]=max(1,dm[k,"PM_B"]);
+        
+        if (!is.na(dm[k,"PM"]) && dm[k,"PM"]<0){
+            dm[k,"PM"]=NA; ##PM can be -1 if obtained with snv_cnv_flag=1; TODO --> get NA directy for jar and remove this. 
+        }
+        #dm[k,"%maxP"]=max(snv$p,na.rm=T); #snv$p[which.min(abs(freq-dm[k,"SP"]))];
+        dm[k,"%maxP"] = snv$p[best_p_index]
+
+        densities[k,]=snv$p;
+    
+        if(joinedFit){
+            dm[k,"SP_cnv"]=dm[k,"SP"];
+            dm[k,"PM_cnv"]=dm[k,"PM"];
+        }else if (!is.na(pm) && pm==2){
+            dm[k,"SP_cnv"]=dm[k,"SP"];
+            dm[k,"PM_cnv"]=pm; dm[k,"PM"]=pm;
+            #dm[k,"PM"]=pm;
         }else{
-          if(dm[k,"PM_B"]>dm[k,"PM_cnv"] && dm[k,"PM_B"]<=2){
-            dm[k,"PM"]=2;
-          }else if(dm[k,"PM_B"]>2 && dm[k,"PM_B"]<=dm[k,"PM_cnv"]){
-            dm[k,"PM"]=dm[k,"PM_cnv"];
-          }else{
-            dm[k,"PM"]=NA;
-          }
-        }
-      }
-    }
+            dm[k,"SP_cnv"]=f_CNV;
+            dm[k,"PM_cnv"]=pm; 
 
+            ##PM of SP does not have to be 2, because SP may also be a descendant of SP_cnv, i.e. the clone that acquired the CNV
+            ##IF SP is larger than SP_cnv, then SP cannot be descandant of SP_cnv and therefor cannot harbor the CNV --> ploidy = 2
+            ##IF SP is smaller than SP_cnv than SP may descend from SP_cnv: 
+            ##-->Reject descendant hypothesis (ploidy of SP = 2) --> if 2 >= PM_B > PM 
+            ##-->Accept descendant hypothesis (ploidy of SP = PM) --> if PM >= PM_B > 2 
+            ##-->Irresolvable otherwise (ploidy of SP cannot be assigned) 
+            if(!is.na(dm[k,"SP"]) && !is.na(dm[k,"SP_cnv"])){
+                if(dm[k,"SP"]>dm[k,"SP_cnv"]){
+                    dm[k,"PM"]=2;
+                }else{
+                    if(dm[k,"PM_B"]>dm[k,"PM_cnv"] && dm[k,"PM_B"]<=2){
+                        dm[k,"PM"]=2;
+                    }else if(dm[k,"PM_B"]>2 && dm[k,"PM_B"]<=dm[k,"PM_cnv"]){
+                        dm[k,"PM"]=dm[k,"PM_cnv"];
+                    }else{
+                        dm[k,"PM"]=NA;
+                    }
+                }
+            }
+        }
+        PM_B = 0
+        PM = 0
+        PM_cnv =0
+        SP_cnv = 0
+    
+        if(!isempty(idx)){
+            PM_B = snv_default$fit[idx,"PM_B"]
+            PM = snv_default$fit[idx,"PM"]
+            if (!is.na(PM) && PM<0){
+                PM = NA
+            }
+            if(joinedFitDefault){
+                SP_cnv = SP
+                PM_cnv=PM
+            }else if (!is.na(pm) && pm==2){
+                SP_cnv=SP
+                PM_cnv=pm;
+                PM=pm;
+                #dm[k,"PM"]=pm;
+            }else{
+                SP_cnv=f_CNV;
+                PM_cnv=pm 
+                if(!is.na(SP) && !is.na(SP_cnv)){
+                    if(SP>SP_cnv){
+                        PM=2;
+                    }else{
+                        if(PM_B>PM_cnv && PM_B<=2){
+                            PM=2;
+                        }else if(PM_B>2 && PM_B<=PM_cnv){
+                            PM=PM_cnv
+                        }else{
+                            PM=NA;
+                        }
+                    }
+                }
+            }
+            if(scenario_switch && debug){
+                message = paste("DefScen:",scenario,"NewScen:",dm[k,"scenario"],dm[k,"PM"],dm[k,"PM_B"],PM,PM_B)
+                print(message)
+            }
+        }
+        print(paste(PM_B,dm[k,"PM_B"],PM,dm[k,"PM"], dm[k,"SP"],SP,sep="="))
+        #write any differences to log file
+        if(!(PM_B == dm[k,"PM_B"])  || !(dm[k,"SP"] == SP)){
+            print("LOG:")
+            line = as.matrix(t(c(k,dm[k,],SP,PM_B,PM)))
+            write.table(line,sep="\t",append=TRUE,file="log.tsv",row.names=FALSE,col.names=FALSE,quote=FALSE)
+        } else if( (is.na(PM) && !is.na(dm[k,"PM"])) || (is.na(dm[k,"PM"]) && !is.na(PM))){
+            print("LOG:")
+            line = as.matrix(t(c(k,dm[k,],SP,PM_B,PM)))
+            write.table(line,sep="\t",append=TRUE,file="log.tsv",row.names=FALSE,col.names=FALSE,quote=FALSE)
+        }
     success=success+1;
     if (mod(k,20)==0){
-      print(paste("Processed", k, "out of ",nrow(dm),"SNVs --> success: ",
-                  success,"/",k))
+        print(paste("Processed", k, "out of ",nrow(dm),"SNVs --> success: ", success,"/",k))
     }
   }
   
   dm[dm[,"%maxP"]==0,"SP"]=NA;
 
+  #add CCF/adjucted VAF to each mutation based on results
+  dm[,"AF_Tumor_Adjusted"]=(dm[,"AF_Tumor"]*dm[,"CN_Estimate"]-dm[,"PN_B"])/(dm[,"PM_B"]-dm[,"PN_B"])
 
-  ##Remove SPs to which no mutations were assigned
-  toRm=c();
-  for (j in 1:size(finalSPs,1)){
-    if(is.null(dim(finalSPs))){
-      idx=which(dm[,"SP"]==finalSPs["Mean Weighted"]);
-      finalSPs["nMutations"]=length(idx);   
-    }else{
+  #assess the quality of SPs based on the fraction of variants with PM_B = 1 (should be the most common scenario in most cases)
+  if(prune_by_ploidy){
+    toRm=c();
+    for (j in 1:size(finalSPs,1)){
       idx=which(dm[,"SP"]==finalSPs[j,"Mean Weighted"]);
-      finalSPs[j,"nMutations"]=length(idx);
-      if(length(idx)==0){
+      PM_B1=sum(dm[idx,"PM_B"]==1 | dm[idx,"PN_B"]==1)
+      tot = length(idx)
+      print(paste("For SP:",finalSPs[j,"Mean Weighted"],PM_B1,"out of",tot,"are ploidy 1 or LOH"))
+      if(PM_B1 < tot/2 | tot < 10){
+        #if a minority of SNVs in this cluster have PM_B 1, remove it and then rerun this to assign these to another SP
         toRm=c(toRm,j);
+        print("removing")
       }
-    }
-  }
-  if(length(toRm)>0){
-    finalSPs=finalSPs[-1*toRm,];
-  }
+      #also adjust SP based on mean AF_Adjusted value, since it should improve the accuracay of the SP and subsequent assignment of variants to it
+      adj_vaf_mean = mean(dm[idx,"AF_Tumor_Adjusted"])
+      adj_vaf_ploidy1 = mean((dm[idx,"AF_Tumor"]*dm[idx,"CN_Estimate"]-dm[idx,"PN_B"])/(1-dm[idx,"PN_B"]))
 
-#calculate mean %maxP for mutations assigned to each SP
-#for (j in 1:size(finalSPs,1)){
-#    if(is.null(dim(finalSPs))){
-#      idx=which(dm[,"SP"]==finalSPs["Mean Weighted"]);
-#      finalSPs["nMutations"]=length(idx);   
-#    }else{
-#      idx=which(dm[,"SP"]==finalSPs[j,"Mean Weighted"]);
-#      finalSPs[j,"nMutations"]=length(idx);
-#      if(length(idx)==0){
-#        toRm=c(toRm,j);
-#      }
-#    }
-#  }
+      print(paste("SP:",finalSPs[j,"Mean Weighted"],'mean CCF:',adj_vaf_mean,"and assuming ploidy 1",adj_vaf_ploidy1))
+
+      finalSPs[j,"Mean Weighted"] = adj_vaf_mean
+      dm[idx,"SP"] = adj_vaf_mean
+    }
+    if(length(toRm)>0){
+     finalSPs=finalSPs[-1*toRm,];
+    }
+  } else{
+   ##Remove SPs to which no mutations were assigned
+   toRm=c();
+   for (j in 1:size(finalSPs,1)){
+     if(is.null(dim(finalSPs))){
+       idx=which(dm[,"SP"]==finalSPs["Mean Weighted"]);
+       finalSPs["nMutations"]=length(idx);   
+     }else{
+       idx=which(dm[,"SP"]==finalSPs[j,"Mean Weighted"]);
+       finalSPs[j,"nMutations"]=length(idx);
+       if(length(idx)==0){
+         toRm=c(toRm,j);
+       }
+     }
+   }
+   if(length(toRm)>0){
+     finalSPs=finalSPs[-1*toRm,];
+   }
+  }
 
 
   output=list("dm"=dm,"finalSPs"=finalSPs);
   return(output);
 }
 
-localSum<-function(means,simple=TRUE,threshold = NULL){
-  #toss any peak reagion that contains a probability > this. Low quality predictions result from these. 
-  if(!missing(threshold)){
-    above_thresh = which(means > threshold)
-    means[above_thresh] = 0
+localSum<-function(probs,simple=TRUE,max_p_threshold = NULL){
+  # This function was devised to handle the observation that the probability distributions seem to favour LOH events even when the copy number is normal and generally seem to
+  # favour a higher ploidy value. The peaks for the higher ploidy in the probability distributions are sharp but there is a clear local maximum often for the alternate ploidy
+  # This function attempts to find the local maximum by calculating the sum of all probabilities in individual peaks and returning the index of the peak with the highest sum rather
+  # than the maximum point probability, which is used in the default behaviour of Expands.
+
+  #another feature of this function is to assess the kurtosis of each peak. This is to handle another scenario that was observed in which some probability distributions contain
+  #regions with very broad local maxima (blocky peaks). Such low kurtosis peaks seem to usually represent a poor quality fit and should ideally be removed. This function returns the kurtosis of the chosen peak
+  #to help in determining if the fit is worth keeping.
+  
+  #"simple" mode skips kurtosis calculations
+
+  # if threshold is supplied, toss any peak region that contains a probability > this. Lower quality predictions seem to result from fits of the model with such high values. 
+  if(!missing(max_p_threshold)){
+    above_thresh = which(probs > max_p_threshold)
+    probs[above_thresh] = 0
   }
-  peak_regions = sign(diff(means))
+  peak_regions = sign(diff(probs))
   
       ind = 1
       last_sign = 0
@@ -457,21 +584,21 @@ localSum<-function(means,simple=TRUE,threshold = NULL){
           if(last_sign == -1){
             #same peak
             
-            peaksum[peaknum] = peaksum[peaknum] + means[ind]
-            if(peakmax[peaknum]<means[ind]){
-              peakmax[peaknum] = means[ind]
+            peaksum[peaknum] = peaksum[peaknum] + probs[ind]
+            if(peakmax[peaknum]<probs[ind]){
+              peakmax[peaknum] = probs[ind]
               
               peakmax_ind[peaknum] = ind
             }
-            peakvals=c(peakvals,means[ind])
+            peakvals=c(peakvals,probs[ind])
             last_ind = ind
             ind = ind+1
           } else{
             #new peak
-            peakmax[peaknum] = means[ind]
-            peaksum[peaknum] = peaksum[peaknum] + means[ind]
+            peakmax[peaknum] = probs[ind]
+            peaksum[peaknum] = peaksum[peaknum] + probs[ind]
             peakmax_ind[peaknum] = ind
-            peakvals = c(means[ind])
+            peakvals = c(probs[ind])
             last_ind = ind
             ind = ind+1
           }
@@ -532,7 +659,17 @@ localSum<-function(means,simple=TRUE,threshold = NULL){
   }
   return(SPs);
 }
+
 weightedMean<-function(peakCl,freq){
+  ##weighted mean
+  wMean=0;sumWeight=sum(apply(peakCl,1,na.rm=T,max));
+  for (pI in 1:nrow(peakCl)){
+    maxIdx=which.max(peakCl[pI,]);
+    wMean=wMean+(peakCl[pI,maxIdx]/sumWeight)*freq[maxIdx];
+  }
+  return(wMean);
+}
+newWeightedMean<-function(peakCl,freq){
 #modified
   ##weighted mean
   #wMean=0;sumWeight=sum(apply(peakCl,1,na.rm=T,max));

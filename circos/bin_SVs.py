@@ -14,19 +14,23 @@ score_cutoff = 25
 
 
 
-def main(fai_file,vcf_file_location,bin_size=5000000):
+def main():
     parser = argparse.ArgumentParser(description="summarize intra- and intrachromosomal SV information from a series of vcf files")
     parser.add_argument("--fai", "-f",dest="fai", help="fasta index file (.fai) to provide chromosome lengths")
     parser.add_argument("--vcf_path", "-v",dest="vcf_path",help="path to vcf files to use as input, all files ending in .vcf in this path will be parsed")
+    parser.add_argument("--out","-o",dest="out_file",help="file to write to for circos R helper script")
+    parser.add_argument("--out_detailed","-d",dest="detailed_out_file",help="file to write sample details for events to (for reference only)")
     args = parser.parse_args()
     vcf_path = args.vcf_path
     fai = args.fai
 
+    bin_size=5000000
     bins = createGenomeBins(fai,bin_size)
     bin_break_counts = {} #store a count for every bin
     bin_break_pairs = {} #store the pair details for every event, organized by bin for retrieval
-    
-    os.chdir(vcf_file_location)
+    out_h = open(args.out_file,"w")
+    out_d = open(args.detailed_out_file,"w")
+    os.chdir(vcf_path)
     sample = ""
     for file in glob.glob("*.vcf"):
         sample = file.rstrip(".vcf")
@@ -34,8 +38,8 @@ def main(fai_file,vcf_file_location,bin_size=5000000):
         file = vcf_path + file
         print(file)
         tallyBins(file,bins,bin_break_counts,bin_break_pairs,sample)
-    print bin_break_pairs.keys()
-    
+    #print bin_break_pairs.keys()
+    samp_events = {} #key on sample_id and chr1Bin1chr2Bin2 to collapse any redundant events in the same patient
     for chrom in bin_break_pairs.keys():
         hit_bins = bin_break_counts[chrom].keys()
         for hit_bin in hit_bins:
@@ -62,10 +66,26 @@ def main(fai_file,vcf_file_location,bin_size=5000000):
                             e1 = bins[c1][1][b1]
                             s2 = bins[c2][0][b2]
                             e2 = bins[c2][1][b2]
-                            print "%s\tchr%s\tchr%s\t%s\t%s\t%s" % (sample,c1,c2,type,s1,s2) 
+                            out_string = "chr%s\tchr%s\t%s\t%s\t%s" % (c1,c2,type,s1,s2) 
+                            #out_h.write(out_string)
+                            if samp_events.has_key(out_string):
+                                if samp_events[out_string].has_key(sample):
+                                    samp_events[out_string][sample]+=1
+                                else:
+                                    samp_events[out_string][sample] = 1
+                            else:
+                                samp_events[out_string] = {sample:1}
             else:
                 print "no chromosome for %s" % chrom
-    
+    for event in samp_events.keys():
+        samps = samp_events[event].keys()
+        
+        n = len(samps)
+        out_string = "%s\t%s\n" % (event,n)
+        out_h.write(out_string)
+        for samp in samps:
+            out_string = "%s\t%s\n" % (samp,event)
+            out_d.write(out_string)
 def getBin(starts,ends,pos):
     for i in range(0,len(ends)):
         start = starts[i]
@@ -210,4 +230,4 @@ def createGenomeBins(fai,bin_size):
             chrom_bins[vals[0]] = (bin_starts,bin_ends)
     return(chrom_bins)
 
-main(fai,vcf_path)
+main()

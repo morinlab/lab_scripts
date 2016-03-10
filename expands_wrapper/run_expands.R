@@ -10,6 +10,10 @@ args = commandArgs(trailingOnly=TRUE)
 print(args)
 library(matlab) #this dependency can probably be removed. Note the single line marked that uses a matlab function can probably be replaced with pure R
 library(expands)
+#source("/projects/rmorin/git/lab_scripts/expands_wrapper/expands_visualization.R")
+source("/projects/rmorin/git/lab_scripts/expands_wrapper/plotSPs.R")
+source("/projects/rmorin/git/lab_scripts/expands_wrapper/assignMutations.R")
+.addF = expands:::.addF
 
 seg = args[1]
 
@@ -298,10 +302,10 @@ if(include_loh > 0){
 
 	merge_snv=rbind(loh_snv_data,snv_data)
 	loh_string = "LOH_"
-	samp_param = paste(sample,loh_string,"_state_INDEL_maxpm_", max_PM, "_score_", max_score, ",precision_", precision,sep="")
+	samp_param = paste(sample,loh_string,"_state_INDEL_DelMask_maxpm_", max_PM, "_score_", max_score, ",precision_", precision,sep="")
 } else{
 	merge_snv = snv_data
-	samp_param = paste(sample,loh_string,"_noLOH_Generic_state_maxpm_", max_PM, "_score_", max_score, ",precision_", precision,sep="")
+	samp_param = paste(sample,loh_string,"_noLOH_INDEL_DelMask_maxpm_", max_PM, "_score_", max_score, ",precision_", precision,sep="")
 }
 print("merged")
 print(merge_snv)
@@ -371,29 +375,34 @@ print("running assignMutations...")
 aM= assignMutations( dm, SPs,max_PM=max_PM)
 
 #unmaks the deletions for vizualization
-#if(mask_deletions){
-#	seg2[,"CN_Estimate"] = seg2[,"CN_Estimate_nomask"]
-#	dm = assignQuantityToMutation(merge_snv,seg2,"CN_Estimate")
-#	some=dm[,"startpos"] %in% aM$dm[,"startpos"]
+if(mask_deletions){
+	seg2[,"CN_Estimate"] = seg2[,"CN_Estimate_nomask"]
+	dm = assignQuantityToMutation(merge_snv,seg2,"CN_Estimate")
+	some=dm[,"startpos"] %in% aM$dm[,"startpos"]
 
-#  	aM$dm[,"CN_Estimate"] = dm[some,"CN_Estimate"]
+  	aM$dm[,"CN_Estimate"] = dm[some,"CN_Estimate"]
 	
-#}
+}
 #save SPS file from Expands with mutations assigned to subclones
 
- suppressWarnings(write.table(aM$dm,file = output_file, append=TRUE, quote = FALSE, sep = "\t", row.names=FALSE));
- print(paste("Output saved under ",output_file));
-
+ 
 #file = "expands_plot_simu_incl_chr6LOH.pdf"
 #plot the Expands image showing mutations assigned to their SPs
+
+
+file1 = paste("newPlot_",file,sep="")
+pdf(file1)
+dm = newPlotSPs(aM$dm,sampleID=sample,cex=1)
+dev.off()
+
 pdf(file)
 plotSPs(aM$dm, sampleID=sample,cex=1)
 dev.off()
 
-file1 = paste("newPlot_",file,sep="")
-pdf(file1)
-newPlotSPs(aM$dm,sampleID=sample,cex=1)
-dev.off()
+print(dm)
 
 print("final SPs")
 print(aM$finalSPs)
+
+suppressWarnings(write.table(dm,file = output_file, quote = FALSE, sep = "\t", row.names=FALSE));
+ print(paste("Output saved under ",output_file));
