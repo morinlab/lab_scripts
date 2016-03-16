@@ -31,6 +31,8 @@ precision = as.double(args[5])
 
 input_mode = args[6]  # S for sequenza, I for IGV-friendly seg file, T for Titan full segments file
 
+cn_style = args[7] # 1 for integer values, 2 for the actual values based on log ratio (2 is recommended by the EXPANDS author)
+
 #could also be made an argument if the user wants to really slow down the program by decreasing this :)
 min_freq = 0.1
 max_PM=5  #6 was causing some weird results
@@ -38,7 +40,7 @@ max_PM=5  #6 was causing some weird results
 print("expecting input format:")
 print(input_mode)
 
-if(length(args)>6){
+if(length(args)>7){
 	#loh flag set to a true value. Default is to not do anything with LOH events
 	include_loh = as.double(args[7])
 	print(paste("running in LOH mode", include_loh, sep=" "))
@@ -96,8 +98,12 @@ if(input_mode == "T"){
 
 	seg2[,"startpos"] = as.numeric(seg1[keep_both,3])
 	seg2[,"endpos"] = as.numeric(seg1[keep_both,4])
-	seg2[,4]=as.numeric(seg1[keep_both,"Copy_Number"])
-
+	if(cn_style ==1){
+		seg2[,4]=as.numeric(seg1[keep_both,"Copy_Number"])
+	}
+	else if(cn_style ==2){
+		seg2[,4] = 2*2^seg1[keep_both,"Median_logR"]
+	}	
 
 }else if(input_mode == "S"){
 	print(paste("loading Sequenza ",seg))
@@ -158,6 +164,7 @@ if(input_mode == "T"){
 	seg2[,"startpos"] = as.numeric(seg1[keep_both,"start.pos"])
 	seg2[,"endpos"] = as.numeric(seg1[keep_both,"end.pos"])
 	seg2[,4]=as.numeric(seg1[keep_both,"CNt"])
+	#below not implemented for cnv mode yet. IMPORTANT: depth.ratio does not seem to equate to log ratio
 	#cn_estimate = 2*2^seg1[keep_both,"depth.ratio"]
 	#seg2[,4] = cn_estimate
 	#print(loh_snv_data)
