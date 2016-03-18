@@ -1,10 +1,11 @@
   
 
 
-#this doesn't actually seem to work any better
+
 newClusterCellFrequencies <- function(densities, precision, nrep=30, min_CellFreq=0.1, p_cutoff=0.8, local_sum = TRUE){ ##, plotF=0
     #local_sum forces the clustering to use the local maximum in the probability distribution rather than global maximum
     #p_cutoff is used to remove extremely high P estimates in the added localSum method
+    #kurtosis feature is not used
 
   library(flexmix)
   library(matlab)
@@ -59,14 +60,13 @@ newClusterCellFrequencies <- function(densities, precision, nrep=30, min_CellFre
       
       ##Extend around maxima
       
-      # replace weightedMean here too
+      # replaced with weightedMean here too
       if(local_sum){
        peak=newWeightedMean(clusterM,freq);
        } else{
         peak=weightedMean(clusterM,freq);
        }
-      #peak_old = .weightedMean(clusterM,freq)
-      #print(paste("K=",k,"old_wm:",peak_old,"new_wm:",peak))
+     
       peakMin=peak-0.05;peakMax=peak + 0.05;
       idx=find(freq>=peakMin & freq<=peakMax);
       if(isempty(idx)){
@@ -105,7 +105,6 @@ newClusterCellFrequencies <- function(densities, precision, nrep=30, min_CellFre
 
       meanCl=c(freq[ia],freq[ib]);
 
-      #print(paste("1:",freq[ia],"2:",freq[ib],sep=" "))
       peakIdx=which.min(abs(meanCl-peak));
       peakCl=densitiesOk[which(Tx==peakIdx),];
       meanClPeak=meanCl[peakIdx]; 
@@ -114,8 +113,7 @@ newClusterCellFrequencies <- function(densities, precision, nrep=30, min_CellFre
       } else{
        wMean=weightedMean(peakCl[,idx],freq[idx]);
       }
-      #print(peakCl[,idx])
-      #print(freq[idx])
+
       tryCatch({   
         ##find peak range of cluster
         maxCl=apply(peakCl,2,mean,na.rm=T);
@@ -173,8 +171,6 @@ newClusterCellFrequencies <- function(densities, precision, nrep=30, min_CellFre
     SPs=SPs[,outcols];
   }
   print("Done.");
-  ##print(SPs);
-  ##out=list("SPs"=SPs,"spGrid"=robSPs$spGrid);
   return(SPs);
 }
 
@@ -187,8 +183,10 @@ newClusterCellFrequencies <- function(densities, precision, nrep=30, min_CellFre
 }
 
 
-#appears in testing to work a lot better than the default function
+
 newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploidy = 0,min_kurtosis=3,debug=0){
+  #modified to use localSum method to select more appropriate fit based on local maximum in probability distributions
+  #p_cutoff will cause high probabilities to be masked. these seem to be a symptom of a bad fit of the model.
     library(moments)
     if (is.null(dim(finalSPs))) {
         spFreq = finalSPs[ "Mean Weighted"]
@@ -199,11 +197,6 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
     }
     spFreq=sort(spFreq);
   
-    ##PM_B is the ploidy of the B-allele in SP; PM is the total ploidy in SP_cnv
-    #addCols=c("%maxP","SP","PM_B","SP_cnv","PM","PM_cnv","scenario");
-    #for (k in 1:length(addCols)){
-    #  dm=.addColumn(dm,addCols[k],NA);
-    #}
     added = matrix(nrow=length(dm[,1]),ncol=7)
     colnames(added) = c("%maxP","SP","PM_B","SP_cnv","PM","PM_cnv","scenario");
     dm=cbind(dm,added)
@@ -230,6 +223,7 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
         if(class(cnv)!="try-error" && any(!is.na(cnv$p))){
             if (max(cnv$p, na.rm=T)>0){
                 cnv_bestp_ind = localSum(cnv$p)[1]
+                #changed here to use localSum method
                 idx = which.min(abs(spFreq-freq[cnv_bestp_ind]))
                 #idx=which.min(abs(spFreq-freq[which.max(cnv$p)]))
                 f_CNV=spFreq[idx];
@@ -241,7 +235,8 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
         }
         ##Max_PM is either 2 if SP with SNV is not a descendant of SP with CNV, and is PM of SP with CNV otherwise. Since we don't know which applies we choose the maximum value
         snvS=try(cellfrequency_pdf(dm[k,"AF_Tumor"],dm[k,"CN_Estimate"],dm[k,"PN_B"],freq, max_PM=max(c(pm,2),na.rm=T), snv_cnv_flag=1),silent=TRUE)
-    
+        
+        #some variables to internally track the default values of maxP_J etc for comparison. These could all be removed because they are not actually used except for debugging purposes
         maxP_J=0; ##Maximum probability from joined fit
         maxP_J_original = 0; 
         maxP_S=0; ##Maximum probability from separate fit
@@ -255,17 +250,11 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
             lsres = localSum(snvJ$p,max_p_threshold=p_cutoff)
             maxP_J = lsres[2]
             # contents: maxp_idx,maxP_J,maxP_best_ind,kurt_J
-            message = paste("snvJ",k,dm[k,"AF_Tumor"],"Local:",lsres[2],lsres[1])
-            message = paste(message,"MaxP: ",maxP_J_original,best_ind_original)
             changed = 0
-            #if(is.na(lsres[4]) | lsres[4] < min_kurtosis){ #kurtosis is too low, ignoring
-            #    maxP_J = 0
-            #    message = paste(message,"Kurt:",signif(lsres[4],3))
-            #    changed = 1
-            #}
+
+            #can be removed, just here for debugging
             if(debug){
                 if(changed || !(best_ind_original ==lsres[1])){
-                    #print(message)
                     wd = getwd()
                     file=paste(wd,"/","debug","/","snv",k,"PN_B",dm[k,"PN_B"],"AF",dm[k,"AF_Tumor"],"CN",dm[k,"CN_Estimate"],"_J.pdf",sep="")
                     pdf(file)
@@ -277,15 +266,13 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
         if(class(snvS)!="try-error" && any(!is.na(snvS$p))){
             maxP_S_original=max(snvS$p,na.rm=T)
             best_ind_original = which.max(snvS$p)
-            #lsres = localSum(snvS$p,max_p_threshold=p_cutoff,simple=FALSE)
             lsres = localSum(snvS$p,max_p_threshold=p_cutoff)
             maxP_S = lsres[2]
             # contents: maxp_idx,maxP_J,maxP_best_ind,kurt_J
-            message = paste("snvS",k,dm[k,"AF_Tumor"],"Local:",lsres[2],lsres[1])
-            message = paste(message,"MaxP: ",maxP_S_original,best_ind_original)
+
+            #can be removed, just here for debugging
             if(debug){
                 if(!(best_ind_original ==lsres[1])){
-                    #print(message)
                     wd = getwd()
                     file=paste(wd,"/","debug","/","snv",k,"PN_B",dm[k,"PN_B"],"AF",dm[k,"AF_Tumor"],"CN",dm[k,"CN_Estimate"],"_S.pdf",sep="")
                     pdf(file)
@@ -298,22 +285,15 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
         if(!is.null(snvSbeforeC) && class(snvSbeforeC)!="try-error" && any(!is.na(snvSbeforeC$p))){
             maxP_SB_original=max(snvSbeforeC$p,na.rm=T)
             best_ind_original = which.max(snvSbeforeC$p)
-            #lsres = localSum(snvSbeforeC$p,max_p_threshold=p_cutoff,simple=FALSE)
+            
             lsres = localSum(snvSbeforeC$p,max_p_threshold=p_cutoff)
             maxP_SbeforeC = lsres[2]
             # contents: maxp_idx,maxP_J,maxP_best_ind,kurt_J
-            message = paste("snvSBeforeC",k,dm[k,"AF_Tumor"],"Local:",lsres[2],lsres[1])
-            message = paste(message,"MaxP: ",maxP_SB_original,best_ind_original)
-            changed = 0
-            #if(is.na(lsres[4]) | lsres[4] < min_kurtosis){
-                #kurtosis is too low, ignoring
-            #    maxP_SBeforeC = 0
-            #    message = paste(message,"Kurt:",signif(lsres[4],3))
-            #    changed = 1
-            #}
+          
+            #can be removed, just here for debugging
             if(debug){
-                if(changed || !(best_ind_original ==lsres[1])){
-                    #print(message)
+                if(!(best_ind_original ==lsres[1])){
+                    
                     wd = getwd()
                     file=paste(wd,"/","debug","/","snv",k,"PN_B",dm[k,"PN_B"],"AF",dm[k,"AF_Tumor"],"CN",dm[k,"CN_Estimate"],"_SbeforeC.pdf",sep="")
                     pdf(file)
@@ -326,7 +306,7 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
         ##Skip if no solution found
         if (maxP_J==0 && maxP_S==0 && maxP_SbeforeC==0){
             dm[k,"SP"]=NA;
-            #print("Skipping")
+            
             next;
         }
         joinedFit=FALSE;
@@ -346,9 +326,9 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
             }
         }
         message = ""
-        #compare to default behaviour
+        #--->the next bit of code is only there to compare to default behaviour for debugging and evaluation purposes
         scenario_switch = 0
-        #if(debug){
+        
             scenario = 0
             if (class(snvJ)!="try-error" && (dm[k,"PN_B"]==1 || maxP_J_original >=max(maxP_S_original,maxP_SB_original,na.rm=T))){ ##SP carrying SNV and SP carrying CNV have same size, i.e. are identical:
                 scenario =3
@@ -367,8 +347,8 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
             if(!(scenario == dm[k,"scenario"])){
                 scenario_switch = 1
             }
-        #}
-    
+        
+        #<------
     
         #new behaviour
         best_p_index = localSum(snv$p,max_p_threshold=p_cutoff)[1]
@@ -389,18 +369,14 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
         }
     
         idx=which(abs(snv_default$fit[,"f"]-SP)<=precision/2); ##index of fits matching SP size
-    
         idx=idx[which.min(snv_default$fit[idx,"dev"])] ##index of fit of matching SP size with minimal residual (dev)
     
-
         if(isempty(idx_new)){
             #no good fit found
-            
             dm[k,"SP"]=NA
             next
         }
 
-       
         dm[k,c("PM_B","PM")]=snv$fit[idx_new,c("PM_B","PM")]; ##(dm[k,"CN_Estimate"]*dm[k,"AF_Tumor"]-(1-dm[k,"SP"])*dm[k,"PN_B"])/dm[k,"SP"];  dm[k,"PM_B"]=max(1,dm[k,"PM_B"]);
         
         if (!is.na(dm[k,"PM"]) && dm[k,"PM"]<0){
@@ -446,7 +422,7 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
         PM = 0
         PM_cnv =0
         SP_cnv = 0
-    
+        #--> is all just for debugging purposes
         if(!isempty(idx)){
             PM_B = snv_default$fit[idx,"PM_B"]
             PM = snv_default$fit[idx,"PM"]
@@ -460,7 +436,6 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
                 SP_cnv=SP
                 PM_cnv=pm;
                 PM=pm;
-                #dm[k,"PM"]=pm;
             }else{
                 SP_cnv=f_CNV;
                 PM_cnv=pm 
@@ -478,36 +453,28 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
                     }
                 }
             }
-            if(scenario_switch){
+            if(scenario_switch & debug){
                 message = paste("DefScen:",scenario,"Ps_J,S,SbeforeC",maxP_J_original,maxP_S_original,maxP_SB_original,"NewScen:",dm[k,"scenario"],"Ps_new",maxP_J,maxP_S,maxP_SbeforeC,dm[k,"PM"],dm[k,"PM_B"],PM,PM_B)
                 print(message)
-
                 wd = getwd()
                 file=paste(wd,"/","debug","/","snv",k,"PN_B",dm[k,"PN_B"],"AF",dm[k,"AF_Tumor"],"CN",dm[k,"CN_Estimate"],"_new.pdf",sep="")
                 pdf(file)
                 lsres = localSum(snv$p,max_p_threshold=p_cutoff,simple=FALSE)
                 maxP = lsres[2]
                 barplot(snv$p,names=freq,las=2,main=paste("PM_B ",dm[k,"PM_B"],"LSp",maxP,"Freq:",signif(freq[lsres[1]],3)))
-                dev.off()
-          
-               
+                dev.off()               
                 file=paste(wd,"/","debug","/","snv",k,"PN_B",dm[k,"PN_B"],"AF",dm[k,"AF_Tumor"],"CN",dm[k,"CN_Estimate"],"_original.pdf",sep="")
                 pdf(file)
                 barplot(snv_default$p,names=freq,las=2,main=paste("PM_B ",PM_B,"maxP",max(snv_default$p),"Freq:",signif(freq[which.max(snv_default$p)],3)))
                 dev.off()
             }
-        }
-        #print(paste(PM_B,dm[k,"PM_B"],PM,dm[k,"PM"], dm[k,"SP"],SP,sep="="))
-        #write any differences to log file
-        if(!(PM_B == dm[k,"PM_B"])  || !(dm[k,"SP"] == SP)){
-            #print("LOG:")
-            line = as.matrix(t(c(k,dm[k,],SP,PM_B,PM)))
-            write.table(line,sep="\t",append=TRUE,file="log.tsv",row.names=FALSE,col.names=FALSE,quote=FALSE)
-        } else if( (is.na(PM) && !is.na(dm[k,"PM"])) || (is.na(dm[k,"PM"]) && !is.na(PM))){
-            #print("LOG:")
-            line = as.matrix(t(c(k,dm[k,],SP,PM_B,PM)))
-            write.table(line,sep="\t",append=TRUE,file="log.tsv",row.names=FALSE,col.names=FALSE,quote=FALSE)
-        }
+          }
+        if(debug){
+           print(paste(PM_B,dm[k,"PM_B"],PM,dm[k,"PM"], dm[k,"SP"],SP,sep="="))
+         }
+        #<-----
+
+
     success=success+1;
     if (mod(k,20)==0){
         print(paste("Processed", k, "out of ",nrow(dm),"SNVs --> success: ", success,"/",k))
@@ -519,7 +486,8 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
   #add CCF/adjucted VAF to each mutation based on results
   dm[,"AF_Tumor_Adjusted"]=(dm[,"AF_Tumor"]*dm[,"CN_Estimate"]-dm[,"PN_B"])/(dm[,"PM_B"]-dm[,"PN_B"])
 
-  #assess the quality of SPs based on the fraction of variants with PM_B = 1 (should be the most common scenario in most cases)
+  #EXPERIMENTAL: assess the quality of SPs based on the fraction of variants with PM_B = 1 (should be the most common scenario in most cases because homozygous SNVs should be rare as they can only arise due to deletion or neutral LOH)
+  #a more sensible extension here may be to only consider variants in regions of CN 2 or higher. Note, this change may be useless now given the improved clustering in v 1.7
   if(prune_by_ploidy){
     toRm=c();
     for (j in 1:size(finalSPs,1)){
@@ -575,13 +543,16 @@ localSum<-function(probs,simple=TRUE,max_p_threshold = NULL){
   # This function attempts to find the local maximum by calculating the sum of all probabilities in individual peaks and returning the index of the peak with the highest sum rather
   # than the maximum point probability, which is used in the default behaviour of Expands.
 
-  #another feature of this function is to assess the kurtosis of each peak. This is to handle another scenario that was observed in which some probability distributions contain
+  #another feature available in this function is to assess the kurtosis of each peak. This is to handle another scenario that was observed in which some probability distributions contain
   #regions with very broad local maxima (blocky peaks). Such low kurtosis peaks seem to usually represent a poor quality fit and should ideally be removed. This function returns the kurtosis of the chosen peak
-  #to help in determining if the fit is worth keeping.
+  #to help in determining if the fit is worth keeping. The feature is currently not being used and can sometimes lead to segfaults
   
-  #"simple" mode skips kurtosis calculations
+  #"simple" mode skips all kurtosis calculations
 
   # if threshold is supplied, toss any peak region that contains a probability > this. Lower quality predictions seem to result from fits of the model with such high values. 
+
+  #one known (or suspected) limitation of this function is that probabilities associated with different SPs are not considered separately and almost certainly should be. It's not clear how serious this problem may be
+
   if(!missing(max_p_threshold)){
     above_thresh = which(probs > max_p_threshold)
     probs[above_thresh] = 0
@@ -625,32 +596,25 @@ localSum<-function(probs,simple=TRUE,max_p_threshold = NULL){
           last_sign = i
         } else{
           if(last_sign < 0){
-            
-            #print(paste("K",kurtosis_last_peak))
             if(!simple){
               kurtosis_last_peak = kurtosis(peakvals)
               peak_kurtosis[peaknum] = kurtosis_last_peak
             }
             peaknum=peaknum+1
             peaksum = c(peaksum,0)
-            
           }
           last_sign = i
           last_ind = ind
           ind = ind+1
-          
         }
-
       }
       if(!simple){
         kurtosis_last_peak = kurtosis(peakvals)
         peak_kurtosis[peaknum] = kurtosis_last_peak
       }
-      #print(paste("K",kurtosis_last_peak))
       best_peak_idx = which.max(peaksum)
       best_peak_max_idx = peakmax_ind[best_peak_idx]
       max_val_best_peak = peakmax[best_peak_idx]
-      #print(peaksum)
       if(simple){
           return(c(best_peak_max_idx,peaksum[best_peak_idx]))
       }
