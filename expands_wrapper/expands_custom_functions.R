@@ -69,6 +69,9 @@ newClusterCellFrequencies <- function(densities, precision, nrep=30, min_CellFre
       #print(paste("K=",k,"old_wm:",peak_old,"new_wm:",peak))
       peakMin=peak-0.05;peakMax=peak + 0.05;
       idx=find(freq>=peakMin & freq<=peakMax);
+      if(isempty(idx)){
+        next;
+      }
       stdOk=which(apply(densities[,idx],1,std)>10^-5);
       if (length(stdOk)<5){
         next;
@@ -248,17 +251,18 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
         if(class(snvJ)!="try-error" && any(!is.na(snvJ$p))){
             maxP_J_original=max(snvJ$p,na.rm=T)
             best_ind_original = which.max(snvJ$p)
-            lsres = localSum(snvJ$p,max_p_threshold=p_cutoff,simple=FALSE)
+            #lsres = localSum(snvJ$p,max_p_threshold=p_cutoff,simple=FALSE)  #this segfaults in some cases
+            lsres = localSum(snvJ$p,max_p_threshold=p_cutoff)
             maxP_J = lsres[2]
             # contents: maxp_idx,maxP_J,maxP_best_ind,kurt_J
             message = paste("snvJ",k,dm[k,"AF_Tumor"],"Local:",lsres[2],lsres[1])
             message = paste(message,"MaxP: ",maxP_J_original,best_ind_original)
             changed = 0
-            if(is.na(lsres[4]) | lsres[4] < min_kurtosis){ #kurtosis is too low, ignoring
-                maxP_J = 0
-                message = paste(message,"Kurt:",signif(lsres[4],3))
-                changed = 1
-            }
+            #if(is.na(lsres[4]) | lsres[4] < min_kurtosis){ #kurtosis is too low, ignoring
+            #    maxP_J = 0
+            #    message = paste(message,"Kurt:",signif(lsres[4],3))
+            #    changed = 1
+            #}
             if(debug){
                 if(changed || !(best_ind_original ==lsres[1])){
                     #print(message)
@@ -273,7 +277,8 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
         if(class(snvS)!="try-error" && any(!is.na(snvS$p))){
             maxP_S_original=max(snvS$p,na.rm=T)
             best_ind_original = which.max(snvS$p)
-            lsres = localSum(snvS$p,max_p_threshold=p_cutoff,simple=FALSE)
+            #lsres = localSum(snvS$p,max_p_threshold=p_cutoff,simple=FALSE)
+            lsres = localSum(snvS$p,max_p_threshold=p_cutoff)
             maxP_S = lsres[2]
             # contents: maxp_idx,maxP_J,maxP_best_ind,kurt_J
             message = paste("snvS",k,dm[k,"AF_Tumor"],"Local:",lsres[2],lsres[1])
@@ -291,20 +296,21 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
             }
         }
         if(!is.null(snvSbeforeC) && class(snvSbeforeC)!="try-error" && any(!is.na(snvSbeforeC$p))){
-            maxP_SB_original=max(snvS$p,na.rm=T)
-            best_ind_original = which.max(snvS$p)
-            lsres = localSum(snvS$p,max_p_threshold=p_cutoff,simple=FALSE)
-            maxP_SBeforeC = lsres[2]
+            maxP_SB_original=max(snvSbeforeC$p,na.rm=T)
+            best_ind_original = which.max(snvSbeforeC$p)
+            #lsres = localSum(snvSbeforeC$p,max_p_threshold=p_cutoff,simple=FALSE)
+            lsres = localSum(snvSbeforeC$p,max_p_threshold=p_cutoff)
+            maxP_SbeforeC = lsres[2]
             # contents: maxp_idx,maxP_J,maxP_best_ind,kurt_J
             message = paste("snvSBeforeC",k,dm[k,"AF_Tumor"],"Local:",lsres[2],lsres[1])
             message = paste(message,"MaxP: ",maxP_SB_original,best_ind_original)
             changed = 0
-            if(is.na(lsres[4]) | lsres[4] < min_kurtosis){
+            #if(is.na(lsres[4]) | lsres[4] < min_kurtosis){
                 #kurtosis is too low, ignoring
-                maxP_SBeforeC = 0
-                message = paste(message,"Kurt:",signif(lsres[4],3))
-                changed = 1
-            }
+            #    maxP_SBeforeC = 0
+            #    message = paste(message,"Kurt:",signif(lsres[4],3))
+            #    changed = 1
+            #}
             if(debug){
                 if(changed || !(best_ind_original ==lsres[1])){
                     #print(message)
@@ -472,19 +478,33 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
                     }
                 }
             }
-            if(scenario_switch && debug){
-                message = paste("DefScen:",scenario,"NewScen:",dm[k,"scenario"],dm[k,"PM"],dm[k,"PM_B"],PM,PM_B)
+            if(scenario_switch){
+                message = paste("DefScen:",scenario,"Ps_J,S,SbeforeC",maxP_J_original,maxP_S_original,maxP_SB_original,"NewScen:",dm[k,"scenario"],"Ps_new",maxP_J,maxP_S,maxP_SbeforeC,dm[k,"PM"],dm[k,"PM_B"],PM,PM_B)
                 print(message)
+
+                wd = getwd()
+                file=paste(wd,"/","debug","/","snv",k,"PN_B",dm[k,"PN_B"],"AF",dm[k,"AF_Tumor"],"CN",dm[k,"CN_Estimate"],"_new.pdf",sep="")
+                pdf(file)
+                lsres = localSum(snv$p,max_p_threshold=p_cutoff,simple=FALSE)
+                maxP = lsres[2]
+                barplot(snv$p,names=freq,las=2,main=paste("PM_B ",dm[k,"PM_B"],"LSp",maxP,"Freq:",signif(freq[lsres[1]],3)))
+                dev.off()
+          
+               
+                file=paste(wd,"/","debug","/","snv",k,"PN_B",dm[k,"PN_B"],"AF",dm[k,"AF_Tumor"],"CN",dm[k,"CN_Estimate"],"_original.pdf",sep="")
+                pdf(file)
+                barplot(snv_default$p,names=freq,las=2,main=paste("PM_B ",PM_B,"maxP",max(snv_default$p),"Freq:",signif(freq[which.max(snv_default$p)],3)))
+                dev.off()
             }
         }
-        print(paste(PM_B,dm[k,"PM_B"],PM,dm[k,"PM"], dm[k,"SP"],SP,sep="="))
+        #print(paste(PM_B,dm[k,"PM_B"],PM,dm[k,"PM"], dm[k,"SP"],SP,sep="="))
         #write any differences to log file
         if(!(PM_B == dm[k,"PM_B"])  || !(dm[k,"SP"] == SP)){
-            print("LOG:")
+            #print("LOG:")
             line = as.matrix(t(c(k,dm[k,],SP,PM_B,PM)))
             write.table(line,sep="\t",append=TRUE,file="log.tsv",row.names=FALSE,col.names=FALSE,quote=FALSE)
         } else if( (is.na(PM) && !is.na(dm[k,"PM"])) || (is.na(dm[k,"PM"]) && !is.na(PM))){
-            print("LOG:")
+            #print("LOG:")
             line = as.matrix(t(c(k,dm[k,],SP,PM_B,PM)))
             write.table(line,sep="\t",append=TRUE,file="log.tsv",row.names=FALSE,col.names=FALSE,quote=FALSE)
         }
@@ -669,14 +689,10 @@ weightedMean<-function(peakCl,freq){
   }
   return(wMean);
 }
-newWeightedMean<-function(peakCl,freq){
-#modified
-  ##weighted mean
-  #wMean=0;sumWeight=sum(apply(peakCl,1,na.rm=T,max));
-  #does this make more sense?
+newWeightedMean<-function(peakCl,freq){ #modified to use localSum
+  
   wMean=0;sumWeight=sum(apply(peakCl,1,na.rm=T,max));
   for (pI in 1:nrow(peakCl)){
-    #maxIdx=which.max(peakCl[pI,]);
     maxIdx=localSum(peakCl[pI,])[1]
     wMean=wMean+(peakCl[pI,maxIdx]/sumWeight)*freq[maxIdx];
   }
