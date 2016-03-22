@@ -66,11 +66,11 @@ def calc_snv_counts(record):
     # Create keys to extract read counts
     ref_key = "{}U".format(record.REF)
     alt_key = "{}U".format(record.ALT[0])
-    # Extract read counts (sum tier 1 and 2)
-    t_ref_count = sum(int(x) for x in record.samples[TUMOR_IDX][ref_key])
-    t_alt_count = sum(int(x) for x in record.samples[TUMOR_IDX][alt_key])
-    n_ref_count = sum(int(x) for x in record.samples[NORMAL_IDX][ref_key])
-    n_alt_count = sum(int(x) for x in record.samples[NORMAL_IDX][alt_key])
+    # Extract read counts (tier 2, which includes tier 1)
+    t_ref_count = record.samples[TUMOR_IDX][ref_key][1]
+    t_alt_count = record.samples[TUMOR_IDX][alt_key][1]
+    n_ref_count = record.samples[NORMAL_IDX][ref_key][1]
+    n_alt_count = record.samples[NORMAL_IDX][alt_key][1]
     return t_ref_count, t_alt_count, n_ref_count, n_alt_count
 
 
@@ -78,9 +78,9 @@ def calc_indel_counts(record):
     """Extract the number of reads that support the reference and alternate
     indel alleles in the tumour and normal samples.
     """
-    # Extract read counts (sum tier 1 and 2)
-    t_ref_count = sum(int(x) for x in record.samples[TUMOR_IDX]["TAR"])
-    t_alt_count = sum(int(x) for x in record.samples[TUMOR_IDX]["TIR"])
-    n_ref_count = sum(int(x) for x in record.samples[NORMAL_IDX]["TAR"])
-    n_alt_count = sum(int(x) for x in record.samples[NORMAL_IDX]["TIR"])
+    # Extract read counts (tier 2, which includes tier 1)
+    t_ref_count = record.samples[TUMOR_IDX]["TAR"][1]
+    t_alt_count = record.samples[TUMOR_IDX]["TIR"][1]
+    n_ref_count = record.samples[NORMAL_IDX]["TAR"][1]
+    n_alt_count = record.samples[NORMAL_IDX]["TIR"][1]
     return t_ref_count, t_alt_count, n_ref_count, n_alt_count
