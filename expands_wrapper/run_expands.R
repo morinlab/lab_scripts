@@ -10,13 +10,6 @@ args = commandArgs(trailingOnly=TRUE)
 print(args)
 library(matlab) #this dependency can probably be removed. Note the single line marked that uses a matlab function can probably be replaced with pure R
 library(expands)
-#source("/projects/rmorin/git/lab_scripts/expands_wrapper/expands_custom_functions.R")
-#source("/projects/rmorin/git/lab_scripts/expands_wrapper/plotSPs.R")
-#source("/projects/rmorin/git/lab_scripts/expands_wrapper/assignMutations_fix.R")
-source("/projects/rmorin/git/expands/R/addColumn.R")
-source("/projects/rmorin/git/expands/R/plotSPs.R")
-
-#.addF = expands:::.addF
 
 seg = args[1]
 
@@ -222,7 +215,11 @@ if(input_mode == "T"){
 	q()
 }
 
-mask_deletions = 0 # added by Ryan in response to weird behaviour in simulations when regions have a CN < 2. The model seems to perform much better if deletions are hidden/masked. This can be made a command-line option if desirable
+
+#this code will likely be removed as the new release seems to work better for deletions
+
+mask_deletions = 0 
+
 if(cn_style == 2){
 	mask_deletions = 0
 }
@@ -265,6 +262,7 @@ snv_data[,"AF_Tumor"]=maf_keep[,"t_alt_count"]/(maf_keep[,"t_alt_count"]+maf_kee
 snv_data[,"PN_B"] = 0
 
 
+#this code can all be removed for the Galaxy tool version ending with <-HERE
 #for convenience, make a pyclone input file using some code recycled from expands. There might be a more reasonable place to declare this function
         assignStatesToMutation<-function(dm,cbs,cols){
         print("Assigning copy number to mutations for PyClone...")
@@ -309,7 +307,7 @@ snv_data[,"PN_B"] = 0
                 keepers = !is.na(py_snv_data_assigned[,"normal_cn"])
                 write.table(py_snv_data_assigned[keepers,],file=out_pyclone,sep="\t",quote=FALSE)
         }
-
+#<-HERE
 
 if(include_loh > 0){
 
@@ -375,8 +373,6 @@ toUseIdx=which(apply(is.finite(cfd$densities),1,all) )
 
 SPs=clusterCellFrequencies(cfd$densities[toUseIdx,], precision, min_CellFreq=min_freq)
 
-#test modified version of this function
-#SPs=newClusterCellFrequencies(cfd$densities[toUseIdx,], precision, min_CellFreq=min_freq)
 
 SPs=SPs[SPs[,"score"]<=max_score,] 
 
@@ -387,12 +383,12 @@ print(SPs)
 print("running assignMutations...")
 
 
-#MAJOR CHANE HERE where Ryan's version of the code is called instead of default 
+
 aM= assignMutations( dm, SPs,max_PM=max_PM)
 
-#aM= assignMutationsPatch( dm, SPs,max_PM=max_PM)
 
 #unmaks the deletions for vizualization
+#can probably be removed
 if(mask_deletions){
 	seg2[,"CN_Estimate"] = seg2[,"CN_Estimate_nomask"]
 	dm = assignQuantityToMutation(merge_snv,seg2,"CN_Estimate")
@@ -418,10 +414,12 @@ pdf(file)
 plotSPs(aM$dm, sampleID=sample,cex=1)
 dev.off()
 
-print(dm)
+#print(dm)
 
 print("final SPs")
 print(aM$finalSPs)
+
+#we should probably write out the SP details to another file as is done in the runExpands wrapper
 
 suppressWarnings(write.table(aM$dm,file = output_file, quote = FALSE, sep = "\t", row.names=FALSE))
 
