@@ -196,16 +196,17 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
         precision=finalSPs[1,"precision"]
     }
     spFreq=sort(spFreq);
-  
-    added = matrix(nrow=length(dm[,1]),ncol=7)
-    colnames(added) = c("%maxP","SP","PM_B","SP_cnv","PM","PM_cnv","scenario");
-    dm=cbind(dm,added)
+    if(!any(colnames(dm)=="SP")){
+      added = matrix(nrow=length(dm[,1]),ncol=7)
+      colnames(added) = c("%maxP","SP","PM_B","SP_cnv","PM","PM_cnv","scenario");
+      dm=cbind(dm,added)
+    }
     if (!any(colnames(dm)=="f")){
         dm=.addF(dm,  max_PM);
     }
-    if (!any(colnames(dm)=="AF_Tumor_Adjusted")){
-        dm=.addColumn(dm,"AF_Tumor_Adjusted",NA);
-    }
+    #if (!any(colnames(dm)=="AF_Tumor_Adjusted")){
+    #    dm=.addColumn(dm,"AF_Tumor_Adjusted",NA);
+    #}
     dm[,"SP"]=NA;  dm[,"SP_cnv"]=NA; dm[,"PM_B"]=NA; dm[,"PM"]=NA; dm[,"PM_cnv"]=NA; dm[,"scenario"]=NA;##delete any potentially existing SP info
     freq=c()
     for (sp in spFreq){
@@ -233,8 +234,25 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
                 snvSbeforeC=try(cellfrequency_pdf(dm[k,"AF_Tumor"],dm[k,"CN_Estimate"],dm[k,"PN_B"],freq, max_PM=NA, snv_cnv_flag=4, SP_cnv=f_CNV, PM_cnv=pm),silent=TRUE);
             }
         }
+        #patch from newer AM function provided by author
+        ##Max_PM is either 2 if SP with SNV is not a descendant of SP with CNV.... 
+        snvS_noDesc=try(cellfrequency_pdf(dm[k,"AF_Tumor"],dm[k,"CN_Estimate"],dm[k,"PN_B"],freq, max_PM=2, snv_cnv_flag=1),silent=TRUE)
+        ##.. or Max_PM is PM of SP with CNV otherwise
+        snvS_Desc=try(cellfrequency_pdf(dm[k,"AF_Tumor"],dm[k,"CN_Estimate"],dm[k,"PN_B"],freq[freq<=f_CNV+precision/2], max_PM=pm, snv_cnv_flag=1),silent=TRUE)
+        ##Choose better solution between the two
+        snvS=snvS_noDesc;
+        if(class(snvS_Desc)!="try-error" ){
+          if(class(snvS_noDesc)=="try-error" || max(snvS_noDesc$p,na.rm=T)<max(snvS_Desc$p,na.rm=T)){
+            tmp=matrix(0,length(freq),1);        
+            tmp[freq<=f_CNV+precision/2]=snvS_Desc$p;  snvS_Desc$p=tmp;  ##Complement to cover entire spFreq space
+            snvS=snvS_Desc;
+          }
+        }
+        
         ##Max_PM is either 2 if SP with SNV is not a descendant of SP with CNV, and is PM of SP with CNV otherwise. Since we don't know which applies we choose the maximum value
-        snvS=try(cellfrequency_pdf(dm[k,"AF_Tumor"],dm[k,"CN_Estimate"],dm[k,"PN_B"],freq, max_PM=max(c(pm,2),na.rm=T), snv_cnv_flag=1),silent=TRUE)
+        #snvS=try(cellfrequency_pdf(dm[k,"AF_Tumor"],dm[k,"CN_Estimate"],dm[k,"PN_B"],freq, max_PM=max(c(pm,2),na.rm=T), snv_cnv_flag=1),silent=TRUE)
+        #above is commented out because it is superseeded by new code pasted above
+        
         
         #some variables to internally track the default values of maxP_J etc for comparison. These could all be removed because they are not actually used except for debugging purposes
         maxP_J=0; ##Maximum probability from joined fit
@@ -371,14 +389,14 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
         idx=which(abs(snv_default$fit[,"f"]-SP)<=precision/2); ##index of fits matching SP size
         idx=idx[which.min(snv_default$fit[idx,"dev"])] ##index of fit of matching SP size with minimal residual (dev)
     
-        if(isempty(idx_new)){
-            #no good fit found
-            dm[k,"SP"]=NA
-            next
+        #if(isempty(idx_new)){
+        #    #no good fit found
+        #    dm[k,"SP"]=NA
+        #    next
+        #}
+        if(!isempty(idx_new)){
+          dm[k,c("PM_B","PM")]=snv$fit[idx_new,c("PM_B","PM")]; ##(dm[k,"CN_Estimate"]*dm[k,"AF_Tumor"]-(1-dm[k,"SP"])*dm[k,"PN_B"])/dm[k,"SP"];  dm[k,"PM_B"]=max(1,dm[k,"PM_B"]);
         }
-
-        dm[k,c("PM_B","PM")]=snv$fit[idx_new,c("PM_B","PM")]; ##(dm[k,"CN_Estimate"]*dm[k,"AF_Tumor"]-(1-dm[k,"SP"])*dm[k,"PN_B"])/dm[k,"SP"];  dm[k,"PM_B"]=max(1,dm[k,"PM_B"]);
-        
         if (!is.na(dm[k,"PM"]) && dm[k,"PM"]<0){
             dm[k,"PM"]=NA; ##PM can be -1 if obtained with snv_cnv_flag=1; TODO --> get NA directy for jar and remove this. 
         }
@@ -386,7 +404,14 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
         dm[k,"%maxP"] = snv$p[best_p_index]
 
         densities[k,]=snv$p;
-    
+	
+	if(class(pm) == "numeric"){
+	    if(length(pm)==0){
+		f_CNV = NA
+		pm = NA  #I don't know why there are some cases like this but it causes a fatal error if not caught
+	    }
+	}
+    	
         if(joinedFit){
             dm[k,"SP_cnv"]=dm[k,"SP"];
             dm[k,"PM_cnv"]=dm[k,"PM"];
@@ -408,7 +433,9 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
                 if(dm[k,"SP"]>dm[k,"SP_cnv"]){
                     dm[k,"PM"]=2;
                 }else{
-                    if(dm[k,"PM_B"]>dm[k,"PM_cnv"] && dm[k,"PM_B"]<=2){
+                    if(is.na(dm[k,"PM_B"]) || is.na(dm[k,"PM_cnv"])){
+                      dm[k,"PM"]=NA;
+                    }else if(dm[k,"PM_B"]>dm[k,"PM_cnv"] && dm[k,"PM_B"]<=2){
                         dm[k,"PM"]=2;
                     }else if(dm[k,"PM_B"]>2 && dm[k,"PM_B"]<=dm[k,"PM_cnv"]){
                         dm[k,"PM"]=dm[k,"PM_cnv"];
@@ -484,7 +511,8 @@ newAssignMutations<-function( dm, finalSPs, max_PM=6, p_cutoff=0.8,prune_by_ploi
   dm[dm[,"%maxP"]==0,"SP"]=NA;
 
   #add CCF/adjucted VAF to each mutation based on results
-  dm[,"AF_Tumor_Adjusted"]=(dm[,"AF_Tumor"]*dm[,"CN_Estimate"]-dm[,"PN_B"])/(dm[,"PM_B"]-dm[,"PN_B"])
+  #dm[,"AF_Tumor_Adjusted"]=(dm[,"AF_Tumor"]*dm[,"CN_Estimate"]-dm[,"PN_B"])/(dm[,"PM_B"]-dm[,"PN_B"])
+  #dm[,"AF_Tumor_Adjusted"]=dm[,"AF_Tumor_Adjusted"]*(dm[,"PM_B"]/dm[,"PM"])
 
   #EXPERIMENTAL: assess the quality of SPs based on the fraction of variants with PM_B = 1 (should be the most common scenario in most cases because homozygous SNVs should be rare as they can only arise due to deletion or neutral LOH)
   #a more sensible extension here may be to only consider variants in regions of CN 2 or higher. Note, this change may be useless now given the improved clustering in v 1.7

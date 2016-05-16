@@ -30,18 +30,25 @@ include_loh = 0
 max_score = as.double(args[4])
 
 precision = as.double(args[5])
+#set to 1 to use default
 
 
 
 input_mode = args[6]  # S for sequenza, I for IGV-friendly seg file, T for Titan full segments file
 
+cn_style = as.numeric(args[7]) # 1 for integer values, 2 for the actual values based on log ratio (2 is recommended by the EXPANDS author)
 
-run_options = args[7]
+run_options = args[8]
 #
 # 1 use only default parameters and code from current Expands version
 # 2 use default clustering, new assignMutations functionality
 # 3 use new clustering and default assignMutations
 # 4 use both new clustering and new assignMutations functionality
+
+
+#mask_deletions = 1 # added by Ryan in response to weird behaviour in simulations when regions have a CN < 2 
+mask_deletions = 0
+
 
 new_am = 0
 new_clust = 0
@@ -53,7 +60,7 @@ if(run_options == 3 || run_options == 4){
 	print("using new clustering")
 	new_clust = 1
 }
-
+samp_param = ""
 
 #could also be made an argument if the user wants to really slow down the program by decreasing this :)
 min_freq = 0.1
@@ -62,9 +69,9 @@ max_PM=5  #6 was causing some weird results
 print("expecting input format:")
 print(input_mode)
 
-if(length(args)>7){
+if(length(args)>8){
 	#loh flag set to a true value. Default is to not do anything with LOH events
-	include_loh = as.double(args[8])
+	include_loh = as.double(args[9])
 	print(paste("running in LOH mode", include_loh, sep=" "))
 	#if set to 1, neutral LOH only will be included, if set to 2, deletion LOH only will be included, if set to 3, all LOH will be included
 }
@@ -120,9 +127,14 @@ if(input_mode == "T"){
 
 	seg2[,"startpos"] = as.numeric(seg1[keep_both,3])
 	seg2[,"endpos"] = as.numeric(seg1[keep_both,4])
-	seg2[,4]=as.numeric(seg1[keep_both,"Copy_Number"])
-
-
+	
+	if(cn_style ==1){
+		seg2[,4]=as.numeric(seg1[keep_both,"Copy_Number"])
+	}
+	else if(cn_style ==2){
+		seg2[,4] = 2*2^seg1[keep_both,"Median_logR"]
+	}
+	
 }else if(input_mode == "S"){
 	print(paste("loading Sequenza ",seg))
 	seg1=read.csv(seg,stringsAsFactors=FALSE,sep="\t")
@@ -151,7 +163,7 @@ if(input_mode == "T"){
 	
 		sequenza_loh = seg1[keep_loh,]
 
-		vaf_loh_event= 1- sequenza_loh[,"Bf"]  #the Expands method expects VAFs that were increased relative to the normal but Sequenza reports BAF relative to lower Reference_Allel
+		vaf_loh_event= 1- sequenza_loh[,"Bf"]  #the Expands method expects VAFs that were increased relative to the normal but Sequenza reports BAF relative to low
 
 		loh_snv_data=matrix(nrow=length(vaf_loh_event),ncol=7,dimnames=list(c(),c("chr","startpos","endpos","REF","ALT","AF_Tumor","PN_B")))
 		loh_snv_data[,"chr"] = as.numeric(sequenza_loh[,"chromosome"])
@@ -161,7 +173,8 @@ if(input_mode == "T"){
 		loh_snv_data[,"REF"] = as.numeric(rep(65,length(vaf_loh_event)))
 		loh_snv_data[,"ALT"] = as.numeric(rep(45,length(vaf_loh_event)))
 		loh_snv_data[,"PN_B"] = as.numeric(rep(1,length(vaf_loh_event)))
-		#loh_snv_data[,"PN_B"] = as.numeric(rep(0,length(vaf_loh_event))) #don't set as LOH because it works better if you don't. Unsure why
+		print(loh_snv_data)
+		
 	}
 	chroms_a = seg1[,2]
         chroms = as.numeric(chroms_a)
@@ -181,11 +194,76 @@ if(input_mode == "T"){
 
 	seg2[,"startpos"] = as.numeric(seg1[keep_both,"start.pos"])
 	seg2[,"endpos"] = as.numeric(seg1[keep_both,"end.pos"])
-	seg2[,4]=as.numeric(seg1[keep_both,"CNt"])
-	#cn_estimate = 2*2^seg1[keep_both,"depth.ratio"]
-	#seg2[,4] = cn_estimate
-	#print(loh_snv_data)
-	#q()
+	#experimental
+	normalize_weighted = 0
+	normalize = 1
+	if(cn_style ==1){
+		seg2[,4]=as.numeric(seg1[keep_both,"CNt"])
+	} else if(cn_style == 2){
+		#for using the rational value for absolute CN based on depth.ratio (with some tolerance for deviation)
+		deviation_allowed = 0.25
+		logratio=log2(as.numeric(seg1[keep_both,"depth.ratio"]))
+		seg2[,4] = 2*2^logratio
+		mean_cn = mean(seg2[,4])
+		lengths = seg2[,"endpos"] - seg2[,"startpos"]
+		weighted = seg2[,4] * lengths
+		weighted_mean_cn = sum(weighted) / sum(as.numeric(lengths))
+		print(paste("meanCN:",mean_cn,"weighted:",weighted_mean_cn))
+		if(normalize_weighted){
+			seg2[,4] = seg2[,4] * 2/weighted_mean_cn
+			newmean = mean(seg2[,4])
+			print(paste("adjusted to meanCN:",newmean))
+			samp_param = paste(samp_param,"NORM_cn",newmean,sep="")
+	  	} else if(normalize){
+	        seg2[,4] = seg2[,4] * 2/mean_cn
+            newmean = mean(seg2[,4])
+            print(paste("adjusted to meanCN:",newmean))
+            samp_param = paste(samp_param,"NORM_cn_nw_",newmean,sep="")
+	  	}
+	  	#now apply threshold to force values near neutral to exactly 2
+	  	near_neut = (seg2[,4] > 2 - deviation_allowed) & (seg2[,4] < 2+ deviation_allowed)
+	  	seg2[near_neut,4] = 2
+	  	print(seg2)
+	  	q()
+	  	if(include_loh > 0){
+			logratio=log2(as.numeric(seg1[,"depth.ratio"]))
+			abs = 2*2^logratio
+            if(include_loh == 1){
+                neut = seg1[,"CNt"] == 2
+                loh1 = seg1[,"A"]==2
+                keep_loh = neut & loh1
+                loh_string = "neut_LOH_"
+            } else if(include_loh ==2){
+                del = seg1[,"CNt"] == 1
+                loh1 = seg1[,"A"] + seg1[,"B"] ==1
+                keep_loh = del & loh1
+                loh_string = "del_LOH_"
+            } else if(include_loh==3){
+                loh_string = "any_LOH_thresh"
+                not_amp = abs < 2 + deviation_allowed
+                loh1 = seg1[,"B"]==0
+                keep_loh = not_amp & loh1
+            }
+            sequenza_loh = seg1[keep_loh,]
+            vaf_loh_event= 1- sequenza_loh[,"Bf"]  #the Expands method expects VAFs that were increased relative to the normal but Sequenza reports BAF relative to lower Refer
+            loh_snv_data=matrix(nrow=length(vaf_loh_event),ncol=7,dimnames=list(c(),c("chr","startpos","endpos","REF","ALT","AF_Tumor","PN_B")))
+            loh_snv_data[,"chr"] = as.numeric(sequenza_loh[,"chromosome"])
+            loh_snv_data[,"startpos"] = as.numeric(sequenza_loh[,"start.pos"] + 1)
+            loh_snv_data[,"endpos"] = as.numeric(sequenza_loh[,"start.pos"] + 1)
+            loh_snv_data[,"AF_Tumor"]= as.numeric(vaf_loh_event)
+            loh_snv_data[,"REF"] = as.numeric(rep(65,length(vaf_loh_event)))
+            loh_snv_data[,"ALT"] = as.numeric(rep(45,length(vaf_loh_event)))
+            loh_snv_data[,"PN_B"] = as.numeric(rep(1,length(vaf_loh_event)))
+            print(loh_snv_data)
+        }
+	} else{
+		print(paste("error, no CN style chosen",cn_style))
+		q()
+	}
+
+
+
+
 	
 } else if (input_mode == "I"){
 	#LOH information not included in these files, just load the copy number states and convert to absolute CN
@@ -236,8 +314,7 @@ if(input_mode == "T"){
 	q()
 }
 
-#mask_deletions = 1 # added by Ryan in response to weird behaviour in simulations when regions have a CN < 2 
-mask_deletions = 1
+
 if(mask_deletions){
 		seg2.mask = seg2[,4] < 2
 		seg2.save = seg2[,"CN_Estimate"]
@@ -279,11 +356,11 @@ snv_data[,"PN_B"] = 0
 
 if(include_loh > 0){
 	merge_snv=rbind(loh_snv_data,snv_data)
-	loh_string = "LOH_"
-	samp_param = paste(sample,loh_string,"maxpm_", max_PM, "_score_", max_score, ",precision_", precision, "newAM:_", new_am, "_newClust:_", new_clust,sep="")
+	#loh_string = "LOH_"
+	samp_param = paste(sample,loh_string,"maxpm_", max_PM, "_score_", max_score, ",precision_", precision, "MaxDel:_",mask_deletions,"newAM:_", new_am, "_newClust:_", new_clust,samp_param,sep="")
 } else{
 	merge_snv = snv_data
-	samp_param = paste(sample,loh_string,"maxpm_", max_PM, "_score_", max_score, ",precision_", precision,"newAM:_", new_am, "_newClust:_", new_clust,sep="")
+	samp_param = paste(sample,loh_string,"maxpm_", max_PM, "_score_", max_score, ",precision_", precision,"MaxDel:_",mask_deletions,"newAM:_", new_am, "_newClust:_", new_clust,samp_param,sep="")
 	#for convenience, make a pyclone input file using some code recycled from expands. There might be a more reasonable place to declare this function
 	assignStatesToMutation<-function(dm,cbs,cols){
 	print("Assigning copy number to mutations for PyClone...")
@@ -329,10 +406,8 @@ if(include_loh > 0){
 		write.table(py_snv_data_assigned[keepers,],file=out_pyclone,sep="\t",quote=FALSE)
 	}
 }
-print("merged")
-print(merge_snv)
-print(".....")
-print(seg2)
+#print("merged")
+#print(merge_snv)
 
 
 #run individual expands steps separately
@@ -362,7 +437,15 @@ ii=which(is.na(dm[,"CN_Estimate"]));
     print(paste(length(ii), " SNV(s) excluded due to AF*CN below ", min_freq," (SNV can't be explained by an SP present in ",min_freq*100 ,"% or more of the sample)."));
     dm=dm[-ii,];
   }
-precision=0.1/log(nrow(dm)/7); #use default?
+
+if(precision == 1){
+	precision=0.1/log(nrow(dm)/7); #use default
+}
+
+  
+print(dm)
+print(loh_snv_data)
+print(paste("Precision:",precision,nrow(dm),log(nrow(dm))))
 
 print(samp_param)
 dirF=getwd();
@@ -395,7 +478,7 @@ print(SPs)
 print("running assignMutations...")
 
 
-#MAJOR CHANE HERE where Ryan's version of the code is called instead of default 
+#MAJOR CHANGE HERE where Ryan's version of the code is called instead of default 
 if(new_am){
 	#aM= newAssignMutations( dm, SPs,max_PM=max_PM,prune_by_ploidy=1)
 	aM= newAssignMutations( dm, SPs,max_PM=max_PM)
@@ -414,7 +497,7 @@ if(iterative_mode){
 			some=dm1[,"startpos"] %in% aM$dm[,"startpos"]
 
   			saved[,"CN_Estimate"] = dm1[some,"CN_Estimate"]
-	
+			#also need to update ploidy for these cases that were changed. Not implemented yet...
 	}
 	#if (!any(colnames(saved)=="AF_Tumor_Adjusted")){
   	#saved=.addColumn(saved,"AF_Tumor_Adjusted",NA);
@@ -428,9 +511,9 @@ if(iterative_mode){
 	plotSPs(saved, sampleID=sample,cex=1)
 	dev.off()
 	file = paste(samp_param,"NewPlot.pdf",sep="")
-	pdf(file)
-	newPlotSPs(saved, sampleID=sample,cex=1)
-	dev.off()
+	#pdf(file)
+	#newPlotSPs(saved, sampleID=sample,cex=1)
+	#dev.off()
 	suppressWarnings(write.table(saved,file = output_file, quote = FALSE, sep = "\t", row.names=FALSE));
 	print(paste("Output saved under ",output_file));
 
@@ -456,9 +539,9 @@ if(iterative_mode){
 		dm = plotSPs(aM$dm, sampleID=sample,cex=1)
 		dev.off()
 		file_iter = paste(samp_param,"iter1_NewPlot.pdf",sep="")
-		pdf(file_iter)
-		newPlotSPs(aM$dm, sampleID=sample,cex=1)
-		dev.off()
+		#pdf(file_iter)
+		#newPlotSPs(aM$dm, sampleID=sample,cex=1)
+		#dev.off()
 		output_file_iter = paste(dirF, "/", samp_param,"_iter1.sps",sep="");
 		suppressWarnings(write.table(aM$dm,file = output_file_iter, quote = FALSE, sep = "\t", row.names=FALSE));
 		q()
@@ -483,12 +566,12 @@ if(mask_deletions){
 #file = "expands_plot_simu_incl_chr6LOH.pdf"
 #plot the Expands image showing mutations assigned to their SPs
 pdf(file)
-plotSPs(aM$dm, sampleID=sample,cex=1)
+dm = plotSPs(aM$dm, sampleID=sample,cex=1)
 dev.off()
 
-file1 = paste("newPlot_",file,sep="")
+file1 = paste("rawPlot_",file,sep="")
 pdf(file1)
-dm = newPlotSPs(aM$dm,sampleID=sample,cex=1)
+plotSPs(aM$dm,sampleID=sample,cex=1,rawAF=TRUE)
 dev.off()
 
 print("final SPs")

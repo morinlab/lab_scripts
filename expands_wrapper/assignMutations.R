@@ -131,15 +131,17 @@ assignMutations<-function( dm, finalSPs, max_PM=6){
       ##-->Reject descendant hypothesis (ploidy of SP = 2) --> if 2 >= PM_B > PM 
       ##-->Accept descendant hypothesis (ploidy of SP = PM) --> if PM >= PM_B > 2 
       ##-->Irresolvable otherwise (ploidy of SP cannot be assigned) 
-      print(paste(dm[k,"PM_B"],dm[k,"PM_cnv"],dm[k,"PM_B"]))
-      print(k)
-      print("-----------------------------------")
+      #print(paste(dm[k,"PM_B"],dm[k,"PM_cnv"],dm[k,"PM_B"]))
+      #print(k)
+      #print("-----------------------------------")
       if(!is.na(dm[k,"SP"]) && !is.na(dm[k,"SP_cnv"])){
-        print(paste("HERE:",dm[k,"SP"],dm[k,"SP_cnv"]))
+        #print(paste("HERE:",dm[k,"SP"],dm[k,"SP_cnv"]))
         if(dm[k,"SP"]>dm[k,"SP_cnv"]){
           dm[k,"PM"]=2;
         }else{
-          if(dm[k,"PM_B"]>dm[k,"PM_cnv"] && dm[k,"PM_B"]<=2){
+          if(is.na(dm[k,"PM_B"]) && is.na(dm[k,"PM_cnv"])){
+            dm[k,"PM"] = NA;
+          }else if(dm[k,"PM_B"]>dm[k,"PM_cnv"] && dm[k,"PM_B"]<=2){
             dm[k,"PM"]=2;
           }else if(dm[k,"PM_B"]>2 && dm[k,"PM_B"]<=dm[k,"PM_cnv"]){
             dm[k,"PM"]=dm[k,"PM_cnv"];

@@ -10,10 +10,13 @@ args = commandArgs(trailingOnly=TRUE)
 print(args)
 library(matlab) #this dependency can probably be removed. Note the single line marked that uses a matlab function can probably be replaced with pure R
 library(expands)
-#source("/projects/rmorin/git/lab_scripts/expands_wrapper/expands_visualization.R")
-source("/projects/rmorin/git/lab_scripts/expands_wrapper/plotSPs.R")
-source("/projects/rmorin/git/lab_scripts/expands_wrapper/assignMutations.R")
-.addF = expands:::.addF
+#source("/projects/rmorin/git/lab_scripts/expands_wrapper/expands_custom_functions.R")
+#source("/projects/rmorin/git/lab_scripts/expands_wrapper/plotSPs.R")
+#source("/projects/rmorin/git/lab_scripts/expands_wrapper/assignMutations_fix.R")
+source("/projects/rmorin/git/expands/R/addColumn.R")
+source("/projects/rmorin/git/expands/R/plotSPs.R")
+
+#.addF = expands:::.addF
 
 seg = args[1]
 
@@ -42,7 +45,7 @@ print(input_mode)
 
 if(length(args)>7){
 	#loh flag set to a true value. Default is to not do anything with LOH events
-	include_loh = as.double(args[7])
+	include_loh = as.double(args[8])
 	print(paste("running in LOH mode", include_loh, sep=" "))
 	#if set to 1, neutral LOH only will be included, if set to 2, deletion LOH only will be included, if set to 3, all LOH will be included
 }
@@ -125,7 +128,7 @@ if(input_mode == "T"){
 			keep_loh = del & loh1
 			loh_string = "del_LOH_"
 		} else if(include_loh==3){
-			loh_string = "any_LOH_Real"
+			loh_string = "any_LOH"
 			not_amp = seg1[,"CNt"] <=2
 			loh1 = seg1[,"B"]==0
 			keep_loh = not_amp & loh1
@@ -163,12 +166,12 @@ if(input_mode == "T"){
 
 	seg2[,"startpos"] = as.numeric(seg1[keep_both,"start.pos"])
 	seg2[,"endpos"] = as.numeric(seg1[keep_both,"end.pos"])
-	seg2[,4]=as.numeric(seg1[keep_both,"CNt"])
-	#below not implemented for cnv mode yet. IMPORTANT: depth.ratio does not seem to equate to log ratio
-	#cn_estimate = 2*2^seg1[keep_both,"depth.ratio"]
-	#seg2[,4] = cn_estimate
-	#print(loh_snv_data)
-	#q()
+	if(cn_style ==1){
+		seg2[,4]=as.numeric(seg1[keep_both,"CNt"])
+	} else if (cn_style == 2){
+		logratio=log2(as.numeric(seg1[keep_both,"depth.ratio"]))
+		seg2[,4] = 2*2^logratio
+	}
 	
 } else if (input_mode == "I"){
 	#LOH information needs to be included in these files and BAF
@@ -181,7 +184,7 @@ if(input_mode == "T"){
 	chroms = as.numeric(chroms_a)
 	keep_chrom= !is.na(chroms<23)
 	
-	loh_string = "no_LOH_"
+	#loh_string = "no_LOH_"
 
 	loh_status = seg1[,"LOH_flag"]
 
@@ -219,7 +222,10 @@ if(input_mode == "T"){
 	q()
 }
 
-mask_deletions = 1 # added by Ryan in response to weird behaviour in simulations when regions have a CN < 2. The model seems to perform much better if deletions are hidden/masked. This can be made a command-line option if desirable
+mask_deletions = 0 # added by Ryan in response to weird behaviour in simulations when regions have a CN < 2. The model seems to perform much better if deletions are hidden/masked. This can be made a command-line option if desirable
+if(cn_style == 2){
+	mask_deletions = 0
+}
 
 if(mask_deletions){
 		seg2.mask = seg2[,4] < 2
@@ -308,9 +314,10 @@ snv_data[,"PN_B"] = 0
 if(include_loh > 0){
 
 	merge_snv=rbind(loh_snv_data,snv_data)
-	loh_string = "LOH_"
+	#loh_string = "LOH_"
 	samp_param = paste(sample,loh_string,"_state_INDEL_DelMask_maxpm_", max_PM, "_score_", max_score, ",precision_", precision,sep="")
 } else{
+  loh_string = "no_LOH"
 	merge_snv = snv_data
 	samp_param = paste(sample,loh_string,"_noLOH_INDEL_DelMask_maxpm_", max_PM, "_score_", max_score, ",precision_", precision,sep="")
 }
@@ -348,8 +355,12 @@ ii=which(is.na(dm[,"CN_Estimate"]));
     dm=dm[-ii,];
   }
 
+if(precision ==1){
 precision=0.1/log(nrow(dm)/7); #use default?
 
+}
+print(dm)
+print(loh_snv_data)
 print(samp_param)
 dirF=getwd();
 
@@ -377,9 +388,9 @@ print("running assignMutations...")
 
 
 #MAJOR CHANE HERE where Ryan's version of the code is called instead of default 
-#aM= newAssignMutations( dm, SPs,max_PM=max_PM)
-
 aM= assignMutations( dm, SPs,max_PM=max_PM)
+
+#aM= assignMutationsPatch( dm, SPs,max_PM=max_PM)
 
 #unmaks the deletions for vizualization
 if(mask_deletions){
@@ -396,10 +407,11 @@ if(mask_deletions){
 #file = "expands_plot_simu_incl_chr6LOH.pdf"
 #plot the Expands image showing mutations assigned to their SPs
 
+#aM$dm[,"%maxP"] = 1
 
-file1 = paste("newPlot_",file,sep="")
+file1 = paste("rawPlot_",file,sep="")
 pdf(file1)
-dm = newPlotSPs(aM$dm,sampleID=sample,cex=1)
+plotSPs(aM$dm,sampleID=sample,cex=1,rawAF=TRUE)
 dev.off()
 
 pdf(file)
@@ -411,5 +423,5 @@ print(dm)
 print("final SPs")
 print(aM$finalSPs)
 
-suppressWarnings(write.table(dm,file = output_file, quote = FALSE, sep = "\t", row.names=FALSE));
- print(paste("Output saved under ",output_file));
+suppressWarnings(write.table(aM$dm,file = output_file, quote = FALSE, sep = "\t", row.names=FALSE))
+

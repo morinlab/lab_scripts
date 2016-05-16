@@ -1,6 +1,4 @@
-
-
-newPlotSPs<-function(dm, sampleID=NA,cex=0.5, legend="CN_Estimate", orderBy="chr", rawAF=F){
+plotSPs<-function(dm, sampleID=NA,cex=0.5, legend="CN_Estimate", orderBy="chr", rawAF=F){
   
   keep=which(!is.na(dm[,"SP"]),); dm=dm[keep,];
   ia=order(dm[,"startpos"]);dm=dm[ia,];
@@ -11,11 +9,19 @@ newPlotSPs<-function(dm, sampleID=NA,cex=0.5, legend="CN_Estimate", orderBy="chr
   yticklab=c(1:maxPloidy,seq(0,1,by=0.1));
   at=c(sort(c(1:maxPloidy)*-0.1),seq(0,1,by=0.1));
   
-  if (!any(colnames(dm)=="AF_Tumor_Adjusted")){
   dm=.addColumn(dm,"AF_Tumor_Adjusted",NA);
-  }
   if(!rawAF){
-    dm[,"AF_Tumor_Adjusted"]=(dm[,"AF_Tumor"]*dm[,"CN_Estimate"]-dm[,"PN_B"])/(dm[,"PM_B"]-dm[,"PN_B"])
+    iEq2=which(dm[,"PM_B"]==dm[,"PN_B"])
+    iEq3=setdiff(1:nrow(dm),iEq2);
+    if(!isempty(iEq3)){ ##Equation 3 informative
+      dm[iEq3,"AF_Tumor_Adjusted"]=(dm[iEq3,"AF_Tumor"]*dm[iEq3,"CN_Estimate"]-dm[iEq3,"PN_B"])/(dm[iEq3,"PM_B"]-dm[iEq3,"PN_B"])
+      dm[iEq3,"AF_Tumor_Adjusted"]=dm[iEq3,"AF_Tumor_Adjusted"]*(dm[iEq3,"PM_B"]/dm[iEq3,"PM"])
+    }
+    if(!isempty(iEq2)){##Equation 3 not informative --> use equation 2
+      dm[iEq2,"AF_Tumor_Adjusted"]=(dm[iEq2,"CN_Estimate"]-2)/(dm[iEq2,"PM"]-2)
+    }
+    #dm[,"AF_Tumor_Adjusted"]=(dm[,"AF_Tumor"]*dm[,"CN_Estimate"]-dm[,"PN_B"])/(dm[,"PM_B"]-dm[,"PN_B"])
+    #dm[,"AF_Tumor_Adjusted"]=dm[,"AF_Tumor_Adjusted"]*(dm[,"PM_B"]/dm[,"PM"])
     adjusted="Adjusted"
   }else{
     dm[,"AF_Tumor_Adjusted"]=dm[,"AF_Tumor"]
@@ -50,6 +56,8 @@ newPlotSPs<-function(dm, sampleID=NA,cex=0.5, legend="CN_Estimate", orderBy="chr
   .plotSPPerVar(dm,8,0,1,legend);
   .plotSPPerVar(dm,8,1,1,legend);
   lines(c(0,nrow(dm)),c(0,0),col="black");
+  
+  #ylim([-0.12*maxPloidy,1.1]);
   return(dm)
 }
 
@@ -83,18 +91,9 @@ newPlotSPs<-function(dm, sampleID=NA,cex=0.5, legend="CN_Estimate", orderBy="chr
   return(legend1);
 }
 
-.addColumn<-function(M,newCol,initVal){
-  if (!any(colnames(M)==newCol)){
-    M=matrix(cbind(M,matrix(initVal,nrow(M),1)),nrow=nrow(M),ncol=ncol(M)+1,
-             dimnames = list(rownames(M), c(colnames(M),newCol)));
-  }
-  return(M);
-}
 
 .plotSPPerCopyNumber<-function(dm,lineType,lohFlag,cnFlag){
-  #x=c(terrain.colors(4),rainbow(4));
-  library(RColorBrewer)
-  x=brewer.pal(8, "Paired")
+  x=c("#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C", "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00");# "#CAB2D6");
   legend1=list("text"=c(),"col"=c());
   maxploidy=max(dm[,"PM"],na.rm=TRUE)+1;
   for (i in 1:length(x)){
