@@ -59,6 +59,9 @@ def main():
         qname = read.query_name
 
         seq = read.query_sequence
+
+        print qname
+
         qual = get_ascii_quality(read.query_qualities)
 
         if read.is_reverse:
@@ -114,6 +117,9 @@ def main():
             del paired_dict[qname]
 
     sam.close()
+
+    paired_process.stdin.close()
+    paired_process.wait()
 
     if len(paired_dict.keys()):
 
