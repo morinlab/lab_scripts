@@ -28,14 +28,14 @@ input_mode = args[6]  # S for sequenza, I for IGV-friendly seg file, T for Titan
 cn_style = args[7] # 1 for integer values, 2 for the actual values based on log ratio (2 is recommended by the EXPANDS author)
 
 # for testing
-# seg = "~/tmp/PT003_segments.txt"
-# maf = "~/tmp/PT003_Pd15.aug.maf"
-# sample = "PT003_Pd15"
-# includ_loh = 1
-# max_score = 2.5
-# precision = 0.05
-# input_mode = "S"
-# cn_style = 2
+seg = "/Volumes/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/oncoSNP/3-augmented_oncoSNP/DLC_0010.aug.cnvs"
+maf = "/Volumes/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/strelka_pipeline/9-aug_maf/DLC-10_S37.aug.maf"
+sample = "DLC_0010"
+includ_loh = 1
+max_score = 2.5
+precision = 0.05
+input_mode = "O"
+cn_style = 2
 
 
 #could also be made an argument if the user wants to really slow down the program by decreasing this :)
@@ -219,7 +219,42 @@ if(input_mode == "T"){
   seg2[,"endpos"] = as.numeric(seg1[keep_chrom,4])
   seg2[,4]=abs[keep_chrom]
   
-} else{
+} else if (input_mode == "O") {
+  
+  # Expects OncoSNP .cnvs file augmented with Log R Ratio and BAF using oncosnputils
+  # Columns: chr	start	end	copyNum	loh	rank	logLik	numMarkers	normFrac	state	ploidyNum
+  # majorCopyNumber minorCopyNumber	LRR	LRRShifted	BAF	numProbes	numSnpProbes
+  
+  print(paste("loading OncoSNP ", seg))
+  seg1 = read.csv(seg, stringsAsFactors = FALSE, sep = "\t")
+  chroms_a = seg1[, 1]
+  chroms = as.numeric(chroms_a)
+  
+  keep_seg = seg1[, "end"] - seg1[, "start"] > 1
+  keep_chrom = !is.na(chroms < 23)
+  
+  keep_both = keep_chrom & keep_seg
+  seg2 = matrix(nrow = dim(seg1[keep_both, ][1]), ncol = 4)
+  
+  colnames(seg2) = c("chr", "startpos", "endpos", "CN_Estimate")
+  
+  seg2[, "chr"] = as.numeric(seg1[keep_both, "chr"])
+  seg2[, "startpos"] = as.numeric(seg1[keep_both, "start"])
+  seg2[, "endpos"] = as.numeric(seg1[keep_both, "end"])
+  
+  if (cn_style == 1) {
+    
+    seg2[, 4] = as.numeric(seg1[keep_both, "copyNum"])
+    
+  } else if (cn_style == 2) {
+    
+    logratio = as.numeric(seg1[keep_both, "LRR"])
+    seg2[, 4] = 2*2^logratio
+    
+  }
+  
+  
+} else {
   print("no input mode specified!")
   q()
 }
@@ -304,7 +339,9 @@ py_snv_data[,"endpos"] = as.numeric(maf_keep[,"End_Position"])
 
 py_snv_data[,"ref_counts"]=maf_keep[,"t_ref_count"]
 py_snv_data[,"var_counts"]=maf_keep[,"t_alt_count"]
-if(input_mode == "S"){
+
+if(input_mode == "S") {
+  
   #rename columns in Sequenza data to match normal_cn, minor_cn, major_cn and position/chromoosome name style of Expands
   colnames(seg1)=c("chr","startpos","endpos","Bf","N.BAF","sd.BAF","depth.ratio","N.ratio","sd.ratio","CNt","major_cn","minor_cn","segmentLength") #note, we need to fill normal_cn with 2 for everything
   #set segment length
@@ -315,7 +352,27 @@ if(input_mode == "S"){
   out_pyclone = paste("./",sample,"_pyclone_in.tsv",sep="")
   keepers = !is.na(py_snv_data_assigned[,"normal_cn"])
   write.table(py_snv_data_assigned[keepers,],file=out_pyclone,sep="\t",quote=FALSE)
+  
+} else if (input_mode == "O") {
+  
+  #TODO
+  #rename columns in Sequenza data to match normal_cn, minor_cn, major_cn and position/chromoosome name style of Expands
+  colnames(seg1)=c("chr","startpos","endpos","Bf","N.BAF","sd.BAF","depth.ratio","N.ratio","sd.ratio","CNt","major_cn","minor_cn","segmentLength")
+  #note, we need to fill normal_cn with 2 for everything
+  #set segment length
+  seg1[,"segmentLength"] = seg1[,"end"] - seg1[,"start"]
+  py_snv_data_assigned = assignStatesToMutation(py_snv_data, seg1, c("minor_cn","major_cn"))
+  py_snv_data_assigned[, "gene"] = maf_keep[, "Hugo_Symbol"]
+  py_snv_data_assigned[, "mutation_id"] = paste(py_snv_data_assigned[, "gene"],
+                                                py_snv_data_assigned[, "startpos"], sep = "_")
+  out_pyclone = paste0("./", sample, "_pyclone_in.tsv")
+  keepers = !is.na(py_snv_data_assigned[, "normal_cn"])
+  write.table(py_snv_data_assigned[keepers, ], file = out_pyclone, sep = "\t", quote = FALSE)
+
 }
+
+
+
 #<-HERE
 
 if(include_loh > 0){
