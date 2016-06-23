@@ -23,20 +23,21 @@ max_score = as.double(args[4])
 
 precision = as.double(args[5])
 
-input_mode = args[6]  # S for sequenza, I for IGV-friendly seg file, T for Titan full segments file
+input_mode = args[6]  # S for sequenza, I for IGV-friendly seg file, T for Titan full segments file, O for augmented OncoSNP .cnvs file
 
 cn_style = args[7] # 1 for integer values, 2 for the actual values based on log ratio (2 is recommended by the EXPANDS author)
 
 # for testing
-seg = "/Volumes/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/oncoSNP/3-augmented_oncoSNP/DLC_0010.aug.cnvs"
-maf = "/Volumes/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/strelka_pipeline/9-aug_maf/DLC-10_S37.aug.maf"
-sample = "DLC_0010"
-includ_loh = 1
-max_score = 2.5
-precision = 0.05
-input_mode = "O"
-cn_style = 2
-
+# seg = "/Volumes/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/oncoSNP/3-augmented_oncoSNP/DLC_0010.aug.cnvs"
+# maf = "/Volumes/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/strelka_pipeline/9-aug_maf/DLC-10_S37.aug.maf"
+# #seg = "/Volumes/morinlab/projects/2016_dlbcl_ex_realn/tumour_copy_number/PT003_segments.txt"
+# #maf = "/Volumes/morinlab/projects/2016_dlbcl_ex_realn/aug_maf/PT003_Pd15.aug.maf"
+# sample = "DLC_0010"
+# includ_loh = 1
+# max_score = 2.5
+# precision = 0.05
+# input_mode = "O"
+# cn_style = 2
 
 #could also be made an argument if the user wants to really slow down the program by decreasing this :)
 min_freq = 0.1
@@ -226,30 +227,30 @@ if(input_mode == "T"){
   # majorCopyNumber minorCopyNumber	LRR	LRRShifted	BAF	numProbes	numSnpProbes
   
   print(paste("loading OncoSNP ", seg))
-  seg1 = read.csv(seg, stringsAsFactors = FALSE, sep = "\t")
-  chroms_a = seg1[, 1]
-  chroms = as.numeric(chroms_a)
+  seg1 <- read.csv(seg, stringsAsFactors = FALSE, sep = "\t")
+  chroms_a  <- seg1[, 1]
+  chroms <- as.numeric(chroms_a)
   
-  keep_seg = seg1[, "end"] - seg1[, "start"] > 1
-  keep_chrom = !is.na(chroms < 23)
+  keep_seg <- seg1[, "end"] - seg1[, "start"] > 1
+  keep_chrom  <- !is.na(chroms < 23)
   
-  keep_both = keep_chrom & keep_seg
-  seg2 = matrix(nrow = dim(seg1[keep_both, ][1]), ncol = 4)
+  keep_both <- keep_chrom & keep_seg
+  seg2 <- matrix(nrow = dim(seg1[keep_both, ][1]), ncol = 4)
   
-  colnames(seg2) = c("chr", "startpos", "endpos", "CN_Estimate")
+  colnames(seg2) <- c("chr", "startpos", "endpos", "CN_Estimate")
   
-  seg2[, "chr"] = as.numeric(seg1[keep_both, "chr"])
-  seg2[, "startpos"] = as.numeric(seg1[keep_both, "start"])
-  seg2[, "endpos"] = as.numeric(seg1[keep_both, "end"])
+  seg2[, "chr"] <- as.numeric(seg1[keep_both, "chr"])
+  seg2[, "startpos"] <- as.numeric(seg1[keep_both, "start"])
+  seg2[, "endpos"] <- as.numeric(seg1[keep_both, "end"])
   
   if (cn_style == 1) {
     
-    seg2[, 4] = as.numeric(seg1[keep_both, "copyNum"])
+    seg2[, 4] <- as.numeric(seg1[keep_both, "copyNum"])
     
   } else if (cn_style == 2) {
     
-    logratio = as.numeric(seg1[keep_both, "LRR"])
-    seg2[, 4] = 2*2^logratio
+    logratio <- as.numeric(seg1[keep_both, "LRR"])
+    seg2[, 4] <- 2*2^logratio
     
   }
   
@@ -331,7 +332,7 @@ assignStatesToMutation<-function(dm,cbs,cols){
 py_snv_data=matrix(nrow=dim(maf_keep[1]),ncol=10,dimnames=list(c(),c("gene","chr","startpos","endpos","mutation_id","ref_counts","var_counts","normal_cn","major_cn","minor_cn")))
 
 # Remove chr prefix
-py_snv_data[,"chr"] <- sub("^chr", "", maf_keep[,"Chromosome"])
+py_snv_data[, "chr"] <- sub("^chr", "", maf_keep[,"Chromosome"])
 
 #load start and end position into matrix
 py_snv_data[,"startpos"] = as.numeric(maf_keep[,"Start_Position"])
@@ -355,18 +356,17 @@ if(input_mode == "S") {
   
 } else if (input_mode == "O") {
   
-  #TODO
-  #rename columns in Sequenza data to match normal_cn, minor_cn, major_cn and position/chromoosome name style of Expands
-  colnames(seg1)=c("chr","startpos","endpos","Bf","N.BAF","sd.BAF","depth.ratio","N.ratio","sd.ratio","CNt","major_cn","minor_cn","segmentLength")
-  #note, we need to fill normal_cn with 2 for everything
-  #set segment length
-  seg1[,"segmentLength"] = seg1[,"end"] - seg1[,"start"]
-  py_snv_data_assigned = assignStatesToMutation(py_snv_data, seg1, c("minor_cn","major_cn"))
-  py_snv_data_assigned[, "gene"] = maf_keep[, "Hugo_Symbol"]
-  py_snv_data_assigned[, "mutation_id"] = paste(py_snv_data_assigned[, "gene"],
+  colnames(seg1) <- c("chr", "startpos", "endpos", "CN", "loh", "rank", "logLik", "numMarkers", 
+                     "normFrac", "state", "ploidyNum", "major_cn", "minor_cn", "log.ratio", "log.ratio.shifted", "BAF", "numProbes", "numSnpProbes")
+  seg1[, "normal_cn"] <- 2
+  seg1[, "segmentLength"] <- seg1[, "endpos"] - seg1[, "startpos"]
+  py_snv_data_assigned <- assignStatesToMutation(py_snv_data, seg1, c("minor_cn","major_cn"))
+  py_snv_data_assigned[, "gene"] <- maf_keep[, "Hugo_Symbol"]
+  py_snv_data_assigned[, "mutation_id"] <- paste(py_snv_data_assigned[, "gene"],
                                                 py_snv_data_assigned[, "startpos"], sep = "_")
-  out_pyclone = paste0("./", sample, "_pyclone_in.tsv")
-  keepers = !is.na(py_snv_data_assigned[, "normal_cn"])
+  
+  out_pyclone <- paste0("./", sample, "_pyclone_in.tsv")
+  keepers <- !is.na(py_snv_data_assigned[, "normal_cn"])
   write.table(py_snv_data_assigned[keepers, ], file = out_pyclone, sep = "\t", quote = FALSE)
 
 }
