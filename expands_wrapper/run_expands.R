@@ -28,16 +28,16 @@ input_mode = args[6]  # S for sequenza, I for IGV-friendly seg file, T for Titan
 cn_style = args[7] # 1 for integer values, 2 for the actual values based on log ratio (2 is recommended by the EXPANDS author)
 
 # for testing
-# seg = "/Volumes/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/oncoSNP/3-augmented_oncoSNP/DLC_0010.aug.cnvs"
-# maf = "/Volumes/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/strelka_pipeline/9-aug_maf/DLC-10_S37.aug.maf"
+seg = "/Volumes/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/oncoSNP/3-augmented_oncoSNP/DLC_0010.aug.cnvs"
+maf = "/Volumes/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/strelka_pipeline/9-aug_maf/DLC_0010.aug.maf"
 # #seg = "/Volumes/morinlab/projects/2016_dlbcl_ex_realn/tumour_copy_number/PT003_segments.txt"
 # #maf = "/Volumes/morinlab/projects/2016_dlbcl_ex_realn/aug_maf/PT003_Pd15.aug.maf"
-# sample = "DLC_0010"
-# includ_loh = 1
-# max_score = 2.5
-# precision = 0.05
-# input_mode = "O"
-# cn_style = 2
+sample = "DLC_0010"
+includ_loh = 1
+max_score = 2.5
+precision = 0.05
+input_mode = "O"
+cn_style = 2
 
 #could also be made an argument if the user wants to really slow down the program by decreasing this :)
 min_freq = 0.1
