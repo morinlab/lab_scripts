@@ -6,9 +6,11 @@
 #for the loh_flag, I recommend you set it to 1. This will include all copy-neutral LOH segments and their BAF in the clustering. This can help resolve clonal clusters with few mutations in them. 
 #Setting this to zero will ignore LOH events 
 
-args = commandArgs(trailingOnly=TRUE)
+args = commandArgs(trailingOnly = TRUE)
 print(args)
-library(matlab) #this dependency can probably be removed. Note the single line marked that uses a matlab function can probably be replaced with pure R
+
+library(matlab)
+#this dependency can probably be removed. Note the single line marked that uses a matlab function can probably be replaced with pure R
 library(expands)
 
 seg = args[1]
@@ -280,7 +282,7 @@ if(mask_deletions){
 }
 
 print(paste("loading MAF ",maf))
-maf_data = read.csv(maf,sep="\t",stringsAsFactors=FALSE )
+maf_data = read.csv(maf, sep = '\t', stringsAsFactors = FALSE )
 
 
 maf_keep_cols = c("Hugo_Symbol","Chromosome","Start_Position","End_Position","Reference_Allele","Tumor_Seq_Allele2","t_ref_count","t_alt_count","n_ref_count","n_alt_count")
