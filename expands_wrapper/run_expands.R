@@ -352,7 +352,7 @@ if(input_mode == "S") {
   py_snv_data_assigned[,"mutation_id"]=paste(py_snv_data_assigned[,"gene"],py_snv_data_assigned[,"startpos"],sep="_")
   out_pyclone = paste("./",sample,"_pyclone_in.tsv",sep="")
   keepers = !is.na(py_snv_data_assigned[,"normal_cn"])
-  write.table(py_snv_data_assigned[keepers,],file=out_pyclone,sep="\t",quote=FALSE)
+  write.table(py_snv_data_assigned[keepers,],file=out_pyclone,sep="\t",quote=FALSE, row.names = FALSE)
   
 } else if (input_mode == "O") {
   
@@ -367,7 +367,7 @@ if(input_mode == "S") {
   
   out_pyclone <- paste0("./", sample, "_pyclone_in.tsv")
   keepers <- !is.na(py_snv_data_assigned[, "normal_cn"])
-  write.table(py_snv_data_assigned[keepers, ], file = out_pyclone, sep = "\t", quote = FALSE)
+  write.table(py_snv_data_assigned[keepers, ], file = out_pyclone, sep = "\t", quote = FALSE, row.names = FALSE)
 
 }
 
