@@ -82,6 +82,10 @@ process_titan_seg <- function(seg, include_loh, cn_style) {
   
 }
 
+# Expecteds Sequenza-style seg file
+# Header:
+# chromosome	start.pos	 end.pos	Bf	N.BAF	 sd.BAF	depth.ratio	 
+# N.ratio	 sd.ratio	 CNt 	A	  B	 LPP
 process_sequenza_seg <- function(seg, include_loh, cn_style) {
   
   print(paste("Loading Sequenza seg file ", seg))
@@ -291,7 +295,7 @@ process_maf <- function(maf) {
 }
 
 # Assign copy numbers in cbs to mutations in dm
-assignStatesToMutation <- function(dm, cbs, cols) {
+assign_states_to_mutation <- function(dm, cbs, cols) {
   print("Assigning copy number to mutations for PyClone... ")
   
   for (k in 1:nrow(cbs)){
@@ -314,7 +318,7 @@ assignStatesToMutation <- function(dm, cbs, cols) {
   return(dm)
 }
 
-generate_pyclone_input <- function(seg, maf_keep, out_dir, sample) {
+generate_pyclone_input <- function(seg, maf_keep) {
   
   py_snv_data <- matrix(nrow = dim(maf_keep[1]), ncol = 10,
                         dimnames = list(c(), c("gene", "chr", "startpos", "endpos", "mutation_id",
@@ -344,16 +348,13 @@ generate_pyclone_input <- function(seg, maf_keep, out_dir, sample) {
   seg1[, "normal_cn"] <- 2
   seg1[, "segmentLength"] <- seg1[, "endpos"] - seg1[, "startpos"]
   
-  py_snv_data_assigned                  <- assignStatesToMutation(py_snv_data, seg1, c("minor_cn", "major_cn"))
+  py_snv_data_assigned                  <- assign_states_to_mutation(py_snv_data, seg1, c("minor_cn", "major_cn"))
   py_snv_data_assigned[, "gene"]        <- maf_keep[, "Hugo_Symbol"]
   py_snv_data_assigned[, "mutation_id"] <- paste(py_snv_data_assigned[, "gene"],
                                                  py_snv_data_assigned[, "startpos"], sep = "_")
   
   keepers <- !is.na(py_snv_data_assigned[, "normal_cn"])
   
-  write.table(py_snv_data_assigned[keepers, ], file = paste0(out_dir, sample, "_pyclone_in.tsv"),
-              sep = "\t", quote = FALSE, row.names = FALSE)
-  
-  print(paste0("PyClone input written to ", out_dir, sample, "_pyclone_in.tsv"))
+  return(py_snv_data_assigned[keepers, ])
   
 }
