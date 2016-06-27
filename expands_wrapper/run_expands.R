@@ -30,11 +30,11 @@ input_mode = args[6]  # S for sequenza, I for IGV-friendly seg file, T for Titan
 cn_style = args[7] # 1 for integer values, 2 for the actual values based on log ratio (2 is recommended by the EXPANDS author)
 
 # for testing
-# seg = "/Volumes/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/oncoSNP/3-augmented_oncoSNP/DLC_0010.aug.cnvs"
-# maf = "/Volumes/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/strelka_pipeline/9-aug_maf/DLC_0010.aug.maf"
+# seg = "/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/oncoSNP/3-augmented_oncoSNP/DLC_0386.aug.cnvs"
+# maf = "/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/strelka_pipeline/9.5-aug_maf_clean/DLC_0386.aug.maf"
 # #seg = "/Volumes/morinlab/projects/2016_dlbcl_ex_realn/tumour_copy_number/PT003_segments.txt"
 # #maf = "/Volumes/morinlab/projects/2016_dlbcl_ex_realn/aug_maf/PT003_Pd15.aug.maf"
-# sample = "DLC_0010"
+# sample = "DLC_0386"
 # includ_loh = 1
 # max_score = 2.5
 # precision = 0.05
@@ -315,8 +315,8 @@ assignStatesToMutation<-function(dm,cbs,cols){
   print("Assigning copy number to mutations for PyClone...")
   ##Assign copy numbers in cbs to mutations in dm
   for (k in 1:nrow(cbs)){
-    
-    idx=which(dm[,"chr"]==cbs[k,"chr"] & dm[,"startpos"]>=cbs[k,"startpos"] & dm[,"startpos"]<=cbs[k,"endpos"]);
+   
+    idx=which(as.numeric(dm[,"chr"])==cbs[k,"chr"] & as.numeric(dm[,"startpos"]) >=cbs[k,"startpos"] & as.numeric(dm[,"startpos"]) <=cbs[k,"endpos"]);
     if (length(idx)==0){
       next;
     }
@@ -337,6 +337,8 @@ py_snv_data=matrix(nrow=dim(maf_keep[1]),ncol=10,dimnames=list(c(),c("gene","chr
 py_snv_data[, "chr"] <- sub("^chr", "", maf_keep[,"Chromosome"])
 
 #load start and end position into matrix
+py_snv_data[,"startpos"] = maf_keep[,"Start_Position"]
+py_snv_data[,"endpos"] = maf_keep[,"End_Position"]
 py_snv_data[,"startpos"] = as.numeric(maf_keep[,"Start_Position"])
 py_snv_data[,"endpos"] = as.numeric(maf_keep[,"End_Position"])
 
