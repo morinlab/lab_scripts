@@ -300,7 +300,8 @@ assign_states_to_mutation <- function(dm, cbs, cols) {
   
   for (k in 1:nrow(cbs)){
     
-    idx <- which(dm[, "chr"] == cbs[k, "chr"] & dm[, "startpos"] >= cbs[k, "startpos"] & dm[, "startpos"] <= cbs[k, "endpos"])
+    # Get all mutations in current segment
+    idx <- which(as.numeric(dm[, "chr"]) == cbs[k, "chr"] & as.numeric(dm[, "startpos"]) >= cbs[k, "startpos"] & as.numeric(dm[, "startpos"]) <= cbs[k, "endpos"])
     
     if (length(idx) == 0){
       next
