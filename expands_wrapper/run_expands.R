@@ -316,7 +316,7 @@ assignStatesToMutation<-function(dm,cbs,cols){
   ##Assign copy numbers in cbs to mutations in dm
   for (k in 1:nrow(cbs)){
    
-    idx=which(as.numeric(dm[,"chr"])==cbs[k,"chr"] & as.numeric(dm[,"startpos"]) >=cbs[k,"startpos"] & as.numeric(dm[,"startpos"]) <=cbs[k,"endpos"]);
+    idx=which(as.numeric(dm[,"chr"])==cbs[k,"chr"] & as.numeric(dm[,"startpos"]) >= cbs[k,"startpos"] & as.numeric(dm[,"startpos"]) <=cbs[k,"endpos"]);
     if (length(idx)==0){
       next;
     }

@@ -12,11 +12,19 @@
 #   [--pyclone_dir PYCLONE_DIR]
 
 
+# ------------------ Source custom EXPANDS utils ----------------
+# See http://stackoverflow.com/a/1815743
+command <- commandArgs(trailingOnly = FALSE)
+script_name <- sub("--file=", "", command[grep("--file=", command)])
+script_path <- dirname(script_name)
+expands_utils <- file.path(script_path, "expandsUtils.R")
+source(expands_utils, chdir = TRUE)
+
+
 # -------------------------- Libraries --------------------------
 library(matlab)
 library(expands)
 library(argparser)
-source("expandsUtils.R")
 
 
 # -------------------------- Define arguments -------------------
@@ -39,15 +47,13 @@ p <- add_argument(p, "--loh", default = 1,
                      2: include deletion LOH only, 3: include all LOH")
 p <- add_argument(p, "--max_score", default = 2.25, help = "max_score for EXPANDS")
 p <- add_argument(p, "--precision", default = 0.05, help = "precision for EXPANDS")
-p <- add_arguemnt(p, "--cn_style", default = 2,
+p <- add_argument(p, "--cn_style", default = 2,
                   help = "1 for integer values, 2 for rational numbers calculated from CN log ratios (recommended)")
 p <- add_argument(p, "--pyclone_dir", default = NULL, help = "Specific output directory for PyClone files")
 
 
 # --------- Get arguments / define other shared variables -------
 args <- parse_args(p)
-#args <- parse_args(p, c("~/tmp/DLC_0010.aug.cnvs", "O", "~/tmp/DLC_0010.aug.maf", "DLC_0010",
-#                        "~/tmp/expands"))
 
 seg         <- args$seg
 input_mode  <- args$input_mode
@@ -68,10 +74,14 @@ max_PM <- 5
 # ------------------------------------------------------------- 
 # Process CNV data from segments file into input CBS matrix for EXPANDS
 
-list[seg2, loh_snv_data] <- ifelse(input_mode == "T", process_titan_seg(seg, include_loh, cn_style),       # Titan
-                            ifelse(input_mode == "S", process_sequenza_seg(seg, include_loh, cn_style),    # Sequenza
-                            ifelse(input_mode == "I", process_igv_seg(seg, include_loh, cn_style),         # IGV-friendly
-                            ifelse(input_mode == "O", process_oncosnp_seg(seg, include_loh, cn_style)))))  # OncoSNP
+processed_seg_output <- ifelse(input_mode == "T", process_titan_seg(seg, include_loh, cn_style),       # Titan
+                        ifelse(input_mode == "S", process_sequenza_seg(seg, include_loh, cn_style),    # Sequenza
+                        ifelse(input_mode == "I", process_igv_seg(seg, include_loh, cn_style),         # IGV-friendly
+                        ifelse(input_mode == "O", process_oncosnp_seg(seg, include_loh, cn_style),     # OncoSNP
+                        NULL))))  
+
+seg2 <- processed_seg_output[1]
+loh_snv_data <- processed_seg_output[2]
 
 # Remove? copied and pasted for now
 mask_deletions = 0 
@@ -95,10 +105,13 @@ if (mask_deletions) {
 # Process SNV data from MAF into input SNV matrix for EXPANDS
 # and genrate PyClone input file
 
-list[snv_data, maf_keep] <- process_maf(maf)
+process_maf_output <- process_maf(maf)
+snv_data <- process_maf_output[1]
+maf_keep <- process_maf_output[2]
+
 pyclone_input <- generate_pyclone_input(seg, maf_keep)
 
-out_pyclone <- paste0(out_dir, sample, "_pyclone_in.tsv")
+out_pyclone <- paste0(out_dir, "/", sample, "_pyclone_in.tsv")
 write.table(pyclone_input, file = out_pyclone,
             sep = "\t", quote = FALSE, row.names = FALSE)
 
@@ -111,7 +124,7 @@ print(paste0("PyClone input written to ", out_pyclone))
 if (include_loh > 0) {
   
   merge_snv <- rbind(loh_snv_data, snv_data)
-  #loh_string = "LOH_"
+  loh_string <- "LOH_"
   samp_param <- paste0(sample, loh_string, "_state_INDEL_DelMask_maxpm_", max_PM,
                        "_score_", max_score, ",precision_", precision)
 } else {

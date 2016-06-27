@@ -253,6 +253,8 @@ process_oncosnp_seg <- function(seg, include_loh, cn_style) {
     seg2[, 4] <- 2*2^logratio
     
   }
+
+  loh_snv_data <- NULL
   
   output <- list(seg2, loh_snv_data)
   return(output)
@@ -320,7 +322,12 @@ assign_states_to_mutation <- function(dm, cbs, cols) {
 }
 
 generate_pyclone_input <- function(seg, maf_keep) {
-  
+
+  seg1 <- read.csv(seg, stringsAsFactors = FALSE, sep = "\t")
+
+  # Convert to matrix
+  maf_keep <- do.call(rbind, maf_keep)
+
   py_snv_data <- matrix(nrow = dim(maf_keep[1]), ncol = 10,
                         dimnames = list(c(), c("gene", "chr", "startpos", "endpos", "mutation_id",
                                                "ref_counts", "var_counts", "normal_cn", "major_cn", "minor_cn")))
