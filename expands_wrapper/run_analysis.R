@@ -9,7 +9,8 @@
 #   [--max_score MAX_SCORE] \
 #   [--precision PRECISION] \
 #   [--cn_style {1, 2}] \
-#   [--pyclone_dir PYCLONE_DIR]
+#   [--pyclone_dir PYCLONE_DIR] \
+#   [--pyclone_only {TRUE, FALSE}]
 
 
 # ------------------ Source custom EXPANDS utils ----------------
@@ -50,26 +51,27 @@ p <- add_argument(p, "--precision", default = 0.05, help = "precision for EXPAND
 p <- add_argument(p, "--cn_style", default = 2,
                   help = "1 for integer values, 2 for rational numbers calculated from CN log ratios (recommended)")
 p <- add_argument(p, "--pyclone_dir", default = NULL, help = "Specific output directory for PyClone files")
+p <- add_argument(p, "--pyclone_only", default = FALSE, help = "TRUE: Generate PyClone input only, skip EXPANDS")
 
 
 # --------- Get arguments / define other shared variables -------
 args <- parse_args(p)
 
-seg         <- args$seg
-input_mode  <- args$input_mode
-maf         <- args$maf
-sample      <- args$sample
-include_loh <- args$loh
-max_score   <- as.double(args$max_score)
-precision   <- as.double(args$precision)
-cn_style    <- args$cn_style
-out_dir     <- args$output_dir
-pyclone_dir <- ifelse(args$pyclone_dir, args$pyclone_dir, args$output_dir)
+seg          <- args$seg
+input_mode   <- args$input_mode
+maf          <- args$maf
+sample       <- args$sample
+include_loh  <- args$loh
+max_score    <- as.double(args$max_score)
+precision    <- as.double(args$precision)
+cn_style     <- args$cn_style
+out_dir      <- args$output_dir
+pyclone_dir  <- ifelse(is.na(args$pyclone_dir), out_dir, args$pyclone_dir)
+pyclone_only <- args$pyclone_only
 
 # could be made arguments
 min_freq <-  0.1
 max_PM <- 5
-
 
 # ------------------------------------------------------------- 
 # Process CNV data from segments file into input CBS matrix for EXPANDS
@@ -81,6 +83,8 @@ processed_seg_output <- ifelse(input_mode == "T", process_titan_seg(seg, include
                         NULL))))  
 
 seg2 <- processed_seg_output[1]
+seg2 <- do.call(rbind, seg2)
+
 loh_snv_data <- processed_seg_output[2]
 
 # Remove? copied and pasted for now
@@ -111,12 +115,20 @@ maf_keep <- process_maf_output[2]
 
 pyclone_input <- generate_pyclone_input(seg, maf_keep)
 
-out_pyclone <- paste0(out_dir, "/", sample, "_pyclone_in.tsv")
+out_pyclone <- paste0(pyclone_dir, "/", sample, "_pyclone_in.tsv")
 write.table(pyclone_input, file = out_pyclone,
             sep = "\t", quote = FALSE, row.names = FALSE)
 
 print(paste0("PyClone input written to ", out_pyclone))
 
+if (pyclone_only == TRUE) {
+
+  print("--pyclone_only set to TRUE and PyClone input complete. Skipping EXPANDS and exiting script.")
+  opt <- options(show.error.messages=FALSE) 
+  on.exit(options(opt)) 
+  stop()
+
+}
 
 # -------------------------------------------------------------
 # Merge LOH data into SNV matrix
@@ -125,14 +137,16 @@ if (include_loh > 0) {
   
   merge_snv <- rbind(loh_snv_data, snv_data)
   loh_string <- "LOH_"
-  samp_param <- paste0(sample, loh_string, "_state_INDEL_DelMask_maxpm_", max_PM,
+  samp_param <- paste0(sample, "_", loh_string, "_state_INDEL_DelMask_maxpm_", max_PM,
                        "_score_", max_score, ",precision_", precision)
 } else {
   loh_string <- "no_LOH"
   merge_snv <- snv_data
-  samp_param <- paste0(sample, loh_string, "_noLOH_INDEL_DelMask_maxpm_", max_PM,
+  samp_param <- paste0(sample, "_", loh_string, "_noLOH_INDEL_DelMask_maxpm_", max_PM,
                       "_score_", max_score, ",precision_", precision)
 }
+
+merge_snv <- do.call(rbind, merge_snv)
 
 print("Merged:")
 print(merge_snv)
@@ -145,7 +159,7 @@ print(seg2)
 
 # 1. Assign each mutation a copy number based on the segmented CN data
 # and filter by CN status and AF
-dm <- assignQuantityToMutation(merge_snv, seg2, "CN_Estimate")
+dm <- assignQuantityToMutation(merge_snv, seg2, quantityColumnLabel = "CN_Estimate")
 
 plotF <- 1
 
@@ -167,7 +181,7 @@ if (length(ii) > 0) {
               "copies) within that region. Consider increasing value of parameter max_PM to facilitate inclusion of these SNVs, provided high coverage data (> 150 fold) is available"))
   dm <- dm[-ii, ]
 }
-ii <- which(dm[, "AF_Tumor"] * dm[, "CN_Estimate"] < min_freq)
+ii <- which(as.numeric(dm[, "AF_Tumor"]) * as.numeric(dm[, "CN_Estimate"]) < min_freq)
 if (length(ii) > 0) {
   print(paste(length(ii), " SNV(s) excluded due to AF*CN below ", min_freq,
               " (SNV can't be explained by an SP present in ",min_freq*100 ,"% or more of the sample)."))
@@ -204,7 +218,7 @@ print(SPs)
 
 
 # 3. Assign each SNV to one of predicted SPs
-aM <- assignMutations(dm, sps, max_PM = max_PM)
+aM <- assignMutations(dm, SPs, max_PM = max_PM)
 
 # Unmasks the deletions for vizualization
 # can probably be removed
