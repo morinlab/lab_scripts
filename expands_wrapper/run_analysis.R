@@ -56,6 +56,11 @@ p <- add_argument(p, "--pyclone_only", default = FALSE, help = "TRUE: Generate P
 # --------- Get arguments / define other shared variables -------
 args <- parse_args(p)
 
+# for testing with oncosnp
+# args <- parse_args(p, c("/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/oncoSNP/3-augmented_oncoSNP/DLC_0009.aug.cnvs", "O",
+#                        "/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/strelka_pipeline/9.5-aug_maf_clean/DLC_0009.aug.maf",
+#                        "DLC_0009", "~/test_expands_wrapper"))
+
 seg          <- args$seg
 input_mode   <- args$input_mode
 maf          <- args$maf
@@ -106,7 +111,7 @@ if (mask_deletions) {
 
 # -------------------------------------------------------------
 # Process SNV data from MAF into input SNV matrix for EXPANDS
-# and genrate PyClone input file
+# and generate PyClone input file
 
 process_maf_output <- process_maf(maf)
 snv_data <- process_maf_output[1]

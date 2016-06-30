@@ -328,16 +328,25 @@ assign_states_to_mutation_by_rank <- function(dm, cbs, cols) {
     best_rank <- 0
     idx <- which(as.numeric(dm[k, "chr"]) == cbs[, "chr"] & as.numeric(dm[k, "startpos"]) >= cbs[, "startpos"] & as.numeric(dm[k, "endpos"]) <= cbs[, "endpos"])
     
+    if (length(idx) == 0){
+      next
+    }
+    
     # if the mutations is found in multiple segments, assign copy number
     # from the segment with highest rank
     for (j in 1:length(idx)) {
+      
         rank <- cbs[j, "rank"]
-        if (rank > best_rank) top_ranked_idx <- idx[j]
+        
+        if (rank > best_rank) {
+          top_ranked_idx <- idx[j]
+          best_rank <- rank
+        }
+
     }
   
-    cols <- c("minor_cn", "major_cn")
-    dm[k, cols] <- repmat(as.numeric(cbs[top_ranked_idx, cols]), length(idx), 1)
-    dm[k, "normal_cn"] <- rep(2, length(idx))
+    dm[k, cols] <- repmat(as.numeric(cbs[top_ranked_idx, cols]), 1)
+    dm[k, "normal_cn"] <- rep(2, 1)
     
   }
   
@@ -384,8 +393,12 @@ generate_pyclone_input <- function(seg, maf_keep, input_mode) {
   seg1[, "segmentLength"] <- seg1[, "endpos"] - seg1[, "startpos"]
   
   # if oncosnp, assign states by rank, otherwise, use general assign_states function
-  py_snv_data_assigned                  <- ifelse(input_mode == "O", assign_states_to_mutation_by_rank(py_snv_data, seg1, c("minor_cn", "major_cn")),
-                                                                                                       assign_states_to_mutation(py_snv_data, seg1, c("minor_cn", "major_cn")))
+  if (input_mode == "O") {
+    py_snv_data_assigned <- assign_states_to_mutation_by_rank(py_snv_data, seg1, c("minor_cn", "major_cn"))
+  } else {
+    py_snv_data_assigned <- assign_states_to_mutation(py_snv_data, seg1, c("minor_cn", "major_cn"))
+  }
+  
   py_snv_data_assigned[, "gene"]        <- maf_keep[, "Hugo_Symbol"]
   py_snv_data_assigned[, "mutation_id"] <- paste(py_snv_data_assigned[, "gene"],
                                                  py_snv_data_assigned[, "startpos"], sep = "_")
