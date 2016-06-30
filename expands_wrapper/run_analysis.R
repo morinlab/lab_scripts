@@ -27,7 +27,6 @@ library(matlab)
 library(expands)
 library(argparser)
 
-
 # -------------------------- Define arguments -------------------
 p <- arg_parser("EXPANDS")
 
@@ -88,10 +87,10 @@ seg2 <- do.call(rbind, seg2)
 loh_snv_data <- processed_seg_output[2]
 
 # Remove? copied and pasted for now
-mask_deletions = 0 
+mask_deletions = FALSE
 
 if(cn_style == 2){
-  mask_deletions = 0
+  mask_deletions = FALSE
 }
 
 if (mask_deletions) {
@@ -113,7 +112,7 @@ process_maf_output <- process_maf(maf)
 snv_data <- process_maf_output[1]
 maf_keep <- process_maf_output[2]
 
-pyclone_input <- generate_pyclone_input(seg, maf_keep)
+pyclone_input <- generate_pyclone_input(seg, maf_keep, input_mode)
 
 out_pyclone <- paste0(pyclone_dir, "/", sample, "_pyclone_in.tsv")
 write.table(pyclone_input, file = out_pyclone,
@@ -223,8 +222,11 @@ aM <- assignMutations(dm, SPs, max_PM = max_PM)
 # Unmasks the deletions for vizualization
 # can probably be removed
 if (mask_deletions) {
+  
   seg2[, "CN_Estimate"] <- seg2[, "CN_Estimate_nomask"]
+  
   dm <- assignQuantityToMutation(merge_snv, seg2, "CN_Estimate")
+  
   some <- dm[, "startpos"] %in% aM$dm[, "startpos"]
   
   aM$dm[, "CN_Estimate"] <- dm[some, "CN_Estimate"]

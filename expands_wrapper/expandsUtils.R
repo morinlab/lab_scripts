@@ -1,5 +1,3 @@
-
-
 # Load and process Titan output file
 # Header:
 # Sample	Chromosome	Start_Position(bp)	End_Position(bp)	Length(bp)
@@ -150,7 +148,7 @@ process_sequenza_seg <- function(seg, include_loh, cn_style) {
   keep_both <- keep_chrom & keep_seg
   seg2 <- matrix(nrow = dim(seg1[keep_both, ][1]), ncol = 4)
   
-  colnames(seg2) <- c("chr",  "startpos","endpos"," CN_Estimate")
+  colnames(seg2) <- c("chr",  "startpos","endpos","CN_Estimate")
   
   seg2[, "chr"]      <- as.numeric(seg1[keep_both, "chromosome"])
   seg2[, "startpos"] <- as.numeric(seg1[keep_both, "start.pos"])
@@ -203,8 +201,7 @@ process_igv_seg <- function(seg, include_loh, cn_style) {
     loh_snv_data[, "REF"]      <- as.numeric(rep(65, length(vaf_loh_event)))
     loh_snv_data[, "ALT"]      <- as.numeric(rep(45, length(vaf_loh_event)))
     loh_snv_data[, "PN_B"]     <- as.numeric(rep(1, length(vaf_loh_event)))
-    # print(loh_snv_data)
-    # q()
+  
   }
   
   seg2 <- matrix(nrow = length(seg1[keep_chrom, 1]), ncol = 4)
@@ -279,7 +276,7 @@ process_maf <- function(maf) {
                      dimnames = list(c(), c("chr", "startpos", "endpos", "REF", "ALT", "AF_Tumor", "PN_B")))
   
   # Remove chr prefix
-  snv_data[, "chr"] <- sub("^chr", "", maf_data[, "Chromosome"])
+  snv_data[, "chr"] <- as.numeric(sub("^chr", "", maf_data[, "Chromosome"]))
   
   # Load start and end position into matrix
   snv_data[, "startpos"] <- as.numeric(maf_keep[, "Start_Position"])
@@ -321,7 +318,37 @@ assign_states_to_mutation <- function(dm, cbs, cols) {
   return(dm)
 }
 
-generate_pyclone_input <- function(seg, maf_keep) {
+# Assign copy numbers in cbs to mutations in dm
+# for OncoSNP output (use max rank)
+assign_states_to_mutation_by_rank <- function(dm, cbs, cols) {
+  print("Assigning copy number to mutations for PyClone using rank... ")
+  
+  for (k in 1:nrow(dm)){
+    
+    best_rank <- 0
+    idx <- which(as.numeric(dm[k, "chr"]) == cbs[, "chr"] & as.numeric(dm[k, "startpos"]) >= cbs[, "startpos"] & as.numeric(dm[k, "endpos"]) <= cbs[, "endpos"])
+    
+    # if the mutations is found in multiple segments, assign copy number
+    # from the segment with highest rank
+    for (j in 1:length(idx)) {
+        rank <- cbs[j, "rank"]
+        if (rank > best_rank) top_ranked_idx <- idx[j]
+    }
+  
+    cols <- c("minor_cn", "major_cn")
+    dm[k, cols] <- repmat(as.numeric(cbs[top_ranked_idx, cols]), length(idx), 1)
+    dm[k, "normal_cn"] <- rep(2, length(idx))
+    
+  }
+  
+  dm <- dm[, colnames(dm) != "segmentLength"]
+  print("... Done.")
+  
+  return(dm)
+}
+
+
+generate_pyclone_input <- function(seg, maf_keep, input_mode) {
 
   seg1 <- read.csv(seg, stringsAsFactors = FALSE, sep = "\t")
 
@@ -333,7 +360,7 @@ generate_pyclone_input <- function(seg, maf_keep) {
                                                "ref_counts", "var_counts", "normal_cn", "major_cn", "minor_cn")))
   
   # Remove chr prefix
-  py_snv_data[, "chr"] <- sub("^chr", "", maf_keep[,"Chromosome"])
+  py_snv_data[, "chr"] <- as.numeric(sub("^chr", "", maf_keep[,"Chromosome"]))
   
   # load start and end position into matrix
   py_snv_data[, "startpos"]   <- as.numeric(maf_keep[, "Start_Position"])
@@ -342,7 +369,7 @@ generate_pyclone_input <- function(seg, maf_keep) {
   py_snv_data[, "ref_counts"] <- maf_keep[, "t_ref_count"]
   py_snv_data[, "var_counts"] <- maf_keep[, "t_alt_count"]
   
-  # rename columns
+  # seg rename columns
   if(input_mode == "S") {
     colnames(seg1) <- c("chr", "startpos", "endpos", "Bf", "N.BAF", "sd.BAF", "depth.ratio",
                         "N.ratio", "sd.ratio", "CNt", "major_cn", "minor_cn", "segmentLength")
@@ -356,7 +383,9 @@ generate_pyclone_input <- function(seg, maf_keep) {
   seg1[, "normal_cn"] <- 2
   seg1[, "segmentLength"] <- seg1[, "endpos"] - seg1[, "startpos"]
   
-  py_snv_data_assigned                  <- assign_states_to_mutation(py_snv_data, seg1, c("minor_cn", "major_cn"))
+  # if oncosnp, assign states by rank, otherwise, use general assign_states function
+  py_snv_data_assigned                  <- ifelse(input_mode == "O", assign_states_to_mutation_by_rank(py_snv_data, seg1, c("minor_cn", "major_cn")),
+                                                                                                       assign_states_to_mutation(py_snv_data, seg1, c("minor_cn", "major_cn")))
   py_snv_data_assigned[, "gene"]        <- maf_keep[, "Hugo_Symbol"]
   py_snv_data_assigned[, "mutation_id"] <- paste(py_snv_data_assigned[, "gene"],
                                                  py_snv_data_assigned[, "startpos"], sep = "_")
