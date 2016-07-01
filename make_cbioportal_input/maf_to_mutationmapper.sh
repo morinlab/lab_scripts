@@ -3,6 +3,8 @@
 # test if a file provided, otherwise read from stdin
 [ $# -ge 1 -a -f "$1" ] && input="$1" || input="-"
 
+(>&2 echo "Generating MutationMapper input from MAF...")
+
 # filter out synonymous variants and 
 # arrange columns in mutation mapper format
 cat $input | tee >(egrep -h "^(#|Hugo_Symbol)") \

@@ -3,6 +3,8 @@
 # test if a file provided, otherwise read from stdin
 [ $# -ge 1 -a -f "$1" ] && input="$1" || input="-"
 
+(>&2 echo "Generating OncoPrinter input from MutationMapper input...")
+
 # assumes a list of sample IDs exists (samples.txt)
 # convert mutation mapper format to input format
 # for oncoprinter
