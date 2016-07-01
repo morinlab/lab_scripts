@@ -1,4 +1,4 @@
-#!/bin/bash
+	#!/bin/bash
 
 # test if a file provided, otherwise read from stdin
 [ $# -ge 1 -a -f "$1" ] && input="$1" || input="-"
@@ -13,4 +13,3 @@ cat $input | tail -n+2 \
 	| sort -k2,2 -k1,1 \
 	| uniq \
 	| sed '1 iSample	Gene	Alteration	Type'
-cat samples.txt
