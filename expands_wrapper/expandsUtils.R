@@ -405,6 +405,7 @@ generate_pyclone_input <- function(seg, maf_keep, input_mode) {
   
   keepers <- !is.na(py_snv_data_assigned[, "normal_cn"])
   
-  return(py_snv_data_assigned[keepers, ])
+  # preserve structure even if only 1 variant returned
+  return(py_snv_data_assigned[keepers, , drop = FALSE])
   
 }
