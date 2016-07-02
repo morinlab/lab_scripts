@@ -168,7 +168,7 @@ if(input_mode == "T"){
 	
 } else if (input_mode == "I"){
 	#LOH information needs to be included in these files and BAF
-	#example format: sample	chr	start	end	LOH_flag	BAF	median
+	#example format: sample	chr	start	end	LOH_flagBAF	median
 	seg1=read.csv(seg,stringsAsFactors=FALSE,sep="\t")
 	#convert last column from log ratio to absolute CN
 	logratios = seg1[,length(seg1[1,])]
@@ -242,13 +242,16 @@ maf_keep_cols = c("Hugo_Symbol","Chromosome","Start_Position","End_Position","Re
 
 #this method works with Indels but is a bit hacky because a fake ref/alt value is used. It doesn't really matter as long as you ignore those values in the output. Expands ignores them AFAIK
 maf_keep = maf_data[,maf_keep_cols]
+#for chr MAFs
+maf_keep[,"Chromosome"] = sapply(maf_keep[,"Chromosome"],function(x) substr(x,4,6))
+head(maf_keep)
 maf_keep[,"Reference_Allele"]=sapply(maf_keep[,"Reference_Allele"],function(x) substr(x,1,1))
 maf_keep[,"Tumor_Seq_Allele2"]=sapply(maf_keep[,"Tumor_Seq_Allele2"],function(x) substr(x,1,1))
 
 snv_data=matrix(nrow=dim(maf_keep[1]),ncol=7,dimnames=list(c(),c("chr","startpos","endpos","REF","ALT","AF_Tumor","PN_B")))
 
 
-snv_data[,"chr"] = as.numeric(maf_data[,"Chromosome"])
+snv_data[,"chr"] = as.numeric(maf_keep[,"Chromosome"])
 
 
 #load start and end position into matrix
