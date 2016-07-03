@@ -128,9 +128,7 @@ print(paste0("PyClone input written to ", out_pyclone))
 if (pyclone_only == TRUE) {
 
   print("--pyclone_only set to TRUE and PyClone input complete. Skipping EXPANDS and exiting script.")
-  opt <- options(show.error.messages=FALSE) 
-  on.exit(options(opt)) 
-  stop()
+  quit(status = 0)
 
 }
 
