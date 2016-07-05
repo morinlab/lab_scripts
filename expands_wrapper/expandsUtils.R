@@ -266,6 +266,8 @@ process_maf <- function(maf) {
   maf_keep_cols <- c("Hugo_Symbol", "Chromosome", "Start_Position", "End_Position", "Reference_Allele", "Tumor_Seq_Allele2",
                     "t_ref_count", "t_alt_count", "n_ref_count", "n_alt_count")
   
+  
+  
   # this method works with Indels but is a bit hacky because a fake ref/alt value is used.
   # It doesn't really matter as long as you ignore those values in the output. Expands ignores them AFAIK
   maf_keep <- maf_data[, maf_keep_cols]
@@ -350,7 +352,7 @@ assign_states_to_mutation_by_rank <- function(dm, cbs, cols) {
     
   }
   
-  dm <- dm[, colnames(dm) != "segmentLength"]
+  dm <- dm[, colnames(dm) != "segmentLength", drop = FALSE]
   print("... Done.")
   
   return(dm)

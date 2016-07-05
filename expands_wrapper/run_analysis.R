@@ -57,9 +57,9 @@ p <- add_argument(p, "--pyclone_only", default = FALSE, help = "TRUE: Generate P
 args <- parse_args(p)
 
 # for testing with oncosnp
-# args <- parse_args(p, c("/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/oncoSNP/test_rank_selection/test.aug.cnvs", "O",
-#                       "/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/oncoSNP/test_rank_selection/test.maf",
-#                       "test", "/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/oncoSNP/test_rank_selection/"))
+# args <- parse_args(p, c("/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/oncoSNP/3-augmented_oncoSNP/DLC_0002.aug.cnvs", "O",
+#                       "/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/deep_sequencing/3-aug_mafs/DLC_0002.maf",
+#                       "test", "/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/deep_sequencing/test"))
 
 seg          <- args$seg
 input_mode   <- args$input_mode
