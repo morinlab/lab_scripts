@@ -55,7 +55,7 @@ p <- add_argument(p, "--pyclone_only", default = FALSE, help = "TRUE: Generate P
 
 
 # --------- Get arguments / define other shared variables -------
-#args <- parse_args(p)
+args <- parse_args(p)
 
 # for testing with oncosnp
 #args <- parse_args(p, c("../tumour_copy_number/PT419_segments.txt", "S",
