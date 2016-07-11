@@ -138,7 +138,7 @@ process_sequenza_seg <- function(seg, include_loh, cn_style) {
     # don't set as LOH because it works better if you don't. Unsure why
   }
   
-  chroms_a <- seg1[, 2]
+  chroms_a <- seg1[, "chromosome"]
   chroms <- as.numeric(chroms_a)
   
   keep_seg <- seg1[, "end.pos"] - seg1[, "start.pos"] > 1
@@ -225,7 +225,7 @@ process_oncosnp_seg <- function(seg, include_loh, cn_style) {
   
   print(paste("loading OncoSNP ", seg))
   seg1 <- read.csv(seg, stringsAsFactors = FALSE, sep = "\t")
-  chroms_a  <- seg1[, 1]
+  chroms_a  <- seg1[, "chr"]
   chroms <- as.numeric(chroms_a)
   
   keep_seg <- seg1[, "end"] - seg1[, "start"] > 1
@@ -266,31 +266,42 @@ process_maf <- function(maf) {
   maf_keep_cols <- c("Hugo_Symbol", "Chromosome", "Start_Position", "End_Position", "Reference_Allele", "Tumor_Seq_Allele2",
                     "t_ref_count", "t_alt_count", "n_ref_count", "n_alt_count")
   
-  
-  
   # this method works with Indels but is a bit hacky because a fake ref/alt value is used.
   # It doesn't really matter as long as you ignore those values in the output. Expands ignores them AFAIK
   maf_keep <- maf_data[, maf_keep_cols]
   maf_keep[, "Reference_Allele"]  <- sapply(maf_keep[, "Reference_Allele"], function(x) substr(x,1,1))
   maf_keep[, "Tumor_Seq_Allele2"] <- sapply(maf_keep[, "Tumor_Seq_Allele2"], function(x) substr(x,1,1))
   
-  snv_data <- matrix(nrow = dim(maf_keep[1]), ncol = 7,
+  # Remove chr prefix if it exists
+  test_chr <- maf_keep[1, "Chromosome"]
+  if (grepl("chr", test_chr)) {
+    # 'chr' prefix exists
+    maf_keep[, "Chromosome"] <- sub("^chr", "", maf_keep[, "Chromosome"])
+  }
+  
+  # Keep mutations on autosomes only
+  chroms_a  <- maf_keep[, "Chromosome"]
+  chroms <- as.numeric(chroms_a)
+  keep_chrom  <- !is.na(chroms < 23)
+  
+  snv_data <- matrix(nrow = dim(maf_keep[keep_chrom, ][1]), ncol = 7,
                      dimnames = list(c(), c("chr", "startpos", "endpos", "REF", "ALT", "AF_Tumor", "PN_B")))
   
-  # Remove chr prefix
-  snv_data[, "chr"] <- as.numeric(sub("^chr", "", maf_data[, "Chromosome"]))
-  
   # Load start and end position into matrix
-  snv_data[, "startpos"] <- as.numeric(maf_keep[, "Start_Position"])
-  snv_data[, "endpos"]   <- as.numeric(maf_keep[, "End_Position"])
-  snv_data[, "REF"]      <- sapply(maf_keep[, "Reference_Allele"], utf8ToInt)
-  snv_data[, "ALT"]      <- sapply(maf_keep[, "Tumor_Seq_Allele2"], utf8ToInt)
-  snv_data[, "AF_Tumor"] <- maf_keep[, "t_alt_count"] / (maf_keep[, "t_alt_count"] + maf_keep[, "t_ref_count"])
+  snv_data[, "chr"]      <- as.numeric(maf_keep[keep_chrom, "Chromosome"])
+  snv_data[, "startpos"] <- as.numeric(maf_keep[keep_chrom, "Start_Position"])
+  snv_data[, "endpos"]   <- as.numeric(maf_keep[keep_chrom, "End_Position"])
+  snv_data[, "REF"]      <- sapply(maf_keep[keep_chrom, "Reference_Allele"], utf8ToInt)
+  snv_data[, "ALT"]      <- sapply(maf_keep[keep_chrom, "Tumor_Seq_Allele2"], utf8ToInt)
+  snv_data[, "AF_Tumor"] <- maf_keep[keep_chrom, "t_alt_count"] / (maf_keep[keep_chrom, "t_alt_count"] + maf_keep[keep_chrom, "t_ref_count"])
   
-  # set flag to somatic for all SNVs
+  # Set flag to somatic for all SNVs
   snv_data[, "PN_B"] <- 0
   
-  outputs <- list(snv_data, maf_keep)
+  # Exclude mitochondrial chromosomes from maf_keep
+  not_chr_m <- !(chroms_a == "M")
+  
+  outputs <- list(snv_data, maf_keep[not_chr_m, ])
   return(outputs)
   
 }

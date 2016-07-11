@@ -23,9 +23,10 @@ source(expands_utils, chdir = TRUE)
 
 
 # -------------------------- Libraries --------------------------
-library(matlab)
-library(expands)
-library(argparser)
+suppressWarnings(library(matlab))
+suppressWarnings(library(expands))
+suppressWarnings(library(argparser))
+
 
 # -------------------------- Define arguments -------------------
 p <- arg_parser("EXPANDS")
@@ -57,9 +58,9 @@ p <- add_argument(p, "--pyclone_only", default = FALSE, help = "TRUE: Generate P
 args <- parse_args(p)
 
 # for testing with oncosnp
-# args <- parse_args(p, c("/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/oncoSNP/3-augmented_oncoSNP/DLC_0002.aug.cnvs", "O",
-#                       "/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/deep_sequencing/3-aug_mafs/DLC_0002.maf",
-#                       "test", "/morinlab/projects/2016_dlbcl_dlc_lymphoma_gene_pool/analysis/deep_sequencing/test"))
+# args <- parse_args(p, c("../tumour_copy_number/PT419_segments.txt", "S",
+#                       "../4-clean_maf/PT419_T2.clean.maf",
+#                       "test", "."))
 
 seg          <- args$seg
 input_mode   <- args$input_mode
@@ -76,6 +77,7 @@ pyclone_only <- args$pyclone_only
 # could be made arguments
 min_freq <-  0.1
 max_PM <- 5
+
 
 # ------------------------------------------------------------- 
 # Process CNV data from segments file into input CBS matrix for EXPANDS
@@ -129,8 +131,9 @@ if (pyclone_only == TRUE) {
 
   print("--pyclone_only set to TRUE and PyClone input complete. Skipping EXPANDS and exiting script.")
   quit(status = 0)
-
+  
 }
+
 
 # -------------------------------------------------------------
 # Merge LOH data into SNV matrix
@@ -138,21 +141,21 @@ if (pyclone_only == TRUE) {
 if (include_loh > 0) {
   
   merge_snv <- rbind(loh_snv_data, snv_data)
-  loh_string <- "LOH_"
+  loh_string <- "LOH"
   samp_param <- paste0(sample, "_", loh_string, "_state_INDEL_DelMask_maxpm_", max_PM,
-                       "_score_", max_score, ",precision_", precision)
+                       "_score_", max_score, "_precision_", precision)
 } else {
   loh_string <- "no_LOH"
   merge_snv <- snv_data
-  samp_param <- paste0(sample, "_", loh_string, "_noLOH_INDEL_DelMask_maxpm_", max_PM,
-                      "_score_", max_score, ",precision_", precision)
+  samp_param <- paste0(sample, "_", loh_string, "_INDEL_DelMask_maxpm_", max_PM,
+                      "_score_", max_score, "_precision_", precision)
 }
 
 merge_snv <- do.call(rbind, merge_snv)
 
-print("Merged:")
+print("Merged variants:")
 print(merge_snv)
-print(".....")
+print("Segments:")
 print(seg2)
 
 
@@ -242,7 +245,7 @@ if (mask_deletions) {
 
 # 4. Plot and save results
 # Save raw visualization
-out_fig_raw <- paste0(out_dir, "/rawPlot_", samp_param, ".pdf")
+out_fig_raw <- paste0(out_dir, "/", samp_param, "_rawPlot.pdf")
 pdf(out_fig_raw)
 plotSPs(aM$dm, sampleID = sample, cex = 1, rawAF = TRUE)
 dev.off()
