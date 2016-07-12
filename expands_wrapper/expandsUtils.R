@@ -423,8 +423,14 @@ generate_pyclone_input <- function(seg, maf_keep, input_mode) {
   normal_cn_profile[, "major_cn"] <- 2
   
   no_cn_data <- is.na(py_snv_data_assigned[, "normal_cn"])
-  cols2 = c("normal_cn", "minor_cn", "major_cn")
-  py_snv_data_assigned[no_cn_data, cols2] <- repmat(normal_cn_profile[1, cols2], length(py_snv_data_assigned[no_cn_data, 1]), 1)
+  
+  # If any mutations have no segment data, assign normal CN
+  if (length(py_snv_data_assigned[no_cn_data, 1]) != 0) {
+    
+    cols2 = c("normal_cn", "minor_cn", "major_cn")
+    py_snv_data_assigned[no_cn_data, cols2] <- repmat(normal_cn_profile[1, cols2], length(py_snv_data_assigned[no_cn_data, 1]), 1)
+    
+  }
   
   return(py_snv_data_assigned)
   

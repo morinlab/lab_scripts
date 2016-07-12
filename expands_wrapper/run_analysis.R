@@ -10,7 +10,7 @@
 #   [--precision PRECISION] \
 #   [--cn_style {1, 2}] \
 #   [--pyclone_dir PYCLONE_DIR] \
-#   [--pyclone_only {TRUE, FALSE}]
+#   [--pyclone_only {TRUE, FALSE, OFF}]
 
 
 # ------------------ Source custom EXPANDS utils ----------------
@@ -58,9 +58,9 @@ p <- add_argument(p, "--pyclone_only", default = FALSE, help = "TRUE: Generate P
 args <- parse_args(p)
 
 # for testing with oncosnp
-#args <- parse_args(p, c("../tumour_copy_number/PT419_segments.txt", "S",
-#                      "../4-clean_maf/PT419_T2.clean.maf",
-#                      "test", "."))
+#args <- parse_args(p, c("../oncoSNP/3-augmented_oncoSNP/DLC_0003.aug.cnvs", "O",
+#                    "3.5-aug_maf_filtered/DLC_0003.maf",
+#                    "test", "."))
 
 seg          <- args$seg
 input_mode   <- args$input_mode
