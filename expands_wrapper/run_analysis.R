@@ -10,7 +10,7 @@
 #   [--precision PRECISION] \
 #   [--cn_style {1, 2}] \
 #   [--pyclone_dir PYCLONE_DIR] \
-#   [--pyclone_only {TRUE, FALSE, OFF}]
+#   [--pyclone_only {TRUE, FALSE}]
 
 
 # ------------------ Source custom EXPANDS utils ----------------
@@ -23,9 +23,9 @@ source(expands_utils, chdir = TRUE)
 
 
 # -------------------------- Libraries --------------------------
-suppressWarnings(library(matlab))
-suppressWarnings(library(expands))
-suppressWarnings(library(argparser))
+suppressMessages(suppressWarnings(library(matlab)))
+suppressMessages(suppressWarnings(library(expands)))
+suppressMessages(suppressWarnings(library(argparser)))
 
 
 # -------------------------- Define arguments -------------------
@@ -57,10 +57,11 @@ p <- add_argument(p, "--pyclone_only", default = FALSE, help = "TRUE: Generate P
 # --------- Get arguments / define other shared variables -------
 args <- parse_args(p)
 
-# for testing with oncosnp
-#args <- parse_args(p, c("../oncoSNP/3-augmented_oncoSNP/DLC_0003.aug.cnvs", "O",
-#                    "3.5-aug_maf_filtered/DLC_0003.maf",
-#                    "test", "."))
+# # for debugging
+# args <- parse_args(p, c("M002-Tumor-PB2_M002-Normal.titan.keep_top_clone.segments.txt", "T",
+#                    "M002-Tumor-PB2_M002-Normal.indels.snvs.augment.maf",
+#                    "M002", "."))
+
 
 seg          <- args$seg
 input_mode   <- args$input_mode
@@ -82,15 +83,21 @@ max_PM <- 5
 # ------------------------------------------------------------- 
 # Process CNV data from segments file into input CBS matrix for EXPANDS
 
-processed_seg_output <- ifelse(input_mode == "T", process_titan_seg(seg, include_loh, cn_style),       # Titan
-                        ifelse(input_mode == "S", process_sequenza_seg(seg, include_loh, cn_style),    # Sequenza
-                        ifelse(input_mode == "I", process_igv_seg(seg, include_loh, cn_style),         # IGV-friendly
-                        ifelse(input_mode == "O", process_oncosnp_seg(seg, include_loh, cn_style),     # OncoSNP
-                        NULL))))  
+if (input_mode == "T") {         # Titan
+  processed_seg_output <- process_titan_seg(seg, include_loh, cn_style)
+} else if (input_mode == "S") {  # Sequenza
+  processed_seg_output <- process_sequenza_seg(seg, include_loh, cn_style)
+} else if (input_mode == "O") {  # OncoSNP
+  processed_seg_output <- process_oncosnp_seg(seg, include_loh, cn_style)
+} else if (input_mode == "I") {  # IGV-friendly
+  processed_seg_output <- process_igv_seg(seg, include_loh, cn_style)
+} else {
+  print("Invalid input mode! Choose one of: S, T, I, O. Exiting script.")
+  quit(status = 1)
+}
 
 seg2 <- processed_seg_output[1]
 seg2 <- do.call(rbind, seg2)
-
 loh_snv_data <- processed_seg_output[2]
 
 # Remove? copied and pasted for now

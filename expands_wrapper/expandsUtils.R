@@ -1,5 +1,4 @@
 # Load and process Titan output file
-# Header:
 # Sample	Chromosome	Start_Position(bp)	End_Position(bp)	Length(bp)
 # Median_Ratio	Median_logR	TITAN_state	TITAN_call	Copy_Number	MinorCN
 # MajorCN	Clonal_Cluster	Clonal_Frequency
@@ -8,6 +7,16 @@ process_titan_seg <- function(seg, include_loh, cn_style) {
   print(paste("Loading Titan output file ", seg))
   
   seg1 <- read.csv(seg, stringsAsFactors = FALSE, sep = '\t')
+  
+  # Remove chr prefix if it exists
+  test_chr <- seg1[1, "Chromosome"]
+  if (grepl("chr", test_chr)) {
+    # 'chr' prefix exists
+    seg1[, "Chromosome"] <- sub("^chr", "", seg1[, "Chromosome"])
+  }
+  chroms <- as.numeric(seg1[, "Chromosome"])
+  keep_chrom <- !is.na(chroms < 23)
+  
   loh_string = "no_LOH_"
   loh_snv_data <- NULL
   
@@ -17,7 +26,7 @@ process_titan_seg <- function(seg, include_loh, cn_style) {
       
       neut <- seg1[, "Copy_Number"] == 2
       loh1 <- seg1[, "MajorCN"] == 2
-      keep_loh <- neut & loh1
+      keep_loh <- neut & loh1 & keep_chrom
       loh_string <- "neut_LOH_"
       
     } else if (include_loh == 2) {
@@ -37,41 +46,35 @@ process_titan_seg <- function(seg, include_loh, cn_style) {
       
     }
     
-    sequenza_loh <- seg1[keep_loh, ]
+    is_loh <- seg1[keep_loh, ]
     
-    vaf_loh_event <- sequenza_loh[, "Median_Ratio"]  
+    vaf_loh_event <- is_loh[, "Median_Ratio"]  
     loh_snv_data <- matrix(nrow = length(vaf_loh_event), ncol = 7, 
                            dimnames = list(c(), c("chr", "startpos", "endpos", "REF", "ALT", "AF_Tumor", "PN_B")))
-    loh_snv_data[, "chr"]      <- as.numeric(sequenza_loh[, "Chromosome"])
-    loh_snv_data[, "startpos"] <- as.numeric(sequenza_loh[, 3] + 1)
-    loh_snv_data[, "endpos"]   <- as.numeric(sequenza_loh[, 3] + 1)
-    loh_snv_data[, "AF_Tumor"] <- as.numeric(sequenza_loh[, "Median_Ratio"])
+    loh_snv_data[, "chr"]      <- as.numeric(is_loh[, "Chromosome"])
+    loh_snv_data[, "startpos"] <- as.numeric(is_loh[, 3] + 1)
+    loh_snv_data[, "endpos"]   <- as.numeric(is_loh[, 3] + 1)
+    loh_snv_data[, "AF_Tumor"] <- as.numeric(is_loh[, "Median_Ratio"])
     loh_snv_data[, "REF"]      <- as.numeric(rep(65, length(vaf_loh_event)))
     loh_snv_data[, "ALT"]      <- as.numeric(rep(45, length(vaf_loh_event)))
     loh_snv_data[, "PN_B"]     <- as.numeric(rep(1, length(vaf_loh_event)))
-    
   }
   
-  chroms <- as.numeric(seg1[, "Chromosome"])
-  
+  # Segment length > 1 and autosomes only
   keep_seg <- seg1[ ,4] - seg1[, 3] > 1
-  
-  keep_chrom <- !is.na(chroms < 23)
-  
   keep_both <- keep_chrom & keep_seg
-  seg2 <- matrix(nrow = dim(seg1[keep_both, ][1]), ncol = 4)
   
+  # Make input CNV matrix for EXPANDS
+  seg2 <- matrix(nrow = dim(seg1[keep_both, ][1]), ncol = 4)
   colnames(seg2) <- c("chr", "startpos", "endpos", "CN_Estimate")
   
   seg2[, "chr"] <- as.numeric(seg1[keep_both, "Chromosome"])
-  
   seg2[, "startpos"] <- as.numeric(seg1[keep_both, 3])
   seg2[, "endpos"]   <- as.numeric(seg1[keep_both, 4])
   
   if (cn_style == 1) {
     seg2[, 4] <- as.numeric(seg1[keep_both, "Copy_Number"])
-  }
-  else if (cn_style == 2) {
+  } else if (cn_style == 2) {
     seg2[ ,4] <- 2*2^seg1[keep_both, "Median_logR"]
   }	
   
@@ -80,16 +83,17 @@ process_titan_seg <- function(seg, include_loh, cn_style) {
   
 }
 
-# Expecteds Sequenza-style seg file
-# Header:
+# Load and process Sequenza-style seg file
 # chromosome	start.pos	 end.pos	Bf	N.BAF	 sd.BAF	depth.ratio	 
 # N.ratio	 sd.ratio	 CNt 	A	  B	 LPP
 process_sequenza_seg <- function(seg, include_loh, cn_style) {
   
   print(paste("Loading Sequenza seg file ", seg))
   seg1 <- read.csv(seg, stringsAsFactors = FALSE, sep = '\t')
-  # note that the CNt value is being used directly by Expands.
-  # For Titan, one would have to convert the log ratio to absolute copy number
+  
+  chroms_a <- seg1[, "chromosome"]
+  chroms <- as.numeric(chroms_a)
+  keep_chrom <- !is.na(chroms < 23)
   
   loh_string = "no_LOH_"
   loh_snv_data <- NULL
@@ -100,7 +104,7 @@ process_sequenza_seg <- function(seg, include_loh, cn_style) {
       
       neut <- seg1[, "CNt"] == 2
       loh1 <- seg1[, "A"] == 2
-      keep_loh <- neut & loh1
+      keep_loh <- neut & loh1 & keep_chrom
       loh_string <- "neut_LOH_"
       
     } else if (include_loh == 2) {
@@ -136,18 +140,14 @@ process_sequenza_seg <- function(seg, include_loh, cn_style) {
     loh_snv_data[, "PN_B"]     <- as.numeric(rep(1, length(vaf_loh_event)))
     # loh_snv_data[,"PN_B"] = as.numeric(rep(0,length(vaf_loh_event)))
     # don't set as LOH because it works better if you don't. Unsure why
+
   }
   
-  chroms_a <- seg1[, "chromosome"]
-  chroms <- as.numeric(chroms_a)
-  
   keep_seg <- seg1[, "end.pos"] - seg1[, "start.pos"] > 1
-  
-  keep_chrom <- !is.na(chroms < 23)
-  
   keep_both <- keep_chrom & keep_seg
-  seg2 <- matrix(nrow = dim(seg1[keep_both, ][1]), ncol = 4)
   
+  # Make input CNV matrix for EXPANDS
+  seg2 <- matrix(nrow = dim(seg1[keep_both, ][1]), ncol = 4)
   colnames(seg2) <- c("chr",  "startpos","endpos","CN_Estimate")
   
   seg2[, "chr"]      <- as.numeric(seg1[keep_both, "chromosome"])
@@ -166,6 +166,7 @@ process_sequenza_seg <- function(seg, include_loh, cn_style) {
 
 }
 
+# untested
 process_igv_seg <- function(seg, include_loh, cn_style) {
   
   print(paste("Loading IGV-friendly seg file ", seg))
@@ -218,8 +219,8 @@ process_igv_seg <- function(seg, include_loh, cn_style) {
   return(output)
 }
 
-# Expects OncoSNP .cnvs file augmented with Log R Ratio and BAF using oncosnputils
-# Columns: chr	start	end	copyNum	loh	rank	logLik	numMarkers	normFrac	state	ploidyNum
+# Load and process OncoSNP .cnvs file augmented with Log R Ratio and BAF using oncosnputils
+# chr	start	end	copyNum	loh	rank	logLik	numMarkers	normFrac	state	ploidyNum
 # majorCopyNumber minorCopyNumber	LRR	LRRShifted	BAF	numProbes	numSnpProbes
 process_oncosnp_seg <- function(seg, include_loh, cn_style) {
   
@@ -400,6 +401,10 @@ generate_pyclone_input <- function(seg, maf_keep, input_mode) {
     colnames(seg1) <- c("chr", "startpos", "endpos", "CN", "loh", "rank", "logLik", "numMarkers", 
                         "normFrac", "state", "ploidyNum", "major_cn", "minor_cn", "log.ratio",
                         "log.ratio.shifted", "BAF", "numProbes", "numSnpProbes")
+  } else if (input_mode == "T") {
+    colnames(seg1) <- c("sample", "chr", "startpos", "endpos", "segmentLength", "median.ratio", 
+                        "median.log.ratio", "state", "call", "CN", "minor_cn", "major_cn", 
+                        "clonal_cluster", "clonal_frequency")
   }
   
   seg1[, "normal_cn"] <- 2
