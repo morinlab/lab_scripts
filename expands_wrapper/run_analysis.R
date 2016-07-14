@@ -58,9 +58,9 @@ p <- add_argument(p, "--pyclone_only", default = FALSE, help = "TRUE: Generate P
 args <- parse_args(p)
 
 # # for debugging
-# args <- parse_args(p, c("M002-Tumor-PB2_M002-Normal.titan.keep_top_clone.segments.txt", "T",
-#                    "M002-Tumor-PB2_M002-Normal.indels.snvs.augment.maf",
-#                    "M002", "."))
+# args <- parse_args(p, c("../tumour_copy_number/FFPE-121-F_segments.txt", "S",
+#                    "../4-clean_maf/FFPE-121-F.clean.maf",
+#                    "FFPE", "."))
 
 
 seg          <- args$seg

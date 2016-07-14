@@ -91,6 +91,12 @@ process_sequenza_seg <- function(seg, include_loh, cn_style) {
   print(paste("Loading Sequenza seg file ", seg))
   seg1 <- read.csv(seg, stringsAsFactors = FALSE, sep = '\t')
   
+  # Remove chr prefix if it exists
+  test_chr <- seg1[1, "chromosome"]
+  if (grepl("chr", test_chr)) {
+    # 'chr' prefix exists
+    seg1[, "chromosome"] <- sub("^chr", "", seg1[, "chromosome"])
+  }
   chroms_a <- seg1[, "chromosome"]
   chroms <- as.numeric(chroms_a)
   keep_chrom <- !is.na(chroms < 23)
@@ -437,6 +443,7 @@ generate_pyclone_input <- function(seg, maf_keep, input_mode) {
     
   }
   
-  return(py_snv_data_assigned)
+  complete <- !is.na(py_snv_data_assigned[, "major_cn"]) & !is.na(py_snv_data_assigned[, "minor_cn"])
+  return(py_snv_data_assigned[complete, , drop = FALSE])
   
 }
