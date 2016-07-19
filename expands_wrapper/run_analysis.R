@@ -74,6 +74,8 @@ cn_style     <- args$cn_style
 out_dir      <- args$output_dir
 pyclone_dir  <- ifelse(is.na(args$pyclone_dir), out_dir, args$pyclone_dir)
 pyclone_only <- args$pyclone_only
+dir.create(out_dir, recursive = TRUE)
+dir.create(pyclone_dir, recursive = TRUE)
 
 # could be made arguments
 min_freq <-  0.1
