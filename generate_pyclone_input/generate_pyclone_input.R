@@ -14,7 +14,8 @@
 command <- commandArgs(trailingOnly = FALSE)
 script_name <- sub("--file=", "", command[grep("--file=", command)])
 script_path <- dirname(script_name)
-expands_utils <- file.path(script_path, "expandsUtils.R")
+wrapper_path <- sub("generate_pyclone_input", "expands_wrapper", script_path)
+expands_utils <- file.path(wrapper_path, "expandsUtils.R")
 source(expands_utils, chdir = TRUE)
 
 
@@ -60,6 +61,7 @@ sample       <- args$sample
 include_loh  <- args$loh
 cn_style     <- args$cn_style
 out_dir      <- args$output_dir
+dir.create(out_dir, recursive = TRUE)
 
 # could be made arguments
 min_freq <-  0.1
