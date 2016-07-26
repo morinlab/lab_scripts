@@ -447,3 +447,53 @@ generate_pyclone_input <- function(seg, maf_keep, input_mode) {
   return(py_snv_data_assigned[complete, , drop = FALSE])
   
 }
+
+plot_expands_SPs <- function(dm, sampleID, orderBy = "chr", rawAF = FALSE) {
+  suppressPackageStartupMessages(require(ggplot2))
+  suppressPackageStartupMessages(require(ggrepel))
+  suppressPackageStartupMessages(require(dplyr))
+  
+  # Wrangle data
+  var_df <- data.frame(dm) %>%                      # Convert dm to data frame
+    filter(!is.na(SP)) %>%                          # Remove variants with no SP assigned
+    arrange_("desc(SP)", orderBy, "startpos") %>%   # Re-order by SP then chr then pos
+    mutate(SP_conf = X.maxP - min(X.maxP,           # Normalize SP assignment confidence
+                                 na.rm = TRUE) + 1) %>% 
+    mutate(SP_conf = 50 * SP_conf / max(SP_conf, na.rm = TRUE)) %>% 
+    mutate(idx = rownames(var_df))
+    
+  maxPloidy <- max(var_df$PM, na.rm = TRUE)
+  
+  if (!rawAF) {
+    iEq2 <- which(var_df$PM_B == var_df$PN_B)
+    iEq3 <- setdiff(1:nrow(var_df), iEq2)
+    
+    if (!isempty(iEq3)) {      # Use Equation 3
+      var_df[iEq3, "AF_Tumor_Adjusted"] <- (var_df[iEq3, "AF_Tumor"] * var_df[iEq3, "CN_Estimate"] - var_df[iEq3, "PN_B"]) /
+        (var_df[iEq3, "PM_B"] - var_df[iEq3, "PN_B"])
+      var_df[iEq3, "AF_Tumor_Adjusted"] <- var_df[iEq3, "AF_Tumor_Adjusted"] * (var_df[iEq3, "PM_B"] / var_df[iEq3, "PM"])
+    }
+
+    if (!isempty(iEq2)) { # Use Equation 2
+      var_df[iEq2, "AF_Tumor_Adjusted"] <- (var_df[iEq2, "CN_Estimate"] - 2) / (var_df[iEq2, "PM"] - 2)
+    }
+    adjusted = "Adjusted"
+    
+  } else {
+    var_df %<>% mutate(AF_Tumor_Adjusted = AF_Tumor)
+    adjusted = ""
+  }
+  
+  # Allele frequencies/SP plot
+  var_df$idx <- factor(var_df$idx, levels = var_df$idx) # Preserve ordering
+  vaf_plot <- ggplot(var_df, aes(x = idx, y = AF_Tumor_Adjusted)) +
+    geom_point(size = 0.5, aes(colour = factor(CN_Estimate)))
+  
+  
+  # CN plot
+  
+  
+  # Join the plots
+  
+  
+}

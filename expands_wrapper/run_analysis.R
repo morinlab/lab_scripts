@@ -55,12 +55,12 @@ p <- add_argument(p, "--pyclone_only", default = FALSE, help = "TRUE: Generate P
 
 
 # --------- Get arguments / define other shared variables -------
-args <- parse_args(p)
+#args <- parse_args(p)
 
 # # for debugging
-# args <- parse_args(p, c("../tumour_copy_number/FFPE-121-F_segments.txt", "S",
-#                    "../4-clean_maf/FFPE-121-F.clean.maf",
-#                    "FFPE", "."))
+args <- parse_args(p, c("../tumour_copy_number/FFPE-121-F_segments.txt", "S",
+                   "../4-clean_maf/FFPE-121-F.clean.maf",
+                   "FFPE", "."))
 
 
 seg          <- args$seg
@@ -264,6 +264,9 @@ out_fig <- paste0(out_dir, "/", samp_param, ".pdf")
 pdf(out_fig)
 plotSPs(aM$dm, sampleID = sample, cex = 1)
 dev.off()
+
+# Save raw custom visualization
+#plot_expands_SPs(aM$dm, sampleID = sample)
 
 # Save table with mutations assigned to SPs
 out_dm <- paste0(out_dir, "/", samp_param, ".dm.tsv")
