@@ -486,15 +486,15 @@ plot_expands_SPs <- function(dm, sampleID, maf_keep, orderBy = "chr", rawAF = FA
   }
   
   # Get gene names
-  gene_df <- maf_keep %>% 
-    data.frame() %>%
-    dplyr::select(Hugo_Symbol, Chromosome, Start_Position, End_Position)
-  gene_df$Chromosome <- as.numeric(gene_df$Chromosome) 
-  var_df %<>% left_join(gene_df,
-                        by = c("chr" = "Chromosome", "startpos" = "Start_Position", "endpos" = "End_Position"))
-  label_df <- var_df %>% 
-    dplyr::rename(Gene = Hugo_Symbol) %>% 
-    filter(Gene %in% genes)
+  # gene_df <- maf_keep %>% 
+  #   data.frame() %>%
+  #   dplyr::select(Hugo_Symbol, Chromosome, Start_Position, End_Position)
+  # gene_df$Chromosome <- as.numeric(gene_df$Chromosome) 
+  # var_df %<>% left_join(gene_df,
+  #                       by = c("chr" = "Chromosome", "startpos" = "Start_Position", "endpos" = "End_Position"))
+  # label_df <- var_df %>% 
+  #   dplyr::rename(Gene = Hugo_Symbol) %>% 
+  #   filter(Gene %in% genes)
   
   # Factors, palette, ordering
   var_df$idx <- as.numeric(var_df$idx)
@@ -509,27 +509,32 @@ plot_expands_SPs <- function(dm, sampleID, maf_keep, orderBy = "chr", rawAF = FA
   af_plot <- ggplot(var_df) +
     geom_point(aes(x = idx, y = SP, fill = SP_conf), shape = 22, colour = NA) +
     scale_fill_gradient(low = "#E6E6E6", high = "#4D4D4D", guide = FALSE) +
-    geom_point(aes(x = idx, y = AF_Tumor_Adjusted, colour = CN_Estimate, shape = PN_B)) +
+    geom_point(alpha = 0.8,
+               aes(x = idx, y = AF_Tumor_Adjusted, colour = CN_Estimate, shape = PN_B)) +
     scale_shape_discrete(name = "Type", labels = c("SNV", "LOH")) +
     scale_colour_manual(values = cn_palette, name = "Copy\nNumber") +
-    geom_text_repel(data = label_df,
-                    aes(x = idx, y = AF_Tumor_Adjusted, label = Gene),
-                    nudge_x = 0.05, nudge_y = 0.05) +
+    #geom_text_repel(data = label_df,
+    #               aes(x = idx, y = AF_Tumor_Adjusted, label = Gene),
+    #                nudge_x = 0.05, nudge_y = 0.05) +
     ylab(yl) + xlab(NULL) + labs(title = sampleID) +
     theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
           axis.line.y = element_line(size = 0.3),
-          axis.line.x = element_line(size = 0.3))
+          axis.line.x = element_line(size = 0.3)) +
+    scale_y_continuous(breaks = seq(0, 1, by = 0.1), limits = c(0, 1))
   
   # Copy number/SP plot
   cn_plot <- ggplot(var_df, aes(x = idx, y = PM_cnv)) +
-    geom_point(aes(colour = CN_Estimate)) +
+    geom_point(aes(colour = CN_Estimate), alpha = 0.8) +
     scale_colour_manual(values = cn_palette, guide = FALSE) +
     ylab("Total ploidy at locus") + xlab("Mutation") +
-    scale_y_continuous(breaks = seq(0, 5, by = 1), limits = c(0, 5)) +
-    theme(axis.ticks.x = element_blank(),
-          axis.line.x = element_line(size = 0.3),
-          axis.line.y = element_line(size = 0.3)) +
-    scale_x_continuous(breaks = seq(0, nrow(var_df), by = 50))
+    theme(axis.line.x = element_line(size = 0.3),
+          axis.line.y = element_line(size = 0.3),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_blank(),
+          panel.background = element_blank()) +
+    scale_y_continuous(breaks = seq(1, 5, by = 1), limits = c(1, 5)) +
+    scale_x_discrete(breaks = seq(0, nrow(var_df), by = 200)) +
     coord_fixed(ratio = 1000/10)
   
   # Aggregate plots
