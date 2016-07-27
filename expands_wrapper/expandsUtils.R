@@ -460,7 +460,7 @@ plot_expands_SPs <- function(dm, sampleID, orderBy = "chr", rawAF = FALSE) {
     mutate(SP_conf = X.maxP - min(X.maxP,           # Normalize SP assignment confidence
                                  na.rm = TRUE) + 1) %>% 
     mutate(SP_conf = 50 * SP_conf / max(SP_conf, na.rm = TRUE)) %>% 
-    mutate(idx = rownames(var_df))
+    mutate(idx = rownames(.))
     
   maxPloidy <- max(var_df$PM, na.rm = TRUE)
   
@@ -485,11 +485,28 @@ plot_expands_SPs <- function(dm, sampleID, orderBy = "chr", rawAF = FALSE) {
   }
   
   # Allele frequencies/SP plot
-  var_df$idx <- factor(var_df$idx, levels = var_df$idx) # Preserve ordering
-  vaf_plot <- ggplot(var_df, aes(x = idx, y = AF_Tumor_Adjusted)) +
-    geom_point(size = 0.5, aes(colour = factor(CN_Estimate)))
+  var_df$idx <- factor(var_df$idx) # Preserve ordering
+  var_df$CN_Estimate <- factor(as.numeric(var_df$CN_Estimate))
+  var_df$PN_B <- factor(as.numeric(var_df$PN_B))
+  cn_palette <- c("#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C",
+                  "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00")
+  yl <- paste0(adjusted, " Allele Frequency")
   
+  ggplot(var_df) +
+    geom_point(aes(x = idx, y = SP, fill = SP_conf), shape = 22, colour = NA) +
+    scale_fill_gradient(low = "#E6E6E6", high = "#4D4D4D", guide = FALSE) +
+    scale_shape_discrete(name = "Type", labels = c("SNV", "LOH")) +
+    geom_point(size = 0.8,
+              aes(x = idx, y = AF_Tumor_Adjusted, colour = CN_Estimate, shape = PN_B)) +
+    scale_colour_manual(values = cn_palette, name = "Copy\nNumber") +
+    ylab(yl) + xlab(NULL) +
+    theme(axis.ticks = element_blank(), axis.text.x = element_blank())
   
+  # ggplot(var_df, aes(x = idx, y = CN_Estimate)) +
+  #   geom_point(size = 0.8, aes(colour = CN_Estimate)) +
+  #   scale_colour_manual(values = cn_palette, guide = FALSE) +
+  #   theme(axis.ticks = element_blank(), axis.text.x = element_blank())
+  # 
   # CN plot
   
   
