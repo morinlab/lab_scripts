@@ -448,10 +448,12 @@ generate_pyclone_input <- function(seg, maf_keep, input_mode) {
   
 }
 
-plot_expands_SPs <- function(dm, sampleID, orderBy = "chr", rawAF = FALSE) {
+plot_expands_SPs <- function(dm, sampleID, maf_keep, orderBy = "chr", rawAF = FALSE) {
   suppressPackageStartupMessages(require(magrittr))
   suppressPackageStartupMessages(require(ggrepel))
   suppressPackageStartupMessages(require(ggplot2))
+  suppressPackageStartupMessages(require(grid))
+  suppressPackageStartupMessages(require(gtable))
   suppressPackageStartupMessages(require(dplyr))
   
   # Wrangle data
@@ -483,24 +485,40 @@ plot_expands_SPs <- function(dm, sampleID, orderBy = "chr", rawAF = FALSE) {
     adjusted = ""
   }
   
-  # Allele frequency/SP plot
+  # Get gene names
+  gene_df <- maf_keep %>% 
+    data.frame() %>%
+    dplyr::select(Hugo_Symbol, Chromosome, Start_Position, End_Position)
+  gene_df$Chromosome <- as.numeric(gene_df$Chromosome) 
+  var_df %<>% left_join(gene_df,
+                        by = c("chr" = "Chromosome", "startpos" = "Start_Position", "endpos" = "End_Position"))
+  label_df <- var_df %>% 
+    dplyr::rename(Gene = Hugo_Symbol) %>% 
+    filter(Gene %in% genes)
+  
+  # Factors, palette, ordering
   var_df$idx <- as.numeric(var_df$idx)
-  var_df$idx <- factor(var_df$idx, levels = var_df$idx) # Preserve ordering
+  var_df$idx <- factor(var_df$idx, levels = order(var_df$idx))
   var_df$CN_Estimate <- factor(var_df$CN_Estimate)
   var_df$PN_B <- factor(as.numeric(var_df$PN_B))
   cn_palette <- c("1" = "#A6CEE3", "2" = "#1F78B4", "3" = "#B2DF8A", "4" = "#33A02C",
                   "5" = "#FB9A99", "6" = "#E31A1C", "7" = "#FDBF6F", "8" = "#FF7F00")
   yl <- paste0(adjusted, " Allele Frequency")
   
+  # Allele frequency/SP plot
   af_plot <- ggplot(var_df) +
     geom_point(aes(x = idx, y = SP, fill = SP_conf), shape = 22, colour = NA) +
     scale_fill_gradient(low = "#E6E6E6", high = "#4D4D4D", guide = FALSE) +
-    scale_shape_discrete(name = "Type", labels = c("SNV", "LOH")) +
     geom_point(aes(x = idx, y = AF_Tumor_Adjusted, colour = CN_Estimate, shape = PN_B)) +
+    scale_shape_discrete(name = "Type", labels = c("SNV", "LOH")) +
     scale_colour_manual(values = cn_palette, name = "Copy\nNumber") +
+    geom_text_repel(data = label_df,
+                    aes(x = idx, y = AF_Tumor_Adjusted, label = Gene),
+                    nudge_x = 0.05, nudge_y = 0.05) +
     ylab(yl) + xlab(NULL) + labs(title = sampleID) +
-    theme(axis.ticks.x = element_blank(), axis.text.x = element_blank()) +
-    scale_y_continuous(breaks = seq(0, 1, by = 0.2), limits = c(0, 1))
+    theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
+          axis.line.y = element_line(size = 0.3),
+          axis.line.x = element_line(size = 0.3))
   
   # Copy number/SP plot
   cn_plot <- ggplot(var_df, aes(x = idx, y = PM_cnv)) +
@@ -508,7 +526,10 @@ plot_expands_SPs <- function(dm, sampleID, orderBy = "chr", rawAF = FALSE) {
     scale_colour_manual(values = cn_palette, guide = FALSE) +
     ylab("Total ploidy at locus") + xlab("Mutation") +
     scale_y_continuous(breaks = seq(0, 5, by = 1), limits = c(0, 5)) +
-    theme(axis.ticks.x = element_blank(), axis.text.x = element_blank()) +
+    theme(axis.ticks.x = element_blank(),
+          axis.line.x = element_line(size = 0.3),
+          axis.line.y = element_line(size = 0.3)) +
+    scale_x_continuous(breaks = seq(0, nrow(var_df), by = 50))
     coord_fixed(ratio = 1000/10)
   
   # Aggregate plots
@@ -521,7 +542,7 @@ plot_expands_SPs <- function(dm, sampleID, orderBy = "chr", rawAF = FALSE) {
   
   # Bind and arrange the two grobs
   g <- rbind(af_g, cn_g, size = "first")
-  g$widths <- unit.pmax(g2$widths, g3$widths)
+  g$widths <- unit.pmax(af_g$widths, cn_g$widths)
   grid.newpage()
   grid.draw(g)
   

@@ -34,8 +34,7 @@ p <- arg_parser("EXPANDS")
 # positional
 p <- add_argument(p, "seg", help = "Input segments file")
 p <- add_argument(p, "input_mode",
-                     help = "Type of seg file: S (Sequenza), I (IGV-friendly seg file), \
-                     T (Titan), O (augmented OncoSNP file)")
+                     help = "Type of seg file: S (Sequenza), I (IGV-friendly seg file), T (Titan), O (augmented OncoSNP file)")
 p <- add_argument(p, "maf", help = "Input MAF file")
 p <- add_argument(p, "sample", help = "Sample ID")
 p <- add_argument(p, "output_dir",
@@ -43,15 +42,14 @@ p <- add_argument(p, "output_dir",
 
 # optional
 p <- add_argument(p, "--loh", default = 1,
-                     help = "0: ignore LOH events, 1: include all copy-neutral LOH segments \
-                     and their BAF in clustering; can help resolve clonal clusters with few mutations, (recommended) \
-                     2: include deletion LOH only, 3: include all LOH")
+                     help = "0: ignore LOH events, 1: include all copy-neutral LOH segments and their BAF in clustering; can help resolve clonal clusters with few mutations, (recommended), 2: include deletion LOH only, 3: include all LOH")
 p <- add_argument(p, "--max_score", default = 2.25, help = "max_score for EXPANDS")
 p <- add_argument(p, "--precision", default = 0.05, help = "precision for EXPANDS")
 p <- add_argument(p, "--cn_style", default = 2,
                   help = "1 for integer values, 2 for rational numbers calculated from CN log ratios (recommended)")
 p <- add_argument(p, "--pyclone_dir", default = NULL, help = "Specific output directory for PyClone files")
 p <- add_argument(p, "--pyclone_only", default = FALSE, help = "TRUE: Generate PyClone input only, skip EXPANDS")
+p <- add_argument(p, "--genes", default = NULL, help = "Label mutations in these genes (specify file with one gene per line)")
 
 
 # --------- Get arguments / define other shared variables -------
@@ -76,6 +74,7 @@ pyclone_dir  <- ifelse(is.na(args$pyclone_dir), out_dir, args$pyclone_dir)
 pyclone_only <- args$pyclone_only
 dir.create(out_dir, recursive = TRUE)
 dir.create(pyclone_dir, recursive = TRUE)
+genes        <- scan(args$genes, what = "character") 
 
 # could be made arguments
 min_freq <-  0.1
