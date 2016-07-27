@@ -449,8 +449,9 @@ generate_pyclone_input <- function(seg, maf_keep, input_mode) {
 }
 
 plot_expands_SPs <- function(dm, sampleID, orderBy = "chr", rawAF = FALSE) {
-  suppressPackageStartupMessages(require(ggplot2))
+  suppressPackageStartupMessages(require(magrittr))
   suppressPackageStartupMessages(require(ggrepel))
+  suppressPackageStartupMessages(require(ggplot2))
   suppressPackageStartupMessages(require(dplyr))
   
   # Wrangle data
@@ -462,19 +463,17 @@ plot_expands_SPs <- function(dm, sampleID, orderBy = "chr", rawAF = FALSE) {
     mutate(SP_conf = 50 * SP_conf / max(SP_conf, na.rm = TRUE)) %>% 
     mutate(idx = rownames(.))
     
-  maxPloidy <- max(var_df$PM, na.rm = TRUE)
-  
   if (!rawAF) {
     iEq2 <- which(var_df$PM_B == var_df$PN_B)
     iEq3 <- setdiff(1:nrow(var_df), iEq2)
     
-    if (!isempty(iEq3)) {      # Use Equation 3
+    if (!isempty(iEq3)) {   # Use Equation 3
       var_df[iEq3, "AF_Tumor_Adjusted"] <- (var_df[iEq3, "AF_Tumor"] * var_df[iEq3, "CN_Estimate"] - var_df[iEq3, "PN_B"]) /
         (var_df[iEq3, "PM_B"] - var_df[iEq3, "PN_B"])
       var_df[iEq3, "AF_Tumor_Adjusted"] <- var_df[iEq3, "AF_Tumor_Adjusted"] * (var_df[iEq3, "PM_B"] / var_df[iEq3, "PM"])
     }
 
-    if (!isempty(iEq2)) { # Use Equation 2
+    if (!isempty(iEq2)) {   # Use Equation 2
       var_df[iEq2, "AF_Tumor_Adjusted"] <- (var_df[iEq2, "CN_Estimate"] - 2) / (var_df[iEq2, "PM"] - 2)
     }
     adjusted = "Adjusted"
@@ -484,33 +483,46 @@ plot_expands_SPs <- function(dm, sampleID, orderBy = "chr", rawAF = FALSE) {
     adjusted = ""
   }
   
-  # Allele frequencies/SP plot
-  var_df$idx <- factor(var_df$idx) # Preserve ordering
-  var_df$CN_Estimate <- factor(as.numeric(var_df$CN_Estimate))
+  # Allele frequency/SP plot
+  var_df$idx <- as.numeric(var_df$idx)
+  var_df$idx <- factor(var_df$idx, levels = var_df$idx) # Preserve ordering
+  var_df$CN_Estimate <- factor(var_df$CN_Estimate)
   var_df$PN_B <- factor(as.numeric(var_df$PN_B))
-  cn_palette <- c("#A6CEE3", "#1F78B4", "#B2DF8A", "#33A02C",
-                  "#FB9A99", "#E31A1C", "#FDBF6F", "#FF7F00")
+  cn_palette <- c("1" = "#A6CEE3", "2" = "#1F78B4", "3" = "#B2DF8A", "4" = "#33A02C",
+                  "5" = "#FB9A99", "6" = "#E31A1C", "7" = "#FDBF6F", "8" = "#FF7F00")
   yl <- paste0(adjusted, " Allele Frequency")
   
-  ggplot(var_df) +
+  af_plot <- ggplot(var_df) +
     geom_point(aes(x = idx, y = SP, fill = SP_conf), shape = 22, colour = NA) +
     scale_fill_gradient(low = "#E6E6E6", high = "#4D4D4D", guide = FALSE) +
     scale_shape_discrete(name = "Type", labels = c("SNV", "LOH")) +
-    geom_point(size = 0.8,
-              aes(x = idx, y = AF_Tumor_Adjusted, colour = CN_Estimate, shape = PN_B)) +
+    geom_point(aes(x = idx, y = AF_Tumor_Adjusted, colour = CN_Estimate, shape = PN_B)) +
     scale_colour_manual(values = cn_palette, name = "Copy\nNumber") +
-    ylab(yl) + xlab(NULL) +
-    theme(axis.ticks = element_blank(), axis.text.x = element_blank())
+    ylab(yl) + xlab(NULL) + labs(title = sampleID) +
+    theme(axis.ticks.x = element_blank(), axis.text.x = element_blank()) +
+    scale_y_continuous(breaks = seq(0, 1, by = 0.2), limits = c(0, 1))
   
-  # ggplot(var_df, aes(x = idx, y = CN_Estimate)) +
-  #   geom_point(size = 0.8, aes(colour = CN_Estimate)) +
-  #   scale_colour_manual(values = cn_palette, guide = FALSE) +
-  #   theme(axis.ticks = element_blank(), axis.text.x = element_blank())
-  # 
-  # CN plot
+  # Copy number/SP plot
+  cn_plot <- ggplot(var_df, aes(x = idx, y = PM_cnv)) +
+    geom_point(aes(colour = CN_Estimate)) +
+    scale_colour_manual(values = cn_palette, guide = FALSE) +
+    ylab("Total ploidy at locus") + xlab("Mutation") +
+    scale_y_continuous(breaks = seq(0, 5, by = 1), limits = c(0, 5)) +
+    theme(axis.ticks.x = element_blank(), axis.text.x = element_blank()) +
+    coord_fixed(ratio = 1000/10)
   
+  # Aggregate plots
+  af_g <- ggplotGrob(af_plot)
+  cn_g <- ggplotGrob(cn_plot)
   
-  # Join the plots
+  # Add a column of legend width to cn grob
+  legend_width <- af_g$widths[5]
+  cn_g <- gtable_add_cols(cn_g, legend_width, 4)
   
+  # Bind and arrange the two grobs
+  g <- rbind(af_g, cn_g, size = "first")
+  g$widths <- unit.pmax(g2$widths, g3$widths)
+  grid.newpage()
+  grid.draw(g)
   
 }
