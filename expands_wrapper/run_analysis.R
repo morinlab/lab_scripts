@@ -47,9 +47,13 @@ p <- add_argument(p, "--max_score", default = 2.25, help = "max_score for EXPAND
 p <- add_argument(p, "--precision", default = 0.05, help = "precision for EXPANDS")
 p <- add_argument(p, "--cn_style", default = 2,
                   help = "1 for integer values, 2 for rational numbers calculated from CN log ratios (recommended)")
-p <- add_argument(p, "--pyclone_dir", default = NULL, help = "Specific output directory for PyClone files")
-p <- add_argument(p, "--pyclone_only", default = FALSE, help = "TRUE: Generate PyClone input only, skip EXPANDS")
-p <- add_argument(p, "--genes", default = NULL, help = "Label mutations in these genes (specify file with one gene per line)")
+p <- add_argument(p, "--pyclone_dir", default = NULL, help = "Specify separate output directory for PyClone files")
+p <- add_argument(p, "--pyclone_only", default = FALSE,
+                  help = "TRUE: Generate PyClone input only, skip EXPANDS")
+p <- add_argument(p, "--plot_custom", default = FALSE,
+                  help = "TRUE: Plot cleaner EPXANDS plots (requires dependencies!)")
+p <- add_argument(p, "--genes", default = NULL,
+                  help = "If --plot_custom TRUE, label mutations in these genes in custom plot (specify file with one gene per line)")
 
 
 # --------- Get arguments / define other shared variables -------
@@ -74,7 +78,12 @@ pyclone_dir  <- ifelse(is.na(args$pyclone_dir), out_dir, args$pyclone_dir)
 pyclone_only <- args$pyclone_only
 dir.create(out_dir, recursive = TRUE)
 dir.create(pyclone_dir, recursive = TRUE)
-genes        <- scan(args$genes, what = "character") 
+plot_custom  <- args$plot_custom 
+if (!is.na(args$genes)) {
+  genes <- scan(args$genes, what = "character") 
+} else {
+  genes <- NULL
+}
 
 # could be made arguments
 min_freq <-  0.1
@@ -264,8 +273,31 @@ pdf(out_fig)
 plotSPs(aM$dm, sampleID = sample, cex = 1)
 dev.off()
 
-# Save raw custom visualization
-#plot_expands_SPs(aM$dm, sampleID = sample)
+if (plot_custom) {
+  # Check for dependencies
+  plot_deps <- list("magrittr", "ggrepel", "ggplot2", "grid", "gtable", "dplyr")
+  missing <- plot_deps[!(plot_deps %in% installed.packages()[,"Package"])]
+  
+  if (length(missing) >= 1) {
+    print("Missing required dependencies for custom plots, therefore not executing:")
+    print(missing)
+    
+  } else {
+    
+    # Save raw custom visualization
+    out_cust_raw <- paste0(out_dir, "/", samp_param, "_rawPlot.custom.png")
+    png(filename = out_cust_raw, width = 6, height = 6, res = 200, units = "in")
+    plot_expands_SPs(aM$dm, sampleID = sample, maf_keep = maf_keep, rawAF = TRUE, genes)
+    dev.off()
+    
+    # Save VAF-corrected custom visualization
+    out_cust <- paste0(out_dir, "/", samp_param, ".custom.png")
+    png(filename = out_cust, width = 6, height = 6, res = 200, units = "in")
+    plot_expands_SPs(aM$dm, sampleID = sample, maf_keep = maf_keep, rawAF = FALSE, genes)
+    dev.off()
+  }
+  
+}
 
 # Save table with mutations assigned to SPs
 out_dm <- paste0(out_dir, "/", samp_param, ".dm.tsv")

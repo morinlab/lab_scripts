@@ -448,13 +448,17 @@ generate_pyclone_input <- function(seg, maf_keep, input_mode) {
   
 }
 
-plot_expands_SPs <- function(dm, sampleID, maf_keep, orderBy = "chr", rawAF = FALSE) {
+plot_expands_SPs <- function(dm, sampleID, maf_keep, orderBy = "chr", rawAF = FALSE, dm.is.path = FALSE, genes = NULL) {
   suppressPackageStartupMessages(require(magrittr))
   suppressPackageStartupMessages(require(ggrepel))
   suppressPackageStartupMessages(require(ggplot2))
   suppressPackageStartupMessages(require(grid))
   suppressPackageStartupMessages(require(gtable))
   suppressPackageStartupMessages(require(dplyr))
+  
+  if (dm.is.path) {
+    dm <- read.delim(dm, header = TRUE, stringsAsFactors = FALSE, sep = "\t")
+  }
   
   # Wrangle data
   var_df <- data.frame(dm) %>%                      # Convert dm to data frame
