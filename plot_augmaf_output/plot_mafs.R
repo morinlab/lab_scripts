@@ -17,7 +17,7 @@ p <- arg_parser(description = "Plot VAFs and other useful results for patients w
 
 # Positional
 p <- add_argument(p, arg = "patient", help = "Patient ID")
-p <- add_arguemnt(p, arg = "samples", help = "Comma-separated list of sample IDs")
+p <- add_argument(p, arg = "samples", help = "Comma-separated list of sample IDs")
 p <- add_argument(p, arg = "mafs", help = "Comma-separated list of augmented MAF paths, in same order as samples")
 p <- add_argument(p, arg = "out_dir", help = "Directory to output figures and results")
 p <- add_argument(p, arg = "genes", help = "List of genes to label (one per line)")
@@ -31,7 +31,7 @@ p <- add_argument(p, arg = "--effects", help = "Comma-separated list of VEP effe
 
 # Flags
 p <- add_argument(p, arg = "--density", flag = TRUE, help = "Plot VAF densities")
-p <- add_arguemnt(p, arg = "--private", flag = TRUE, help = "Output private gene lists")
+p <- add_argument(p, arg = "--private", flag = TRUE, help = "Output private gene lists")
 p <- add_argument(p, arg = "--vaf_stats", flag = TRUE, help = "Output mean/median VAF for non-private variants in each sample")
 
 
@@ -60,10 +60,10 @@ plot_all_VAF(samples, mafs, min_depth, min_vaf, genes, effects, out_dir)
 if (get_priv) get_private_mutations(patient, samples, mafs, min_vaf, min_depth, genes) 
 
 # Plot VAF density by sample
-if (plot_dens) plot_vaf_density(patient, samples, mafs, min_vaf, min_depth, outdir)
+if (plot_dens) plot_vaf_density(patient, samples, mafs, min_vaf, min_depth, out_dir)
 
 # Output median/mean VAF of non-private mutations for each sample
-if (vaf_stats) get_vaf_stats(patient, samples, mafs, min_vaf, min_depth, outdir)
+if (vaf_stats) get_vaf_stats(patient, samples, mafs, min_vaf, min_depth, out_dir)
 
 
 

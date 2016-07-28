@@ -1,11 +1,14 @@
 suppressWarnings(library(argparser))
+suppressWarnings(library(magrittr))
 suppressWarnings(library(stringi))
 suppressWarnings(library(readr))
 suppressWarnings(library(ggplot2))
 suppressWarnings(library(ggrepel))
+suppressWarnings(library(plyr))
+suppressWarnings(library(dplyr))
 
 read_maf <- function(maf_path, min_depth) {
-  # Read in a MAF from path, calculate VAF, and threshold on min_depth
+  # Read in a MAF from path, calculate VAF, and min_vaf on min_depth
   
   maf_df <- read_tsv(maf_path) %>% 
     dplyr::mutate(VAF = ifelse(t_depth > 0, t_alt_count/t_depth, 0)) %>% 
@@ -17,7 +20,7 @@ read_maf <- function(maf_path, min_depth) {
 get_maf_overlap <- function(maf_1, maf_2, min_vaf) {
   # Get the overlap between two MAFs given maf_df's
   
-  # Get overlap and threshold
+  # Get overlap and min_vaf
   overlap <- dplyr::full_join(maf_1, maf_2,
                               by = c("Hugo_Symbol", "Chromosome", "Start_Position", "End_Position",
                                      "Reference_Allele", "Tumor_Seq_Allele2", "Variant_Classification")) %>% 
@@ -71,8 +74,8 @@ plot_all_VAF <- function(samples, mafs, min_depth, min_vaf, genes, effects, out_
       
       if (samples[i] == samples[j]) next
       
-      maf_1 <- samples[i] %>% read_maf(mafs[i], min_depth)
-      maf_2 <- samples[j] %>% read_maf(mafs[j], min_depth)
+      maf_1 <- mafs[i] %>% read_maf(min_depth)
+      maf_2 <- mafs[j] %>% read_maf(min_depth)
       
       get_maf_overlap(maf_1, maf_2, min_vaf) %>% 
         plot_VAF_vs_VAF(patient, samples[i], samples[j], genes, effects, out_dir)
@@ -102,8 +105,9 @@ plot_vaf_density <- function(patient, samples, mafs, min_vaf, min_depth, out_dir
   # Plot VAF density, colour by sample
   
   ag_maf_df <- samples %>% get_aggregate_maf_df(mafs, min_vaf, min_depth) %>% 
-    tidyr::gather(Sample, VAF, 8:length(.)) %>%                          # Collapse VAF calls (long)
-    tidyr::separate(Sample, into = "sample", sep = "\\.", remove = TRUE) # Remove .VAF suffix from sample col
+    tidyr::gather(Sample, VAF, 8:length(.)) %>%             # Collapse VAF calls (long)
+    tidyr::separate(Sample, into = "sample", sep = "\\.",   # Remove .VAF suffix from sample col
+                    remove = TRUE, extra = "drop") 
   
   t_lab <- paste0(patient, "VAF density")
   
@@ -115,25 +119,25 @@ plot_vaf_density <- function(patient, samples, mafs, min_vaf, min_depth, out_dir
 }
 
 get_private_mutations <- function(patient, samples, mafs, min_vaf, min_depth, genes) {
-  # Write private mutations (those with VAF > threshold in
-  # one sample but < threshold in all others)
+  # Write private mutations (those with VAF > min_vaf in
+  # one sample but < min_vaf in all others)
   
   ag_maf_df <- samples %>% get_aggregate_maf_df(mafs, min_vaf, min_depth)
   VAFcols <- names(dplyr::select(ag_maf_df, matches("VAF")))
   
   for (i in 1:length(samples)) {
     
-    # Subset to mutations which are above threshold in sample X
-    private <- ag_maf_df %>% subset(get(VAFcols[i]) > threshold)    
+    # Subset to mutations which are above min_vaf in sample X
+    private <- ag_maf_df %>% subset(get(VAFcols[i]) > min_vaf)    
     
     for (j in 1:(length(VAFcols)-1)) {                
-      # Further subset to mutations which are below threshold in all samples but sample X                           
-      private <- private %>% subset(get(VAFcols[-i][j]) < threshold)
+      # Further subset to mutations which are below min_vaf in all samples but sample X                           
+      private <- private %>% subset(get(VAFcols[-i][j]) < min_vaf)
     }
     
-    private %>% write_tsv(file = paste0(out_dir, "/", samples[i], ".private.txt"))
+    private %>% write_tsv(path = paste0(out_dir, "/", samples[i], ".private.txt"))
     private %>% dplyr::filter(Hugo_Symbol %in% genes) %>%
-      write_tsv(file = paste0(out_dir, "/", samples[i], ".private.in.imp.genes.txt"))
+      write_tsv(path = paste0(out_dir, "/", samples[i], ".private.in.imp.genes.txt"))
     
   }
 }
@@ -145,7 +149,7 @@ get_vaf_stats <- function(patient, samples, mafs, min_vaf, min_depth, out_dir) {
   vaf_stats <- samples %>%
     get_aggregate_maf_df(mafs, min_vaf, min_depth) %>%  
     tidyr::gather(Sample, VAF, 8:length(.)) %>%               # Melt VAF column (wide to long format)
-    dplyr::filter(VAF > min_vaf) %>%                          # Threshold
+    dplyr::filter(VAF > min_vaf) %>%                          # min_vaf
     tidyr::separate(Sample, into = "Sample", sep = "\\.",     # Remove .VAF suffix from sample col           
                     extra = "drop", remove = TRUE) %>% 
     dplyr::group_by(Sample) %>% 
@@ -154,6 +158,6 @@ get_vaf_stats <- function(patient, samples, mafs, min_vaf, min_depth, out_dir) {
       Mean_VAF = mean(VAF),
       Median_VAF = median(VAF))
   
-  vaf_stats %>% write_tsv(file = paste0(out_dir, "/", patient, ".vafstats.tsv"))
+  vaf_stats %>% write_tsv(path = paste0(out_dir, "/", patient, ".vafstats.tsv"))
     
 }
