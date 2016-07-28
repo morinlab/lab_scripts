@@ -279,7 +279,7 @@ if (plot_custom) {
   missing <- plot_deps[!(plot_deps %in% installed.packages()[,"Package"])]
   
   if (length(missing) >= 1) {
-    print("Missing required dependencies for custom plots, therefore not executing:")
+    print("Missing required dependencies for custom plots, therefore not executing. Please install:")
     print(missing)
     
   } else {
