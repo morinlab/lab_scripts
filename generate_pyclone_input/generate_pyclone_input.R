@@ -15,7 +15,7 @@ command <- commandArgs(trailingOnly = FALSE)
 script_name <- sub("--file=", "", command[grep("--file=", command)])
 script_path <- dirname(script_name)
 wrapper_path <- sub("generate_pyclone_input", "expands_wrapper", script_path)
-expands_utils <- file.path(wrapper_path, "expandsUtils.R")
+expands_utils <- file.path(wrapper_path, "../expands_wrapper/expandsUtils.R")
 source(expands_utils, chdir = TRUE)
 
 
