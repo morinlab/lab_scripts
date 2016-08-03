@@ -448,28 +448,35 @@ generate_pyclone_input <- function(seg, maf_keep, input_mode) {
   
 }
 
-plot_expands_SPs <- function(dm, sampleID, maf_keep, orderBy = "chr", rawAF = FALSE, dm.is.path = FALSE, genes = NULL) {
+load_plot_libs <- function() {
   suppressPackageStartupMessages(require(magrittr))
   suppressPackageStartupMessages(require(ggrepel))
   suppressPackageStartupMessages(require(ggplot2))
   suppressPackageStartupMessages(require(grid))
   suppressPackageStartupMessages(require(gtable))
   suppressPackageStartupMessages(require(dplyr))
+}
+
+tidy_dm <- function(dm, orderBy) {
+  # Wrangle dm into a tidy data frame for plotting
   
-  if (dm.is.path) {
-    dm <- read.delim(dm, header = TRUE, stringsAsFactors = FALSE, sep = "\t")
-  }
-  
-  # Wrangle data
   var_df <- data.frame(dm) %>%                      # Convert dm to data frame
     filter(!is.na(SP)) %>%                          # Remove variants with no SP assigned
     arrange_("desc(SP)", orderBy, "startpos") %>%   # Re-order by SP then chr then pos
     mutate(SP_conf = X.maxP - min(X.maxP,           # Normalize SP assignment confidence
-                                 na.rm = TRUE) + 1) %>% 
+                                  na.rm = TRUE) + 1) %>% 
     mutate(SP_conf = 50 * SP_conf / max(SP_conf, na.rm = TRUE)) %>% 
     mutate(idx = rownames(.))
-    
-  if (!rawAF) {
+  
+  return(var_df)
+}
+
+adjust_tumor_af <- function(var_df, rawAF) {
+  # Given a var_df returned from tidy_dm(), :
+  # if plotting rawAF, do no adjustments
+  # if plotting adjusted AF, execute adjustment
+  
+  if (!rawAF) { # Adjust tumor AF
     iEq2 <- which(var_df$PM_B == var_df$PN_B)
     iEq3 <- setdiff(1:nrow(var_df), iEq2)
     
@@ -478,16 +485,25 @@ plot_expands_SPs <- function(dm, sampleID, maf_keep, orderBy = "chr", rawAF = FA
         (var_df[iEq3, "PM_B"] - var_df[iEq3, "PN_B"])
       var_df[iEq3, "AF_Tumor_Adjusted"] <- var_df[iEq3, "AF_Tumor_Adjusted"] * (var_df[iEq3, "PM_B"] / var_df[iEq3, "PM"])
     }
-
+    
     if (!isempty(iEq2)) {   # Use Equation 2
       var_df[iEq2, "AF_Tumor_Adjusted"] <- (var_df[iEq2, "CN_Estimate"] - 2) / (var_df[iEq2, "PM"] - 2)
     }
-    adjusted = "Adjusted"
     
-  } else {
+  } else {     # Use raw tumor AF
     var_df %<>% mutate(AF_Tumor_Adjusted = AF_Tumor)
-    adjusted = ""
   }
+  
+  return(var_df)
+}
+
+plot_expands_SPs <- function(dm, sampleID, maf_keep, orderBy = "chr", rawAF = FALSE, genes = NULL) {
+  load_plot_libs()
+  
+  var_df <- tidy_dm(dm, orderBy) %>% 
+    adjust_tumor_af(rawAF)
+  
+  adjusted <- ifelse(rawAF, "Adjusted ", "")
   
   # Get gene names
   # gene_df <- maf_keep %>% 
