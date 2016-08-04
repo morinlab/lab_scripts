@@ -50,16 +50,16 @@ p <- add_argument(p, "--cn_style", default = 2,
 p <- add_argument(p, "--pyclone_dir", default = NULL, help = "Specify separate output directory for PyClone files")
 p <- add_argument(p, "--pyclone_only", default = FALSE,
                   help = "TRUE: Generate PyClone input only, skip EXPANDS")
-p <- add_argument(p, "--plot_custom", default = FALSE,
-                  help = "TRUE: Plot cleaner EPXANDS plots (requires dependencies!).")
+p <- add_argument(p, "--plot_custom", flag = TRUE,
+                  help = "Pass flag Plot cleaner EPXANDS plots (requires dependencies!).")
 p <- add_argument(p, "--genes", default = NULL,
-                  help = "If --plot_custom TRUE, label mutations in these genes in custom plot (specify file with one gene per line)")
+                  help = "If --plot_custom passed as flag, label mutations in these genes in custom plot (specify file with one gene per line)")
 p <- add_argument(p, arg = "--effects", help = "Comma-separated list of VEP effect criteria. If --plot_custom TRUE and --genes provided, filter mutations to label to the these effects. By default, plots nonsilent variants.",
                   default = "Frame_Shift_Del,Frame_Shift_Ins,In_Frame_Del,In_Frame_Ins,Missense_Mutation,Nonsense_Mutation,Nonstop_Mutation,Splice_Site,Translation_Start_Site")
 
 
 # --------- Get arguments / define other shared variables -------
-#args <- parse_args(p)
+args <- parse_args(p)
 
 # # for debugging
 # args <- parse_args(p, c("../tumour_copy_number/FFPE-121-F_segments.txt", "S",
@@ -81,13 +81,9 @@ pyclone_only <- args$pyclone_only
 dir.create(out_dir, recursive = TRUE)
 dir.create(pyclone_dir, recursive = TRUE)
 plot_custom  <- args$plot_custom 
-effects      <- args$effects %>% as.character %>% strsplit(",") %>% unlist
+effects      <- unlist(strsplit(as.character(args$effects), ","))
 
-if (!is.na(args$genes)) {
-  genes <- scan(args$genes, what = "character") 
-} else {
-  genes <- NULL
-}
+if (!is.na(args$genes)) genes <- scan(args$genes, what = "character")
 
 # could be made arguments
 min_freq <-  0.1

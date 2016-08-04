@@ -537,15 +537,23 @@ get_data_to_label <- function(var_df, maf, genes, effects) {
 plot_expands_SPs <- function(dm, sampleID, maf, orderBy = "chr", rawAF = FALSE, genes = NULL, effects) {
   load_plot_libs()
   
+  print("entered plot_expands_SPs functons")
+  
   # Get data to plot
   var_df <- tidy_dm(dm, orderBy) %>% 
     adjust_tumor_af(rawAF) %>% 
     preserve_var_df()
   
+  print(genes)
+  str(var_df)
+  head(var_df)
+  
   # Get data to label
   if (!is.null(genes)) {
     label_df <- get_data_to_label(var_df, maf, genes)
   }
+  
+  head(label_df)
   
   # Use EXPANDS palette for colouring by CN
   cn_palette <- c("1" = "#A6CEE3", "2" = "#1F78B4", "3" = "#B2DF8A", "4" = "#33A02C",
@@ -565,6 +573,8 @@ plot_expands_SPs <- function(dm, sampleID, maf, orderBy = "chr", rawAF = FALSE, 
           axis.line.y = element_line(size = 0.3),
           axis.line.x = element_line(size = 0.3)) +
     scale_y_continuous(breaks = seq(0, 1, by = 0.1), limits = c(0, 1))
+  
+  print("finished af_plot")
   
   # Add annotation if available
   if (!is.null(genes)) {
@@ -587,6 +597,8 @@ plot_expands_SPs <- function(dm, sampleID, maf, orderBy = "chr", rawAF = FALSE, 
     scale_y_continuous(breaks = seq(1, 5, by = 1), limits = c(1, 5)) +
     scale_x_discrete(breaks = seq(0, nrow(var_df), by = 200)) +
     coord_fixed(ratio = 1000/10)
+  
+  print("finished cn_plot")
   
   # Aggregate plots
   af_g <- ggplotGrob(af_plot)
