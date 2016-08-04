@@ -51,9 +51,11 @@ p <- add_argument(p, "--pyclone_dir", default = NULL, help = "Specify separate o
 p <- add_argument(p, "--pyclone_only", default = FALSE,
                   help = "TRUE: Generate PyClone input only, skip EXPANDS")
 p <- add_argument(p, "--plot_custom", default = FALSE,
-                  help = "TRUE: Plot cleaner EPXANDS plots (requires dependencies!)")
+                  help = "TRUE: Plot cleaner EPXANDS plots (requires dependencies!). Please supply --genes.")
 p <- add_argument(p, "--genes", default = NULL,
                   help = "If --plot_custom TRUE, label mutations in these genes in custom plot (specify file with one gene per line)")
+p <- add_argument(p, arg = "--effects", help = "Comma-separated list of VEP effect criteria. If --plot_custom TRUE and --genes provided, filter mutations to label to the these effects. By default, plots nonsilent variants.",
+                  default = "Frame_Shift_Del,Frame_Shift_Ins,In_Frame_Del,In_Frame_Ins,Missense_Mutation,Nonsense_Mutation,Nonstop_Mutation,Splice_Site,Translation_Start_Site")
 
 
 # --------- Get arguments / define other shared variables -------
@@ -79,6 +81,8 @@ pyclone_only <- args$pyclone_only
 dir.create(out_dir, recursive = TRUE)
 dir.create(pyclone_dir, recursive = TRUE)
 plot_custom  <- args$plot_custom 
+effects      <- args$effects %>% as.character %>% strsplit(",") %>% unlist
+
 if (!is.na(args$genes)) {
   genes <- scan(args$genes, what = "character") 
 } else {
@@ -287,13 +291,13 @@ if (plot_custom) {
     # Save raw custom visualization
     out_cust_raw <- paste0(out_dir, "/", samp_param, "_rawPlot.custom.png")
     png(filename = out_cust_raw, width = 6, height = 6, res = 200, units = "in")
-    plot_expands_SPs(aM$dm, sampleID = sample, maf_keep = maf_keep, rawAF = TRUE, genes)
+    plot_expands_SPs(aM$dm, sampleID = sample, maf = maf, rawAF = TRUE, genes, effects)
     dev.off()
     
     # Save VAF-corrected custom visualization
     out_cust <- paste0(out_dir, "/", samp_param, ".custom.png")
     png(filename = out_cust, width = 6, height = 6, res = 200, units = "in")
-    plot_expands_SPs(aM$dm, sampleID = sample, maf_keep = maf_keep, rawAF = FALSE, genes)
+    plot_expands_SPs(aM$dm, sampleID = sample, maf = maf, rawAF = FALSE, genes, effects)
     dev.off()
   }
   

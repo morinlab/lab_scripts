@@ -460,12 +460,14 @@ load_plot_libs <- function() {
 tidy_dm <- function(dm, orderBy) {
   # Wrangle dm into a tidy data frame for plotting
   
+  orderBy <- ifelse(orderBy == "conf", "desc(SP_conf)", orderBy)
+  
   var_df <- data.frame(dm) %>%                      # Convert dm to data frame
     filter(!is.na(SP)) %>%                          # Remove variants with no SP assigned
-    arrange_("desc(SP)", orderBy, "startpos") %>%   # Re-order by SP then chr then pos
     mutate(SP_conf = X.maxP - min(X.maxP,           # Normalize SP assignment confidence
                                   na.rm = TRUE) + 1) %>% 
-    mutate(SP_conf = 50 * SP_conf / max(SP_conf, na.rm = TRUE)) %>% 
+    mutate(SP_conf = 50 * SP_conf / max(SP_conf, na.rm = TRUE)) %>%
+    arrange_("desc(SP)", orderBy, "startpos") %>%   # Re-order by SP then chr then pos
     mutate(idx = rownames(.))
   
   return(var_df)
@@ -497,33 +499,58 @@ adjust_tumor_af <- function(var_df, rawAF) {
   return(var_df)
 }
 
-plot_expands_SPs <- function(dm, sampleID, maf_keep, orderBy = "chr", rawAF = FALSE, genes = NULL) {
-  load_plot_libs()
+preserve_var_df <- function(var_df) {
+  # Turn observations into factors etc
+  # to preserve ordering when plotting
   
-  var_df <- tidy_dm(dm, orderBy) %>% 
-    adjust_tumor_af(rawAF)
-  
-  adjusted <- ifelse(rawAF, "Adjusted ", "")
-  
-  # Get gene names
-  # gene_df <- maf_keep %>% 
-  #   data.frame() %>%
-  #   dplyr::select(Hugo_Symbol, Chromosome, Start_Position, End_Position)
-  # gene_df$Chromosome <- as.numeric(gene_df$Chromosome) 
-  # var_df %<>% left_join(gene_df,
-  #                       by = c("chr" = "Chromosome", "startpos" = "Start_Position", "endpos" = "End_Position"))
-  # label_df <- var_df %>% 
-  #   dplyr::rename(Gene = Hugo_Symbol) %>% 
-  #   filter(Gene %in% genes)
-  
-  # Factors, palette, ordering
   var_df$idx <- as.numeric(var_df$idx)
   var_df$idx <- factor(var_df$idx, levels = order(var_df$idx))
   var_df$CN_Estimate <- factor(var_df$CN_Estimate)
   var_df$PN_B <- factor(as.numeric(var_df$PN_B))
+  
+  return(var_df)
+}
+
+get_data_to_label <- function(var_df, maf, genes, effects) {
+  
+  maf_df <- read.delim(maf, sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+  test_chr <- maf_df[1, "Chromosome"]
+  if (grepl("chr", test_chr)) {
+    # 'chr' prefix exists
+    maf_df$Chromosome <- sub("^chr", "", maf_df$Chromosome) %>% as.numeric()
+  }
+  
+  gene_df <- maf %>% 
+    data.frame() %>% 
+    mutate(chr = as.numeric(gsub("^chr", "", Chromosome))) %>% 
+    dplyr::select(Hugo_Symbol, chr, Start_Position, End_Position, Variant_Classification)
+  
+  label_df <- left_join(var_df, gene_df,
+                         by = c("chr" = "chr", "startpos" = "Start_Position", "endpos" = "End_Position")) %>% 
+    dplyr::rename(Gene = Hugo_Symbol) %>% 
+    filter(Gene %in% genes) %>% 
+    filter(Variant_Classification %in% effects)
+    
+  return(label_df)
+}
+
+plot_expands_SPs <- function(dm, sampleID, maf, orderBy = "chr", rawAF = FALSE, genes = NULL, effects) {
+  load_plot_libs()
+  
+  # Get data to plot
+  var_df <- tidy_dm(dm, orderBy) %>% 
+    adjust_tumor_af(rawAF) %>% 
+    preserve_var_df()
+  
+  # Get data to label
+  if (!is.null(genes)) {
+    label_df <- get_data_to_label(var_df, maf, genes)
+  }
+  
+  # Use EXPANDS palette for colouring by CN
   cn_palette <- c("1" = "#A6CEE3", "2" = "#1F78B4", "3" = "#B2DF8A", "4" = "#33A02C",
                   "5" = "#FB9A99", "6" = "#E31A1C", "7" = "#FDBF6F", "8" = "#FF7F00")
-  yl <- paste0(adjusted, " Allele Frequency")
+  yl <- ifelse(rawAF, "Adjusted Allele Frequency", "Allele Frequency")
   
   # Allele frequency/SP plot
   af_plot <- ggplot(var_df) +
@@ -533,14 +560,18 @@ plot_expands_SPs <- function(dm, sampleID, maf_keep, orderBy = "chr", rawAF = FA
                aes(x = idx, y = AF_Tumor_Adjusted, colour = CN_Estimate, shape = PN_B)) +
     scale_shape_discrete(name = "Type", labels = c("SNV", "LOH")) +
     scale_colour_manual(values = cn_palette, name = "Copy\nNumber") +
-    #geom_text_repel(data = label_df,
-    #               aes(x = idx, y = AF_Tumor_Adjusted, label = Gene),
-    #                nudge_x = 0.05, nudge_y = 0.05) +
     ylab(yl) + xlab(NULL) + labs(title = sampleID) +
     theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
           axis.line.y = element_line(size = 0.3),
           axis.line.x = element_line(size = 0.3)) +
     scale_y_continuous(breaks = seq(0, 1, by = 0.1), limits = c(0, 1))
+  
+  # Add annotation if available
+  if (!is.null(genes)) {
+    af_plot <- af_plot + geom_text_repel(data = label_df,
+                    aes(x = idx, y = AF_Tumor_Adjusted, label = Gene),
+                     nudge_x = 1, nudge_y = 0.1)
+  }
   
   # Copy number/SP plot
   cn_plot <- ggplot(var_df, aes(x = idx, y = PM_cnv)) +
@@ -570,5 +601,5 @@ plot_expands_SPs <- function(dm, sampleID, maf_keep, orderBy = "chr", rawAF = FA
   g$widths <- unit.pmax(af_g$widths, cn_g$widths)
   grid.newpage()
   grid.draw(g)
-  
+
 }
