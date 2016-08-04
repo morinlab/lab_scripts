@@ -51,7 +51,7 @@ p <- add_argument(p, "--pyclone_dir", default = NULL, help = "Specify separate o
 p <- add_argument(p, "--pyclone_only", default = FALSE,
                   help = "TRUE: Generate PyClone input only, skip EXPANDS")
 p <- add_argument(p, "--plot_custom", default = FALSE,
-                  help = "TRUE: Plot cleaner EPXANDS plots (requires dependencies!). Please supply --genes.")
+                  help = "TRUE: Plot cleaner EPXANDS plots (requires dependencies!).")
 p <- add_argument(p, "--genes", default = NULL,
                   help = "If --plot_custom TRUE, label mutations in these genes in custom plot (specify file with one gene per line)")
 p <- add_argument(p, arg = "--effects", help = "Comma-separated list of VEP effect criteria. If --plot_custom TRUE and --genes provided, filter mutations to label to the these effects. By default, plots nonsilent variants.",
@@ -62,9 +62,9 @@ p <- add_argument(p, arg = "--effects", help = "Comma-separated list of VEP effe
 #args <- parse_args(p)
 
 # # for debugging
-args <- parse_args(p, c("../tumour_copy_number/FFPE-121-F_segments.txt", "S",
-                   "../4-clean_maf/FFPE-121-F.clean.maf",
-                   "FFPE", "."))
+# args <- parse_args(p, c("../tumour_copy_number/FFPE-121-F_segments.txt", "S",
+#                    "../4-clean_maf/FFPE-121-F.clean.maf",
+#                    "FFPE", "."))
 
 
 seg          <- args$seg
