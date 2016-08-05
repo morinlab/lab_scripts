@@ -55,7 +55,7 @@ p <- add_argument(p, "--pyclone_only", default = FALSE,
 
 # optional custom plotting parameters
 p <- add_argument(p, "--plot_custom", flag = TRUE,
-                  help = "Pass flag Plot cleaner EPXANDS plots (requires dependencies!).")
+                  help = "Plot cleaner EPXANDS plots (requires dependencies!).")
 p <- add_argument(p, "--genes", default = NULL,
                   help = "If --plot_custom passed as flag, label mutations in these genes in custom plot (specify file with one gene per line)")
 p <- add_argument(p, arg = "--effects", help = "Comma-separated list of VEP effect criteria. If --plot_custom passed and --genes provided, filter mutations to label to the these effects. By default, plots nonsilent variants.",
