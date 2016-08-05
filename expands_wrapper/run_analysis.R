@@ -49,7 +49,8 @@ p <- add_argument(p, "--cn_style", default = 2,
                   help = "1 for integer values, 2 for rational numbers calculated from CN log ratios (recommended)")
 
 # optional PyClone input parameters
-p <- add_argument(p, "--pyclone_dir", default = NULL, help = "Specify separate output directory for PyClone files")
+p <- add_argument(p, "--pyclone_dir", default = NULL,
+                  help = "Specify separate output directory for PyClone files")
 p <- add_argument(p, "--pyclone_only", default = FALSE,
                   help = "TRUE: Generate PyClone input only, skip EXPANDS")
 
@@ -67,12 +68,6 @@ p <- add_argument(p, arg = "--orderBy", help = "If --plot_custom passed as flag,
 # --------- Get arguments / define other shared variables -------
 args <- parse_args(p)
 
-# # for debugging
-# args <- parse_args(p, c("../tumour_copy_number/FFPE-121-F_segments.txt", "S",
-#                    "../4-clean_maf/FFPE-121-F.clean.maf",
-#                    "FFPE", "."))
-
-
 seg          <- args$seg
 input_mode   <- args$input_mode
 maf          <- args$maf
@@ -84,13 +79,14 @@ cn_style     <- args$cn_style
 out_dir      <- args$output_dir
 pyclone_dir  <- ifelse(is.na(args$pyclone_dir), out_dir, args$pyclone_dir)
 pyclone_only <- args$pyclone_only
-dir.create(out_dir, recursive = TRUE)
-dir.create(pyclone_dir, recursive = TRUE)
 plot_custom  <- args$plot_custom 
 effects      <- unlist(strsplit(as.character(args$effects), ","))
 orderBy      <- args$orderBy
-
 if (!is.na(args$genes)) genes <- scan(args$genes, what = "character")
+
+# make sure directories exist
+dir.create(out_dir, recursive = TRUE)
+dir.create(pyclone_dir, recursive = TRUE)
 
 # could be made arguments
 min_freq <-  0.1
@@ -116,6 +112,7 @@ if (input_mode == "T") {         # Titan
 seg2 <- processed_seg_output[1]
 seg2 <- do.call(rbind, seg2)
 loh_snv_data <- processed_seg_output[2]
+print("Completed processing of segments file")
 
 # Remove? copied and pasted for now
 mask_deletions = FALSE
@@ -142,6 +139,7 @@ if (mask_deletions) {
 process_maf_output <- process_maf(maf)
 snv_data <- process_maf_output[1]
 maf_keep <- process_maf_output[2]
+print("Completed processing of SNV data")
 
 pyclone_input <- generate_pyclone_input(seg, maf_keep, input_mode)
 
@@ -167,20 +165,15 @@ if (include_loh > 0) {
   merge_snv <- rbind(loh_snv_data, snv_data)
   loh_string <- "LOH"
   samp_param <- paste0(sample, "_", loh_string, "_state_INDEL_DelMask_maxpm_", max_PM,
-                       "_score_", max_score, "_precision_", precision)
+                       "_score_", max_score, "_precision_", precision, "_cnstyle_", cn_style)
 } else {
   loh_string <- "no_LOH"
   merge_snv <- snv_data
   samp_param <- paste0(sample, "_", loh_string, "_INDEL_DelMask_maxpm_", max_PM,
-                      "_score_", max_score, "_precision_", precision)
+                      "_score_", max_score, "_precision_", precision, "_cnstyle_", cn_style)
 }
 
 merge_snv <- do.call(rbind, merge_snv)
-
-print("Merged variants:")
-print(merge_snv)
-print("Segments:")
-print(seg2)
 
 
 # -------------------------------------------------------------
@@ -222,9 +215,9 @@ if (precision == 1) {
   
 }
 
-print(dm)
-print(loh_snv_data)
 print(paste0("Parameters: ", samp_param))
+print("Completed Step 1: Assignment of CN to each mutation")
+print("------------------------------------------")
 
 
 # 2. Predict sub-populations
@@ -243,7 +236,8 @@ out_sps <- paste0(out_dir, "/", samp_param, ".unmodified.sps")
 write.table(SPs, file = out_sps, row.names = FALSE, sep = '\t', quote = FALSE)
 
 print(paste0("Subpopulations predicted in this sample (saved to ", out_sps, "):"))
-print(SPs)
+print("Completed Step 2: Prediction of sub-populations")
+print("------------------------------------------")
 
 
 # 3. Assign each SNV to one of predicted SPs
@@ -266,6 +260,8 @@ if (mask_deletions) {
 # file = "expands_plot_simu_incl_chr6LOH.pdf"
 # plot the Expands image showing mutations assigned to their SPs
 # aM$dm[,"%maxP"] = 1
+print("Completed Step 3: Assignment of SNVs to predicted SPs")
+print("------------------------------------------")
 
 # 4. Plot and save results
 # Save raw visualization
@@ -273,12 +269,14 @@ out_fig_raw <- paste0(out_dir, "/", samp_param, "_rawPlot.pdf")
 pdf(out_fig_raw)
 plotSPs(aM$dm, sampleID = sample, cex = 1, rawAF = TRUE)
 dev.off()
+print("Saved raw visualization")
 
 # Save VAF-corrected visualization
 out_fig <- paste0(out_dir, "/", samp_param, ".pdf")
 pdf(out_fig)
 plotSPs(aM$dm, sampleID = sample, cex = 1)
 dev.off()
+print("Saved adjusted-AF visualization")
 
 if (plot_custom) {
   # Check for dependencies
@@ -296,12 +294,14 @@ if (plot_custom) {
     png(filename = out_cust_raw, width = 6, height = 6, res = 200, units = "in")
     plot_expands_SPs(aM$dm, sampleID = sample, maf = maf, rawAF = TRUE, orderBy = orderBy, genes = genes, effects = effects)
     dev.off()
+    print("Saved raw custom visualization")
     
     # Save VAF-corrected custom visualization
     out_cust <- paste0(out_dir, "/", samp_param, ".custom.png")
     png(filename = out_cust, width = 6, height = 6, res = 200, units = "in")
     plot_expands_SPs(aM$dm, sampleID = sample, maf = maf, rawAF = FALSE, orderBy = orderBy, genes = genes, effects = effects)
     dev.off()
+    print("Saved adjusted-AF custom visualization")
   }
   
 }
@@ -316,4 +316,5 @@ out_final_sps <- paste0(out_dir, "/", samp_param, ".final.sps")
 write.table(aM$finalSPs, file = out_final_sps, row.names = FALSE, sep = '\t', quote = FALSE)
 
 print(paste0("Final subpopulations predicted in this sample (saved to ", out_final_sps, "):"))
-print(aM$finalSPs)
+print("Completed Step 4: Visualization of results")
+print("------------------------------------------")

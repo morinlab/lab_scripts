@@ -1,3 +1,5 @@
+# -------------------- Functions for seg processing ---------------------- #
+
 # Load and process Titan output file
 # Sample	Chromosome	Start_Position(bp)	End_Position(bp)	Length(bp)
 # Median_Ratio	Median_logR	TITAN_state	TITAN_call	Copy_Number	MinorCN
@@ -265,6 +267,8 @@ process_oncosnp_seg <- function(seg, include_loh, cn_style) {
   
 }
 
+# -------------------- Functions for MAF processing ---------------------- #
+
 process_maf <- function(maf) {
   
   print(paste("Loading MAF ", maf))
@@ -312,6 +316,8 @@ process_maf <- function(maf) {
   return(outputs)
   
 }
+
+# ----------- Functions for generating PyClone input ---------------------- #
 
 # Assign copy numbers in cbs to mutations in dm
 assign_states_to_mutation <- function(dm, cbs, cols) {
@@ -448,6 +454,8 @@ generate_pyclone_input <- function(seg, maf_keep, input_mode) {
   
 }
 
+# -------------------- Functions for custom plotting ---------------------- #
+
 load_plot_libs <- function() {
   suppressPackageStartupMessages(require(magrittr))
   suppressPackageStartupMessages(require(ggrepel))
@@ -470,7 +478,6 @@ tidy_dm <- function(dm, orderBy) {
     arrange_("desc(SP)", orderBy, "startpos") %>%   # Re-order by SP then chr then pos
     mutate(idx = rownames(.))
   
-  print("test1")
   return(var_df)
 }
 
@@ -483,21 +490,20 @@ adjust_tumor_af <- function(var_df, rawAF) {
     iEq2 <- which(var_df$PM_B == var_df$PN_B)
     iEq3 <- setdiff(1:nrow(var_df), iEq2)
     
-    if (!isempty(iEq3)) {   # Use Equation 3
+    if (!isempty(iEq3)) { # Use Equation 3
       var_df[iEq3, "AF_Tumor_Adjusted"] <- (var_df[iEq3, "AF_Tumor"] * var_df[iEq3, "CN_Estimate"] - var_df[iEq3, "PN_B"]) /
         (var_df[iEq3, "PM_B"] - var_df[iEq3, "PN_B"])
       var_df[iEq3, "AF_Tumor_Adjusted"] <- var_df[iEq3, "AF_Tumor_Adjusted"] * (var_df[iEq3, "PM_B"] / var_df[iEq3, "PM"])
     }
     
-    if (!isempty(iEq2)) {   # Use Equation 2
+    if (!isempty(iEq2)) { # Use Equation 2
       var_df[iEq2, "AF_Tumor_Adjusted"] <- (var_df[iEq2, "CN_Estimate"] - 2) / (var_df[iEq2, "PM"] - 2)
     }
     
-  } else {     # Use raw tumor AF
+  } else {                # Use raw tumor AF
     var_df %<>% mutate(AF_Tumor_Adjusted = AF_Tumor)
   }
   
-  print("test2")
   return(var_df)
 }
 
@@ -507,10 +513,10 @@ preserve_var_df <- function(var_df) {
   
   var_df$idx <- as.numeric(var_df$idx)
   var_df$idx <- factor(var_df$idx, levels = order(var_df$idx))
-  var_df$CN_Estimate <- factor(var_df$CN_Estimate)
+  # Round CN to handle possibility of rational CN Estimates (--cn_style 2)
+  var_df$CN_Estimate <- factor(round(var_df$CN_Estimate)) 
   var_df$PN_B <- factor(as.numeric(var_df$PN_B))
   
-  print("test3")
   return(var_df)
 }
 
@@ -548,12 +554,10 @@ plot_expands_SPs <- function(dm, sampleID, maf, orderBy = "conf", rawAF = FALSE,
     label_df <- get_data_to_label(var_df, maf, genes, effects)
   }
   
-
-
   # Use EXPANDS palette for colouring by CN
   cn_palette <- c("1" = "#A6CEE3", "2" = "#1F78B4", "3" = "#B2DF8A", "4" = "#33A02C",
                   "5" = "#FB9A99", "6" = "#E31A1C", "7" = "#FDBF6F", "8" = "#FF7F00")
-  yl <- ifelse(rawAF, "Adjusted Allele Frequency", "Allele Frequency")
+  yl <- ifelse(rawAF, "Allele Frequency", "Adjusted Allele Frequency")
 
   # Allele frequency/SP plot
   af_plot <- ggplot(var_df) +
@@ -569,13 +573,18 @@ plot_expands_SPs <- function(dm, sampleID, maf, orderBy = "conf", rawAF = FALSE,
           axis.line.x = element_line(size = 0.3)) +
     scale_y_continuous(breaks = seq(0, 1, by = 0.1), limits = c(0, 1)) #+ ggtitle(sampleID)
 
-  print("finished af_plot")
+  print("Plotting AF complete")
 
-  # Add annotation if available
+  num_muts <- length(var_df$chr)
+  # Add annotation to ggplot object if available
   if (!is.null(genes)) {
     af_plot <- af_plot + geom_text_repel(data = label_df,
                     aes(x = idx, y = AF_Tumor_Adjusted, label = Gene),
-                     nudge_x = 200, nudge_y = 0.3, size = 3.5)
+                    nudge_x = ifelse(as.numeric(label_df$idx) < (num_muts - 100), 50, 1),
+                    nudge_y = ifelse(label_df$AF_Tumor_Adjusted < 0.7, 0.2, 0.1),
+                    size = 3.5)
+    
+    print("Labelling mutations complete")
   }
 
   # Copy number/SP plot
@@ -590,16 +599,16 @@ plot_expands_SPs <- function(dm, sampleID, maf, orderBy = "conf", rawAF = FALSE,
           panel.border = element_blank(),
           panel.background = element_blank()) +
     scale_y_continuous(breaks = seq(1, 5, by = 1), limits = c(1, 5)) +
-    scale_x_discrete(breaks = seq(0, nrow(var_df), by = 200)) +
-    coord_fixed(ratio = 1000/10)
+    scale_x_discrete(breaks = seq(0, nrow(var_df), by = 100)) +
+    coord_fixed(ratio = 300/10)
 
-  print("finished cn_plot")
+  print("Plotting CN complete")
 
-  # Aggregate plots
+  # Get grobs from plots
   af_g <- ggplotGrob(af_plot)
   cn_g <- ggplotGrob(cn_plot)
 
-  # Add a column of legend width to cn grob
+  # Add a column of legend-width to cn grob
   legend_width <- af_g$widths[5]
   cn_g <- gtable_add_cols(cn_g, legend_width, 4)
 
