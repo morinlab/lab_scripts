@@ -1,3 +1,5 @@
+# -------------------- Functions for seg processing ---------------------- #
+
 # Load and process Titan output file
 # Sample	Chromosome	Start_Position(bp)	End_Position(bp)	Length(bp)
 # Median_Ratio	Median_logR	TITAN_state	TITAN_call	Copy_Number	MinorCN
@@ -265,6 +267,8 @@ process_oncosnp_seg <- function(seg, include_loh, cn_style) {
   
 }
 
+# -------------------- Functions for MAF processing ---------------------- #
+
 process_maf <- function(maf) {
   
   print(paste("Loading MAF ", maf))
@@ -312,6 +316,8 @@ process_maf <- function(maf) {
   return(outputs)
   
 }
+
+# ----------- Functions for generating PyClone input ---------------------- #
 
 # Assign copy numbers in cbs to mutations in dm
 assign_states_to_mutation <- function(dm, cbs, cols) {
@@ -446,4 +452,175 @@ generate_pyclone_input <- function(seg, maf_keep, input_mode) {
   complete <- !is.na(py_snv_data_assigned[, "major_cn"]) & !is.na(py_snv_data_assigned[, "minor_cn"])
   return(py_snv_data_assigned[complete, , drop = FALSE])
   
+}
+
+# -------------------- Functions for custom plotting ---------------------- #
+
+load_plot_libs <- function() {
+  suppressPackageStartupMessages(require(magrittr))
+  suppressPackageStartupMessages(require(ggrepel))
+  suppressPackageStartupMessages(require(ggplot2))
+  suppressPackageStartupMessages(require(grid))
+  suppressPackageStartupMessages(require(gtable))
+  suppressPackageStartupMessages(require(dplyr))
+}
+
+tidy_dm <- function(dm, orderBy) {
+  # Wrangle dm into a tidy data frame for plotting
+  
+  orderBy <- ifelse(orderBy == "conf", "desc(SP_conf)", orderBy)
+  
+  var_df <- data.frame(dm) %>%                      # Convert dm to data frame
+    filter(!is.na(SP)) %>%                          # Remove variants with no SP assigned
+    mutate(SP_conf = X.maxP - min(X.maxP,           # Normalize SP assignment confidence
+                                  na.rm = TRUE) + 1) %>% 
+    mutate(SP_conf = 50 * SP_conf / max(SP_conf, na.rm = TRUE)) %>%
+    arrange_("desc(SP)", orderBy, "startpos") %>%   # Re-order by SP then chr then pos
+    mutate(idx = rownames(.))
+  
+  return(var_df)
+}
+
+adjust_tumor_af <- function(var_df, rawAF) {
+  # Given a var_df returned from tidy_dm(), :
+  # if plotting rawAF, do no adjustments
+  # if plotting adjusted AF, execute adjustment
+  
+  if (!rawAF) { # Adjust tumor AF
+    iEq2 <- which(var_df$PM_B == var_df$PN_B)
+    iEq3 <- setdiff(1:nrow(var_df), iEq2)
+    
+    if (!isempty(iEq3)) { # Use Equation 3
+      var_df[iEq3, "AF_Tumor_Adjusted"] <- (var_df[iEq3, "AF_Tumor"] * var_df[iEq3, "CN_Estimate"] - var_df[iEq3, "PN_B"]) /
+        (var_df[iEq3, "PM_B"] - var_df[iEq3, "PN_B"])
+      var_df[iEq3, "AF_Tumor_Adjusted"] <- var_df[iEq3, "AF_Tumor_Adjusted"] * (var_df[iEq3, "PM_B"] / var_df[iEq3, "PM"])
+    }
+    
+    if (!isempty(iEq2)) { # Use Equation 2
+      var_df[iEq2, "AF_Tumor_Adjusted"] <- (var_df[iEq2, "CN_Estimate"] - 2) / (var_df[iEq2, "PM"] - 2)
+    }
+    
+  } else {                # Use raw tumor AF
+    var_df %<>% mutate(AF_Tumor_Adjusted = AF_Tumor)
+  }
+  
+  return(var_df)
+}
+
+preserve_var_df <- function(var_df) {
+  # Turn observations into factors etc
+  # to preserve ordering when plotting
+  
+  var_df$idx <- as.numeric(var_df$idx)
+  var_df$idx <- factor(var_df$idx, levels = order(var_df$idx))
+  # Round CN to handle possibility of rational CN Estimates (--cn_style 2)
+  var_df$CN_Estimate <- factor(round(var_df$CN_Estimate)) 
+  var_df$PN_B <- factor(as.numeric(var_df$PN_B))
+  
+  return(var_df)
+}
+
+get_data_to_label <- function(var_df, maf, genes, effects) {
+  
+  maf_df <- read.delim(maf, sep = "\t", header = TRUE, stringsAsFactors = FALSE)
+  test_chr <- maf_df[1, "Chromosome"]
+  if (grepl("chr", test_chr)) {
+    # 'chr' prefix exists
+    maf_df$Chromosome <- sub("^chr", "", maf_df$Chromosome) %>% as.numeric()
+  }
+  
+  gene_df <- maf_df[, c("Hugo_Symbol", "Chromosome", "Start_Position", "End_Position", "Variant_Classification")]
+  
+  label_df <- left_join(var_df, gene_df,
+                         by = c("chr" = "Chromosome", "startpos" = "Start_Position", "endpos" = "End_Position")) %>% 
+    dplyr::rename(Gene = Hugo_Symbol) %>% 
+    dplyr::rename(Effect = Variant_Classification) %>% 
+    dplyr::filter(Gene %in% genes) %>% 
+    dplyr::filter(Effect %in% effects)
+    
+  return(label_df)
+}
+
+plot_expands_SPs <- function(dm, sampleID, maf, orderBy = "conf", rawAF = FALSE, genes = NULL, effects) {
+  load_plot_libs()
+  
+  # Get data to plot
+  var_df <- tidy_dm(dm, orderBy) %>% 
+    adjust_tumor_af(rawAF) %>% 
+    preserve_var_df()
+  
+  # Get data to label
+  if (!is.null(genes)) {
+    label_df <- get_data_to_label(var_df, maf, genes, effects)
+  }
+  
+  # Use EXPANDS palette for colouring by CN
+  cn_palette <- c("1" = "#A6CEE3", "2" = "#1F78B4", "3" = "#B2DF8A", "4" = "#33A02C",
+                  "5" = "#FB9A99", "6" = "#E31A1C", "7" = "#FDBF6F", "8" = "#FF7F00")
+  yl <- ifelse(rawAF, "Allele Frequency", "Adjusted Allele Frequency")
+
+  # Allele frequency/SP plot
+  af_plot <- ggplot(var_df) +
+    geom_point(aes(x = idx, y = SP, fill = SP_conf), shape = 22, colour = NA) +
+    scale_fill_gradient(low = "#E6E6E6", high = "#4D4D4D", guide = FALSE) +
+    geom_point(alpha = 0.8,
+               aes(x = idx, y = AF_Tumor_Adjusted, colour = CN_Estimate, shape = PN_B)) +
+    scale_shape_discrete(name = "Type", labels = c("SNV", "LOH")) +
+    scale_colour_manual(values = cn_palette, name = "Copy\nNumber") +
+    ylab(yl) + xlab(NULL) + 
+    theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
+          axis.line.y = element_line(size = 0.3),
+          axis.line.x = element_line(size = 0.3)) +
+    scale_y_continuous(breaks = seq(0, 1, by = 0.1), limits = c(0, 1)) #+ ggtitle(sampleID)
+
+  print("Plotting AF complete")
+
+  num_muts <- length(var_df$chr)
+  # Add annotation to ggplot object if available
+  if (!is.null(genes)) {
+    af_plot <- af_plot + geom_text_repel(data = label_df,
+                    aes(x = idx, y = AF_Tumor_Adjusted, label = Gene),
+                    nudge_x = ifelse(as.numeric(label_df$idx) < (num_muts - 100), 50, 1),
+                    nudge_y = ifelse(label_df$AF_Tumor_Adjusted < 0.7, 0.2, 0.1),
+                    size = 3.5)
+    
+    print("Labelling mutations complete")
+  }
+
+  # Copy number/SP plot
+  cn_plot <- ggplot(var_df, aes(x = idx, y = PM_cnv)) +
+    geom_point(aes(colour = CN_Estimate), alpha = 0.8) +
+    scale_colour_manual(values = cn_palette, guide = FALSE) +
+    ylab("Total ploidy at locus") + xlab("Mutation") +
+    theme(axis.line.x = element_line(size = 0.3),
+          axis.line.y = element_line(size = 0.3),
+          panel.grid.major = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.border = element_blank(),
+          panel.background = element_blank()) +
+    scale_y_continuous(breaks = seq(1, 5, by = 1), limits = c(1, 5)) +
+    scale_x_discrete(breaks = seq(0, nrow(var_df), by = 100)) +
+    coord_fixed(ratio = 300/10)
+
+  print("Plotting CN complete")
+
+  # Get grobs from plots
+  af_g <- ggplotGrob(af_plot)
+  cn_g <- ggplotGrob(cn_plot)
+
+  # Add a column of legend-width to cn grob
+  legend_width <- af_g$widths[5]
+  cn_g <- gtable_add_cols(cn_g, legend_width, 4)
+
+  # Add title
+  #title <- textGrob(sampleID, gp = gpar(fontsize = 10))
+  
+  # Bind and arrange the two grobs
+  g <- rbind(af_g, cn_g, size = "first")
+  g$widths <- unit.pmax(af_g$widths, cn_g$widths)
+  #g <- gtable_add_rows(title)
+  
+  grid.newpage()
+  grid.draw(g)
+
 }
