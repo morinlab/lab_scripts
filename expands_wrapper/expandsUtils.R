@@ -470,6 +470,7 @@ tidy_dm <- function(dm, orderBy) {
     arrange_("desc(SP)", orderBy, "startpos") %>%   # Re-order by SP then chr then pos
     mutate(idx = rownames(.))
   
+  print("test1")
   return(var_df)
 }
 
@@ -496,6 +497,7 @@ adjust_tumor_af <- function(var_df, rawAF) {
     var_df %<>% mutate(AF_Tumor_Adjusted = AF_Tumor)
   }
   
+  print("test2")
   return(var_df)
 }
 
@@ -508,6 +510,7 @@ preserve_var_df <- function(var_df) {
   var_df$CN_Estimate <- factor(var_df$CN_Estimate)
   var_df$PN_B <- factor(as.numeric(var_df$PN_B))
   
+  print("test3")
   return(var_df)
 }
 
@@ -520,46 +523,38 @@ get_data_to_label <- function(var_df, maf, genes, effects) {
     maf_df$Chromosome <- sub("^chr", "", maf_df$Chromosome) %>% as.numeric()
   }
   
-  gene_df <- maf %>% 
-    data.frame() %>% 
-    mutate(chr = as.numeric(gsub("^chr", "", Chromosome))) %>% 
-    dplyr::select(Hugo_Symbol, chr, Start_Position, End_Position, Variant_Classification)
+  gene_df <- maf_df[, c("Hugo_Symbol", "Chromosome", "Start_Position", "End_Position", "Variant_Classification")]
   
   label_df <- left_join(var_df, gene_df,
-                         by = c("chr" = "chr", "startpos" = "Start_Position", "endpos" = "End_Position")) %>% 
+                         by = c("chr" = "Chromosome", "startpos" = "Start_Position", "endpos" = "End_Position")) %>% 
     dplyr::rename(Gene = Hugo_Symbol) %>% 
-    filter(Gene %in% genes) %>% 
-    filter(Variant_Classification %in% effects)
+    dplyr::rename(Effect = Variant_Classification) %>% 
+    dplyr::filter(Gene %in% genes) %>% 
+    dplyr::filter(Effect %in% effects)
     
   return(label_df)
 }
 
-plot_expands_SPs <- function(dm, sampleID, maf, orderBy = "chr", rawAF = FALSE, genes = NULL, effects) {
+plot_expands_SPs <- function(dm, sampleID, maf, orderBy = "conf", rawAF = FALSE, genes = NULL, effects) {
   load_plot_libs()
-  
-  print("entered plot_expands_SPs functons")
   
   # Get data to plot
   var_df <- tidy_dm(dm, orderBy) %>% 
     adjust_tumor_af(rawAF) %>% 
     preserve_var_df()
   
-  print(genes)
-  str(var_df)
-  head(var_df)
-  
   # Get data to label
   if (!is.null(genes)) {
-    label_df <- get_data_to_label(var_df, maf, genes)
+    label_df <- get_data_to_label(var_df, maf, genes, effects)
   }
   
-  head(label_df)
-  
+
+
   # Use EXPANDS palette for colouring by CN
   cn_palette <- c("1" = "#A6CEE3", "2" = "#1F78B4", "3" = "#B2DF8A", "4" = "#33A02C",
                   "5" = "#FB9A99", "6" = "#E31A1C", "7" = "#FDBF6F", "8" = "#FF7F00")
   yl <- ifelse(rawAF, "Adjusted Allele Frequency", "Allele Frequency")
-  
+
   # Allele frequency/SP plot
   af_plot <- ggplot(var_df) +
     geom_point(aes(x = idx, y = SP, fill = SP_conf), shape = 22, colour = NA) +
@@ -568,21 +563,21 @@ plot_expands_SPs <- function(dm, sampleID, maf, orderBy = "chr", rawAF = FALSE, 
                aes(x = idx, y = AF_Tumor_Adjusted, colour = CN_Estimate, shape = PN_B)) +
     scale_shape_discrete(name = "Type", labels = c("SNV", "LOH")) +
     scale_colour_manual(values = cn_palette, name = "Copy\nNumber") +
-    ylab(yl) + xlab(NULL) + labs(title = sampleID) +
+    ylab(yl) + xlab(NULL) + 
     theme(axis.ticks.x = element_blank(), axis.text.x = element_blank(),
           axis.line.y = element_line(size = 0.3),
           axis.line.x = element_line(size = 0.3)) +
-    scale_y_continuous(breaks = seq(0, 1, by = 0.1), limits = c(0, 1))
-  
+    scale_y_continuous(breaks = seq(0, 1, by = 0.1), limits = c(0, 1)) #+ ggtitle(sampleID)
+
   print("finished af_plot")
-  
+
   # Add annotation if available
   if (!is.null(genes)) {
     af_plot <- af_plot + geom_text_repel(data = label_df,
                     aes(x = idx, y = AF_Tumor_Adjusted, label = Gene),
-                     nudge_x = 1, nudge_y = 0.1)
+                     nudge_x = 200, nudge_y = 0.3, size = 3.5)
   }
-  
+
   # Copy number/SP plot
   cn_plot <- ggplot(var_df, aes(x = idx, y = PM_cnv)) +
     geom_point(aes(colour = CN_Estimate), alpha = 0.8) +
@@ -597,20 +592,25 @@ plot_expands_SPs <- function(dm, sampleID, maf, orderBy = "chr", rawAF = FALSE, 
     scale_y_continuous(breaks = seq(1, 5, by = 1), limits = c(1, 5)) +
     scale_x_discrete(breaks = seq(0, nrow(var_df), by = 200)) +
     coord_fixed(ratio = 1000/10)
-  
+
   print("finished cn_plot")
-  
+
   # Aggregate plots
   af_g <- ggplotGrob(af_plot)
   cn_g <- ggplotGrob(cn_plot)
-  
+
   # Add a column of legend width to cn grob
   legend_width <- af_g$widths[5]
   cn_g <- gtable_add_cols(cn_g, legend_width, 4)
+
+  # Add title
+  #title <- textGrob(sampleID, gp = gpar(fontsize = 10))
   
   # Bind and arrange the two grobs
   g <- rbind(af_g, cn_g, size = "first")
   g$widths <- unit.pmax(af_g$widths, cn_g$widths)
+  #g <- gtable_add_rows(title)
+  
   grid.newpage()
   grid.draw(g)
 

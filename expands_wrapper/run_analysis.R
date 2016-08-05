@@ -40,22 +40,28 @@ p <- add_argument(p, "sample", help = "Sample ID")
 p <- add_argument(p, "output_dir",
                      help = "Path to directory where all output will be saved")
 
-# optional
+# optional EXPANDS parameters
 p <- add_argument(p, "--loh", default = 1,
                      help = "0: ignore LOH events, 1: include all copy-neutral LOH segments and their BAF in clustering; can help resolve clonal clusters with few mutations, (recommended), 2: include deletion LOH only, 3: include all LOH")
 p <- add_argument(p, "--max_score", default = 2.25, help = "max_score for EXPANDS")
 p <- add_argument(p, "--precision", default = 0.05, help = "precision for EXPANDS")
 p <- add_argument(p, "--cn_style", default = 2,
                   help = "1 for integer values, 2 for rational numbers calculated from CN log ratios (recommended)")
+
+# optional PyClone input parameters
 p <- add_argument(p, "--pyclone_dir", default = NULL, help = "Specify separate output directory for PyClone files")
 p <- add_argument(p, "--pyclone_only", default = FALSE,
                   help = "TRUE: Generate PyClone input only, skip EXPANDS")
+
+# optional custom plotting parameters
 p <- add_argument(p, "--plot_custom", flag = TRUE,
                   help = "Pass flag Plot cleaner EPXANDS plots (requires dependencies!).")
 p <- add_argument(p, "--genes", default = NULL,
                   help = "If --plot_custom passed as flag, label mutations in these genes in custom plot (specify file with one gene per line)")
-p <- add_argument(p, arg = "--effects", help = "Comma-separated list of VEP effect criteria. If --plot_custom TRUE and --genes provided, filter mutations to label to the these effects. By default, plots nonsilent variants.",
+p <- add_argument(p, arg = "--effects", help = "Comma-separated list of VEP effect criteria. If --plot_custom passed and --genes provided, filter mutations to label to the these effects. By default, plots nonsilent variants.",
                   default = "Frame_Shift_Del,Frame_Shift_Ins,In_Frame_Del,In_Frame_Ins,Missense_Mutation,Nonsense_Mutation,Nonstop_Mutation,Splice_Site,Translation_Start_Site")
+p <- add_argument(p, arg = "--orderBy", help = "If --plot_custom passed as flag, controls ordering of SNVs in custom plot. Options: chr (Chromosome & Start pos), conf (confidence of SP assignment)",
+                  default = "conf")
 
 
 # --------- Get arguments / define other shared variables -------
@@ -82,6 +88,7 @@ dir.create(out_dir, recursive = TRUE)
 dir.create(pyclone_dir, recursive = TRUE)
 plot_custom  <- args$plot_custom 
 effects      <- unlist(strsplit(as.character(args$effects), ","))
+orderBy      <- args$orderBy
 
 if (!is.na(args$genes)) genes <- scan(args$genes, what = "character")
 
@@ -287,13 +294,13 @@ if (plot_custom) {
     # Save raw custom visualization
     out_cust_raw <- paste0(out_dir, "/", samp_param, "_rawPlot.custom.png")
     png(filename = out_cust_raw, width = 6, height = 6, res = 200, units = "in")
-    plot_expands_SPs(aM$dm, sampleID = sample, maf = maf, rawAF = TRUE, genes, effects)
+    plot_expands_SPs(aM$dm, sampleID = sample, maf = maf, rawAF = TRUE, orderBy = orderBy, genes = genes, effects = effects)
     dev.off()
     
     # Save VAF-corrected custom visualization
     out_cust <- paste0(out_dir, "/", samp_param, ".custom.png")
     png(filename = out_cust, width = 6, height = 6, res = 200, units = "in")
-    plot_expands_SPs(aM$dm, sampleID = sample, maf = maf, rawAF = FALSE, genes, effects)
+    plot_expands_SPs(aM$dm, sampleID = sample, maf = maf, rawAF = FALSE, orderBy = orderBy, genes = genes, effects = effects)
     dev.off()
   }
   
