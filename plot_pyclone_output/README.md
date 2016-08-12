@@ -5,6 +5,6 @@ Replot PyClone's loci-level CCF plots (`plots/loci/scatter.png`) with mutations 
 Example:
 ```
 $ Rscript /software/lab_scripts/.../plot_ccfs.R \
-    PT001 PT001_Tumour,PT001_Plasma pyclone_working_dir/PT001 lymphoma_genes.txt \
+    PT001 PT001_Tumour,PT001_Plasma pyclone_working_dir/PT001/tables/loci.tsv lymphoma_genes.txt \
     --mafs mafs/PT001_Tumour.maf,mafs/PT001_Plasma.maf
 ```
