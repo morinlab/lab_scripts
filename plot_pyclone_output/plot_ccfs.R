@@ -6,7 +6,7 @@
 command <- commandArgs(trailingOnly = FALSE)
 script_name <- sub("--file=", "", command[grep("--file=", command)])
 script_path <- dirname(script_name)
-functions <- file.path(script_path, "plot_ccf_functions.R")
+functions <- file.path(script_path, "functions.R")
 source(functions, chdir = TRUE)
 
 
@@ -16,7 +16,7 @@ p <- arg_parser(description = "Plot PyClone results for patients with multiple s
 # Positional
 p <- add_argument(p, arg = "patient", help = "Patient ID")
 p <- add_argument(p, arg = "samples", help = "Comma-separated list of sample IDs as used in PyClone")
-p <- add_argument(p, arg = "pyclone_dir", help = "Path to directory containing PyClone results for patient")
+p <- add_argument(p, arg = "loci", help = "Path to loci.tsv PyClone output file")
 p <- add_argument(p, arg = "genes", help = "List of genes to label (one per line)")
 
 # Options
@@ -25,25 +25,28 @@ p <- add_argument(p, arg = "--out", default = ".",
 p <- add_argument(p, arg = "--min_cluster_size", default = 5,
                   help = "Mirrors PyClone argument: mininum variants required to plot a cluster")
 p <- add_argument(p, arg = "--mafs", default = NULL,
-                  help = "Provide MAFs for all samples to label nonsilent mutations only (comma-separated, in the same order as samples)")
-
+                  help = "Provide MAFs for all samples to filter mutations to label by effect (comma-separated, in the same order as samples)")
+p <- add_argument(p, arg = "--genes", default = NULL,
+                  help = "If --plot_custom passed as flag, label mutations in these genes in custom plot (specify file with one gene per line)")
+p <- add_argument(p, arg = "--effects", help = "Comma-separated list of VEP effect criteria. If --plot_custom passed and --genes provided, filter mutations to label to the these effects. By default, plots nonsilent variants.",
+                  default = "Frame_Shift_Del,Frame_Shift_Ins,In_Frame_Del,In_Frame_Ins,Missense_Mutation,Nonsense_Mutation,Nonstop_Mutation,Splice_Site,Translation_Start_Site")
 
 # --------- Get arguments / define other shared variables -------
 args <- parse_args(p)
 
-# for debugging
-# args <- parse_args(p, c("FFPE-365", "FFPE-365-A,FFPE-365-R",
-#                    "../7-pyclone/2-pyclone_working_dir/FFPE-365",
-#                    "../helper_files/lymphoma_genes.txt"))
-# args$mafs <- "../4-clean_maf/FFPE-365-A.clean.maf,../4-clean_maf/FFPE-365-R.clean.maf"
-
 patient <- args$patient
 samples <- unlist(stri_split(args$samples, regex = ","))
-pc_dir  <- args$pyclone_dir 
+loci    <- args$loci 
 out_dir <- args$out
 min_var <- as.numeric(args$min_cluster_size)
-genes   <- read_tsv(args$genes) %>% dplyr::select(1) %>% unlist()
 mafs    <- unlist(stri_split(args$mafs, regex = ","))
+effects <- unlist(strsplit(as.character(args$effects), ","))
+
+if (!is.na(args$genes)) {
+  genes <- scan(args$genes, what = "character")
+} else {
+  genes <- NULL
+}
 
 if (length(samples) == 1) {
   print("At least two samples per patient required! Passed:")
@@ -51,21 +54,14 @@ if (length(samples) == 1) {
   quit(status = 1)
 }
 
-dir.create(out_dir, recursive = TRUE)
-
-nonsilent <- c("Frame_Shift_Del", "Frame_Shift_Ins", "In_Frame_Del", "In_Frame_Ins",
-              "Missense_Mutation", "Nonsense_Mutation", "Nonstop_Mutation",
-              "Splice_Site", "Translation_Start_Site")
-
-
 # --------- Plot CCF of all pairs at locus level ----------------
-loci <- get_loci()
+loci_df <- get_loci()
   
 for (i in 1:length(samples)) {
   for (j in 1:length(samples)) {
     
     if (samples[i] == samples[j]) next
-    plot_loci_ccf(loci, c(samples[i], samples[j]))
+    plot_loci_ccf(loci_df, c(samples[i], samples[j]))
     
   }
 }
