@@ -48,15 +48,11 @@ p <- add_argument(p, "--precision", default = 0.05, help = "precision for EXPAND
 p <- add_argument(p, "--cn_style", default = 2,
                   help = "1 for integer values, 2 for rational numbers calculated from CN log ratios (recommended)")
 
-# optional PyClone input parameters
-p <- add_argument(p, "--pyclone_dir", default = NULL,
-                  help = "Specify separate output directory for PyClone files")
-p <- add_argument(p, "--pyclone_only", default = FALSE,
-                  help = "TRUE: Generate PyClone input only, skip EXPANDS")
-
 # optional custom plotting parameters
 p <- add_argument(p, "--plot_custom", flag = TRUE,
                   help = "Plot cleaner EPXANDS plots (requires dependencies!).")
+p <- add_argument(p, "--plot_native", flag = TRUE,
+                  help = "Plot native EXPANDS visualizations")
 p <- add_argument(p, "--genes", default = NULL,
                   help = "If --plot_custom passed as flag, label mutations in these genes in custom plot (specify file with one gene per line)")
 p <- add_argument(p, arg = "--effects", help = "Comma-separated list of VEP effect criteria. If --plot_custom passed and --genes provided, filter mutations to label to the these effects. By default, plots nonsilent variants.",
@@ -72,21 +68,23 @@ seg          <- args$seg
 input_mode   <- args$input_mode
 maf          <- args$maf
 sample       <- args$sample
+
 include_loh  <- args$loh
 max_score    <- as.double(args$max_score)
 precision    <- as.double(args$precision)
 cn_style     <- args$cn_style
 out_dir      <- args$output_dir
-pyclone_dir  <- ifelse(is.na(args$pyclone_dir), out_dir, args$pyclone_dir)
-pyclone_only <- args$pyclone_only
+
+plot_native  <- args$plot_native
 plot_custom  <- args$plot_custom 
 effects      <- unlist(strsplit(as.character(args$effects), ","))
 orderBy      <- args$orderBy
-if (!is.na(args$genes)) genes <- scan(args$genes, what = "character")
 
-# make sure directories exist
-dir.create(out_dir, recursive = TRUE)
-dir.create(pyclone_dir, recursive = TRUE)
+if (!is.na(args$genes)) {
+  genes <- scan(args$genes, what = "character")
+} else {
+  genes <- NULL
+}
 
 # could be made arguments
 min_freq <-  0.1
@@ -140,21 +138,6 @@ process_maf_output <- process_maf(maf)
 snv_data <- process_maf_output[1]
 maf_keep <- process_maf_output[2]
 print("Completed processing of SNV data")
-
-pyclone_input <- generate_pyclone_input(seg, maf_keep, input_mode)
-
-out_pyclone <- paste0(pyclone_dir, "/", sample, "_pyclone_in.tsv")
-write.table(pyclone_input, file = out_pyclone,
-            sep = "\t", quote = FALSE, row.names = FALSE)
-
-print(paste0("PyClone input written to ", out_pyclone))
-
-if (pyclone_only == TRUE) {
-
-  print("--pyclone_only set to TRUE and PyClone input complete. Skipping EXPANDS and exiting script.")
-  quit(status = 0)
-  
-}
 
 
 # -------------------------------------------------------------
@@ -265,54 +248,47 @@ print("------------------------------------------")
 
 # 4. Plot and save results
 # Save raw visualization
-out_fig_raw <- paste0(out_dir, "/", samp_param, "_rawPlot.pdf")
-pdf(out_fig_raw)
-plotSPs(aM$dm, sampleID = sample, cex = 1, rawAF = TRUE)
-dev.off()
-print("Saved raw visualization")
 
-# Save VAF-corrected visualization
-out_fig <- paste0(out_dir, "/", samp_param, ".pdf")
-pdf(out_fig)
-plotSPs(aM$dm, sampleID = sample, cex = 1)
-dev.off()
-print("Saved adjusted-AF visualization")
+if (plot_native) {
+  out_fig_raw <- paste0(out_dir, "/expands_native_raw_", samp_param, ".pdf")
+  pdf(file = out_fig_raw, onefile = FALSE)
+  plotSPs(aM$dm, sampleID = sample, cex = 1, rawAF = TRUE)
+  dev.off()
+  print("Saved raw visualization")
+
+  # Save VAF-corrected visualization
+  out_fig <- paste0(out_dir, "/expands_native_adj_", samp_param, ".pdf")
+  pdf(file = out_fig, onefile = FALSE)
+  plotSPs(aM$dm, sampleID = sample, cex = 1)
+  dev.off()
+  print("Saved adjusted-AF visualization")
+
+}
 
 if (plot_custom) {
-  # Check for dependencies
-  plot_deps <- list("magrittr", "ggrepel", "ggplot2", "grid", "gtable", "dplyr")
-  missing <- plot_deps[!(plot_deps %in% installed.packages()[,"Package"])]
+  # Save raw custom visualization
+  out_cust_raw <- paste0(out_dir, "/expands_custom_raw_", samp_param, ".pdf")
+  pdf(file = out_cust_raw, width = 6, height = 6, onefile = FALSE)
+  plot_expands_SPs(aM$dm, sampleID = sample, maf = maf, rawAF = TRUE, orderBy = orderBy, genes = genes, effects = effects)
+  dev.off()
+  print("Saved raw custom visualization")
   
-  if (length(missing) >= 1) {
-    print("Missing required dependencies for custom plots, therefore not executing. Please install:")
-    print(missing)
-    
-  } else {
-    
-    # Save raw custom visualization
-    out_cust_raw <- paste0(out_dir, "/", samp_param, "_rawPlot.custom.png")
-    png(filename = out_cust_raw, width = 6, height = 6, res = 200, units = "in")
-    plot_expands_SPs(aM$dm, sampleID = sample, maf = maf, rawAF = TRUE, orderBy = orderBy, genes = genes, effects = effects)
-    dev.off()
-    print("Saved raw custom visualization")
-    
-    # Save VAF-corrected custom visualization
-    out_cust <- paste0(out_dir, "/", samp_param, ".custom.png")
-    png(filename = out_cust, width = 6, height = 6, res = 200, units = "in")
-    plot_expands_SPs(aM$dm, sampleID = sample, maf = maf, rawAF = FALSE, orderBy = orderBy, genes = genes, effects = effects)
-    dev.off()
-    print("Saved adjusted-AF custom visualization")
-  }
+  # Save VAF-corrected custom visualization
+  out_cust <- paste0(out_dir, "/expands_custom_adj_", samp_param, ".pdf")
+  pdf(file = out_cust, width = 6, height = 6, onefile = FALSE)
+  plot_expands_SPs(aM$dm, sampleID = sample, maf = maf, rawAF = FALSE, orderBy = orderBy, genes = genes, effects = effects)
+  dev.off()
+  print("Saved adjusted-AF custom visualization")
   
 }
 
 # Save table with mutations assigned to SPs
-out_dm <- paste0(out_dir, "/", samp_param, ".dm.tsv")
+out_dm <- paste0(out_dir, "/expands_mutations_", samp_param, ".tsv")
 suppressWarnings(write.table(aM$dm, file = out_dm, quote = FALSE, sep = "\t", row.names=FALSE))
 print(paste0("Mutation details saved to ", out_dm))
 
 # Save details of final SPs
-out_final_sps <- paste0(out_dir, "/", samp_param, ".final.sps")
+out_final_sps <- paste0(out_dir, "/expands_sps_", samp_param, ".tsv")
 write.table(aM$finalSPs, file = out_final_sps, row.names = FALSE, sep = '\t', quote = FALSE)
 
 print(paste0("Final subpopulations predicted in this sample (saved to ", out_final_sps, "):"))
