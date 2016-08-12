@@ -2,14 +2,12 @@ import argparse
 import math
 import re
 from collections import deque
-"""
 
-Input: a two column, tab delimited file where the first column contains
-the sample name, the second column contains the path to the Sequenza seg 
-file for that sample. Alternatively, a single file containing the segments
-from all the samples in IGV format. Also requires a BED file containing 
-the exon start and end positions to create the marker file. NOTE: assumes 
-that chromosome names do not have 'chr' prefix in all files.
+"""
+Input: a single file containing the segments from all the samples in IGV 
+format. Also requires a BED file containing the exon start and end 
+positions to create the marker file. NOTE: assumes that chromosome have 
+'chr' prefix in the IGV segment file and the BED file.
 
 Output: GISTIC compatible segmentation file with the start position of the
 first segment and the end position of the last segment for every chromosome
