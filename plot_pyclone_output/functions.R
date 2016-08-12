@@ -23,7 +23,7 @@ get_loci <- function() {
 
 
 plot_loci_ccf <- function(loci_df, samples) {
-  
+ 
   # Columns and labels
   x_ccf <- paste0(samples[1], "_cellular_prevalence")
   xl <- paste0(samples[1], " CCF")
@@ -32,10 +32,10 @@ plot_loci_ccf <- function(loci_df, samples) {
   loci_df$cluster_id <- factor(loci_df$cluster_id)
   
   # Keep only clusters with n=min_var mutations
-  counts <- plyr::count(loci, vars = "cluster_id")
+  counts <- plyr::count(loci_df, vars = "cluster_id")
   to_keep <- counts[which(counts$freq > min_var), ] %>% 
     dplyr::select(cluster_id) %>% unlist
-  loci_df_to_plot <- filter(loci_df, cluster_id %in% to_keep)
+  loci_df_to_plot <- dplyr::filter(loci_df, cluster_id %in% to_keep)
   
   # Label known genes of interest
   if (is.na(args$mafs)) {  # No MAFs passed, plot all mutations in passed genes
@@ -71,5 +71,5 @@ plot_loci_ccf <- function(loci_df, samples) {
   
   out_string <- paste0(samples[2], "vs", samples[1], ".pdf")
   ggsave(p, file = file.path(out_dir, out_string))
-  
+
 }

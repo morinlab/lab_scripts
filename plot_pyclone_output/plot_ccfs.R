@@ -56,7 +56,7 @@ if (length(samples) == 1) {
 
 # --------- Plot CCF of all pairs at locus level ----------------
 loci_df <- get_loci()
-  
+
 for (i in 1:length(samples)) {
   for (j in 1:length(samples)) {
     
