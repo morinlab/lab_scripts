@@ -26,8 +26,6 @@ p <- add_argument(p, arg = "--min_cluster_size", default = 5,
                   help = "Mirrors PyClone argument: mininum variants required to plot a cluster")
 p <- add_argument(p, arg = "--mafs", default = NULL,
                   help = "Provide MAFs for all samples to filter mutations to label by effect (comma-separated, in the same order as samples)")
-p <- add_argument(p, arg = "--genes", default = NULL,
-                  help = "If --plot_custom passed as flag, label mutations in these genes in custom plot (specify file with one gene per line)")
 p <- add_argument(p, arg = "--effects", help = "Comma-separated list of VEP effect criteria. If --plot_custom passed and --genes provided, filter mutations to label to the these effects. By default, plots nonsilent variants.",
                   default = "Frame_Shift_Del,Frame_Shift_Ins,In_Frame_Del,In_Frame_Ins,Missense_Mutation,Nonsense_Mutation,Nonstop_Mutation,Splice_Site,Translation_Start_Site")
 
