@@ -553,8 +553,10 @@ plot_expands_SPs <- function(dm, sampleID, maf, orderBy = "conf", rawAF = FALSE,
   if (!is.null(genes)) {
     label_df <- get_data_to_label(var_df, maf, genes, effects)
   }
-
-  suppressWarnings(write.table(var_df, file = dm_string, quote = FALSE, sep = "\t", row.names=FALSE))
+  
+  if(!rawAF) {
+    suppressWarnings(write.table(var_df, file = dm_string, quote = FALSE, sep = "\t", row.names=FALSE))
+  }
   
   # Use EXPANDS palette for colouring by CN
   cn_palette <- c("1" = "#A6CEE3", "2" = "#1F78B4", "3" = "#B2DF8A", "4" = "#33A02C",

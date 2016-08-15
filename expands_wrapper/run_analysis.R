@@ -269,7 +269,7 @@ if (plot_custom) {
   # Save raw custom visualization
   out_cust_raw <- paste0(out_dir, "/expands_custom_raw_", samp_param, ".pdf")
   pdf(file = out_cust_raw, width = 6, height = 6, onefile = FALSE)
-  plot_expands_SPs(aM$dm, sampleID = sample, maf = maf, rawAF = TRUE, orderBy = orderBy, genes = genes, effects = effects)
+  plot_expands_SPs(aM$dm, sampleID = sample, maf = maf, rawAF = TRUE, orderBy = orderBy, genes = genes, effects = effects, dm_string = NULL)
   dev.off()
   print("Saved raw custom visualization")
   
@@ -277,7 +277,7 @@ if (plot_custom) {
   out_cust <- paste0(out_dir, "/expands_custom_adj_", samp_param, ".pdf")
   dm_string <- paste0(out_dir, "/expands_mutations_adj_", samp_param, ".tsv")
   pdf(file = out_cust, width = 6, height = 6, onefile = FALSE)
-  plot_expands_SPs(aM$dm, sampleID = sample, maf = maf, rawAF = FALSE, orderBy = orderBy, genes = genes, effects = effects, dm_string)
+  plot_expands_SPs(aM$dm, sampleID = sample, maf = maf, rawAF = FALSE, orderBy = orderBy, genes = genes, effects = effects, dm_string = dm_string)
   dev.off()
   print("Saved adjusted-AF custom visualization")
   
