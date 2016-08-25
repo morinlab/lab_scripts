@@ -11,6 +11,7 @@ def main():
     output_dir = args.output_dir
     interval_file = args.interval_file
     num_reads = args.num_reads
+    trim_bases = args.trim_bases
 
     #if not os.path.exists(output_dir):
     #    os.path.mkdirs(output_dir, 0775)
@@ -67,6 +68,9 @@ def main():
         if read.is_reverse:
             seq = get_complement(seq)[::-1]
             qual = qual[::-1]
+
+        seq = seq[trim_bases:]
+        qual = qual[trim_bases:]
 
         if not read.is_read1 and not read.is_read2:
 
@@ -188,6 +192,8 @@ def parse_args():
                         help='Interval file that will be created.')
     parser.add_argument('--num_reads', '-n', type=int, default=75000000,
                         help='Maximum number of reads per FASTQ file.')
+    parser.add_argument('--trim_bases','-b',type=int,default=0,
+                        help="trim the first n bases from the 5' of the fastq")
     args = parser.parse_args()
     return args
 
