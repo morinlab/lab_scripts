@@ -320,7 +320,7 @@ process_maf <- function(maf) {
 # ----------- Functions for generating PyClone input ---------------------- #
 
 # Assign copy numbers in cbs to mutations in dm
-assign_states_to_mutation <- function(dm, cbs, cols) {
+assign_states_to_mutation <- function(dm, cbs, cols, male) {
   print("Assigning copy number to mutations for PyClone... ")
   
   for (k in 1:nrow(cbs)){
@@ -338,6 +338,19 @@ assign_states_to_mutation <- function(dm, cbs, cols) {
     
   }
   
+  if (male) {
+    
+    print("Patient is male, assigning normal CN = 1 to mutations on sex chromosomes...")
+    print(head(dm))
+    x_chr <- which(dm[, "chr"] == "X")
+    y_chr <- which(dm[, "chr"] == "Y")
+    print(x_chr)
+    print(y_chr)
+    dm[x_chr, "normal_cn"] <- rep(1, length(x_chr))
+    dm[y_chr, "normal_cn"] <- rep(1, length(y_chr))
+    
+  }
+  
   dm <- dm[, colnames(dm) != "segmentLength"]
   print("... Done.")
   
@@ -346,7 +359,7 @@ assign_states_to_mutation <- function(dm, cbs, cols) {
 
 # Assign copy numbers in cbs to mutations in dm
 # for OncoSNP output (use max rank)
-assign_states_to_mutation_by_rank <- function(dm, cbs, cols) {
+assign_states_to_mutation_by_rank <- function(dm, cbs, cols, male) {
   print("Assigning copy number to mutations for PyClone using rank... ")
   
   for (k in 1:nrow(dm)){
@@ -370,6 +383,20 @@ assign_states_to_mutation_by_rank <- function(dm, cbs, cols) {
         }
 
     }
+    
+    if (male) {
+      
+      print("Patient is male, assigning normal CN = 1 to mutations on sex chromosomes...")
+      print(head(dm))
+      x_chr <- which(dm[, "chr"] == "X")
+      y_chr <- which(dm[, "chr"] == "Y")
+      print(x_chr)
+      print(y_chr)
+      dm[x_chr, "normal_cn"] <- rep(1, length(x_chr))
+      dm[y_chr, "normal_cn"] <- rep(1, length(y_chr))
+      
+    }
+    
   
     dm[k, cols] <- repmat(as.numeric(cbs[top_ranked_idx, cols]), 1)
     dm[k, "normal_cn"] <- rep(2, 1)
@@ -383,7 +410,7 @@ assign_states_to_mutation_by_rank <- function(dm, cbs, cols) {
 }
 
 
-generate_pyclone_input <- function(seg, maf_keep, input_mode) {
+generate_pyclone_input <- function(seg, maf_keep, input_mode, male = FALSE) {
 
   seg1 <- read.csv(seg, stringsAsFactors = FALSE, sep = "\t")
 
@@ -424,9 +451,9 @@ generate_pyclone_input <- function(seg, maf_keep, input_mode) {
   
   # If oncosnp, assign states by rank, otherwise, use general assign_states function
   if (input_mode == "O") {
-    py_snv_data_assigned <- assign_states_to_mutation_by_rank(py_snv_data, seg1, c("minor_cn", "major_cn"))
+    py_snv_data_assigned <- assign_states_to_mutation_by_rank(py_snv_data, seg1, c("minor_cn", "major_cn"), male)
   } else {
-    py_snv_data_assigned <- assign_states_to_mutation(py_snv_data, seg1, c("minor_cn", "major_cn"))
+    py_snv_data_assigned <- assign_states_to_mutation(py_snv_data, seg1, c("minor_cn", "major_cn"), male)
   }
   
   py_snv_data_assigned[, "gene"]        <- maf_keep[, "Hugo_Symbol"]
