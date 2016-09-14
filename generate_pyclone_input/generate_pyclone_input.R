@@ -7,6 +7,7 @@
 # Rscript generate_pyclone_input.R seg_file seg_input_mode maf_file sample_name output_dir \
 #   [--loh {0, 1, 2, 3}] \
 #   [--cn_style {1, 2}] \
+#   [--male {TRUE, FALSE}]
 
 
 # ------------------ Source custom EXPANDS utils ----------------
@@ -44,6 +45,7 @@ p <- add_argument(p, "--loh", default = 1,
                      2: include deletion LOH only, 3: include all LOH")
 p <- add_argument(p, "--cn_style", default = 2,
                   help = "1 for integer values, 2 for rational numbers calculated from CN log ratios (recommended)")
+p <- add_argument(p, "--male", default = FALSE, help = "For male patients, adjust normal CN on sex chromosomes accordingly")
 
 # --------- Get arguments / define other shared variables -------
 args <- parse_args(p)
@@ -60,6 +62,7 @@ maf          <- args$maf
 sample       <- args$sample
 include_loh  <- args$loh
 cn_style     <- args$cn_style
+male         <- args$male
 out_dir      <- args$output_dir
 dir.create(out_dir, recursive = TRUE)
 
@@ -114,7 +117,7 @@ process_maf_output <- process_maf(maf)
 snv_data <- process_maf_output[1]
 maf_keep <- process_maf_output[2]
 
-pyclone_input <- generate_pyclone_input(seg, maf_keep, input_mode)
+pyclone_input <- generate_pyclone_input(seg, maf_keep, input_mode, male)
 
 out_pyclone <- paste0(out_dir, "/", sample, "_pyclone_in.tsv")
 write.table(pyclone_input, file = out_pyclone,

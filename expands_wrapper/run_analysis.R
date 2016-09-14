@@ -8,9 +8,7 @@
 #   [--loh {0, 1, 2, 3}] \
 #   [--max_score MAX_SCORE] \
 #   [--precision PRECISION] \
-#   [--cn_style {1, 2}] \
-#   [--pyclone_dir PYCLONE_DIR] \
-#   [--pyclone_only {TRUE, FALSE}]
+#   [--cn_style {1, 2}]
 
 
 # ------------------ Source custom EXPANDS utils ----------------
