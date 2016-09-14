@@ -8,9 +8,7 @@ $ Rscript /path/to/run_analysis.R seg_file seg_input_mode maf_file sample_name o
   [--loh {0, 1, 2, 3}] \  
   [--max_score MAX_SCORE] \  
   [--precision PRECISION] \  
-  [--cn_style {1, 2}] \  
-  [--pyclone_dir PYCLONE_DIR] \  
-  [--pyclone_only {TRUE, FALSE}]
+  [--cn_style {1, 2}]
 ```
 
 
@@ -38,3 +36,5 @@ optional arguments:
   --pyclone_dir PYCLONE_DIR			Specific output directory for PyClone files
   --pyclone_only PYCLONE_ONLY		TRUE: Generate PyClone input only, skip EXPANDS [default: FALSE]
 ```
+
+As of version 14.2, the steps for generating PyClone input files from the same data as is used by EXPANDS have been split off into `generate_pyclone_inputs`.
