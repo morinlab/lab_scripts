@@ -446,6 +446,7 @@ generate_pyclone_input <- function(seg, maf_keep, input_mode, male = FALSE) {
                         "clonal_cluster", "clonal_frequency")
   }
   
+  seg1[, "chr"] <- sub("^chr", "", seg1[,"chr"])
   seg1[, "normal_cn"] <- 2
   seg1[, "segmentLength"] <- seg1[, "endpos"] - seg1[, "startpos"]
   
