@@ -1,5 +1,6 @@
 #!/usr/bin/env Rscript
 library(MASS)
+options(warn=-1)
 input_args <- commandArgs(trailingOnly=TRUE)
 
 if (length(input_args) != 1){
