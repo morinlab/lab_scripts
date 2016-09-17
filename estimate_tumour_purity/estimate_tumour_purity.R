@@ -266,7 +266,7 @@ het_put <- snv.filtered.alt_vaf[snv.filtered.alt_vaf$vaf_norm >= 0.2 & snv.filte
 het_distr <- coef(fitdistr(het_put[!is.na(het_put$vaf_norm),"vaf_norm"],"normal"))
 # Get lower and upper threshold to capture 95% of variants; designate these as heterozygous SNPs
 het_thresh <- qnorm(p=c(0.025,0.975),mean=het_distr[1],sd=het_distr[2])
-het <- snv.filtered.alt_vaf[snv.filtered.alt_vaf$vaf_norm >= het_thresh[1] & snv.filtered.alt_vaf$vaf_norm <= het_thresh[2],]
+het <- snv.filtered.alt_vaf[snv.filtered.alt_vaf$vaf_norm >= het_thresh[1] & snv.filtered.alt_vaf$vaf_norm <= het_thresh[2] & as.numeric(as.character(snv.filtered.alt_vaf$N_DP)) > 20 & as.numeric(as.character(snv.filtered.alt_vaf$T_DP)) > 20,]
 het.na <- het[!is.na(het$vaf_norm),]
 #plot(density(het.na[,"vaf_norm"]))
 #plot(density(het.na[,"vaf_tumour"]))
