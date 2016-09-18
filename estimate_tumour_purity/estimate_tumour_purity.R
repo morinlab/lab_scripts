@@ -1,14 +1,14 @@
 #!/usr/bin/env Rscript
 library(MASS)
 options(warn=-1)
-input_args <- commandArgs(trailingOnly=TRUE)
+# input_args <- commandArgs(trailingOnly=TRUE)
+# 
+# if (length(input_args) != 1){
+#   stop("Missing argument: Strelka all.somatic VCF file\n",call.=FALSE)
+# }
 
-if (length(input_args) != 1){
-  stop("Missing argument: Strelka all.somatic VCF file\n",call.=FALSE)
-}
-
-snv_file <- input_args[1]
-#snv_file <- "projects/nhl_meta_analysis/all_vcf/MCL_Morin_2015/MCL-13T1_MCL-13N.all.somatic.snvs.vcf"
+#snv_file <- input_args[1]
+snv_file <- "projects/nhl_meta_analysis/all_vcf/MCL_Morin_2015/MCL-13T1_MCL-13N.all.somatic.snvs.vcf"
 vcf.colnames <- c("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","NORMAL","TUMOR")
 
 somatic.snv.vcf <- read.delim(snv_file,header=F,comment.char='#',col.names=vcf.colnames)
@@ -261,19 +261,44 @@ normal.pass.alt_vaf <- calculate_alt_vafs_in_normal(snv.filtered)
 tumour.pass.alt.vaf <- calculate_alt_vafs_in_tumour(snv.filtered)
 snv.filtered.alt_vaf <- cbind.data.frame(snv.filtered,vaf_norm=normal.pass.alt_vaf,vaf_tumour=tumour.pass.alt.vaf)
 
+# Identify putative germline variants
 het_put <- snv.filtered.alt_vaf[snv.filtered.alt_vaf$vaf_norm >= 0.2 & snv.filtered.alt_vaf$vaf_norm <= 0.8 & as.numeric(as.character(snv.filtered.alt_vaf$N_DP)) > 20 & as.numeric(as.character(snv.filtered.alt_vaf$T_DP)) > 20,]
 #plot(density(het_put$vaf_norm[!is.na(het_put$vaf_norm)]))
-# Fit normal distribution on putative SNPs
+
+# Fit normal distribution on putative germline variants
 het_distr <- coef(fitdistr(het_put[!is.na(het_put$vaf_norm),"vaf_norm"],"normal"))
-# Get lower and upper threshold to capture 95% of variants; designate these as heterozygous SNPs
+
+# Get lower and upper threshold to capture 95% of variants; designate these as germline variants
 het_thresh <- qnorm(p=c(0.025,0.975),mean=het_distr[1],sd=het_distr[2])
-het <- snv.filtered.alt_vaf[snv.filtered.alt_vaf$vaf_norm >= het_thresh[1] & snv.filtered.alt_vaf$vaf_norm <= het_thresh[2] & as.numeric(as.character(snv.filtered.alt_vaf$N_DP)) > 20 & as.numeric(as.character(snv.filtered.alt_vaf$T_DP)) > 20,]
+het <- het_put[het_put$vaf_norm >= het_thresh[1] & het_put$vaf_norm <= het_thresh[2],]
 het.na <- het[!is.na(het$vaf_norm),]
+het.na <- het.na[!is.na(het.na$vaf_tumour),]
+
 #plot(density(het.na[,"vaf_norm"]))
 #plot(density(het.na[,"vaf_tumour"]))
-loh.var <- het.na[het.na$vaf_tumour > 0.5,]
-#plot(density(loh.var$vaf_tumour))
+
+loh.var.upper <- het.na[het.na$vaf_tumour > 0.5,]
+loh.var.lower <- het.na[het.na$vaf_tumour < 0.5,]
+
+#plot(density(loh.var.upper$vaf_tumour))
+#plot(density(loh.var.lower$vaf_tumour))
+
+purity <- NULL
+
 # Fit normal distribution on LOH events
-loh_distr <- coef(fitdistr(loh.var$vaf_tumour,"normal"))
+if(nrow(loh.var.upper) != 0 & nrow(loh.var.lower) != 0){
+  loh_distr.upper <- coef(fitdistr(loh.var.upper$vaf_tumour,"normal"))
+  loh_distr.lower <- coef(fitdistr(loh.var.lower$vaf_tumour,"normal"))
+  purity <- mean(loh_distr.upper[1], 1 - loh_distr.lower[1])
+}else if(nrow(loh.var.upper) != 0 & nrow(loh.var.lower) == 0){
+  loh_distr.upper <- coef(fitdistr(loh.var.upper$vaf_tumour,"normal"))
+  purity <- loh_distr.upper[1]
+}else if(nrow(loh.var.upper) == 0 & nrow(loh.var.lower) != 0){
+  loh_distr.lower <- coef(fitdistr(loh.var.lower$vaf_tumour,"normal"))
+  purity <- 1 - loh_distr.lower[1]
+}else{
+  purity <- NA
+}
+
 # Use mean as estimate for tumour purity
-cat(loh_distr[1])
+cat(purity)
