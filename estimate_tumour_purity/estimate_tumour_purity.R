@@ -1,14 +1,14 @@
 #!/usr/bin/env Rscript
 library(MASS)
 options(warn=-1)
-# input_args <- commandArgs(trailingOnly=TRUE)
-# 
-# if (length(input_args) != 1){
-#   stop("Missing argument: Strelka all.somatic VCF file\n",call.=FALSE)
-# }
+input_args <- commandArgs(trailingOnly=TRUE)
 
-#snv_file <- input_args[1]
-snv_file <- "projects/nhl_meta_analysis/all_vcf/MCL_Morin_2015/MCL-13T1_MCL-13N.all.somatic.snvs.vcf"
+if (length(input_args) != 1){
+  stop("Missing argument: Strelka all.somatic VCF file\n",call.=FALSE)
+}
+
+snv_file <- input_args[1]
+#snv_file <- "projects/nhl_meta_analysis/all_vcf/MCL_Morin_2015/MCL-13T1_MCL-13N.all.somatic.snvs.vcf"
 vcf.colnames <- c("CHROM","POS","ID","REF","ALT","QUAL","FILTER","INFO","FORMAT","NORMAL","TUMOR")
 
 somatic.snv.vcf <- read.delim(snv_file,header=F,comment.char='#',col.names=vcf.colnames)
