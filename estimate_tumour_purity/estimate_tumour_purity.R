@@ -301,4 +301,4 @@ if(nrow(loh.var.upper) != 0 & nrow(loh.var.lower) != 0){
 }
 
 # Use mean as estimate for tumour purity
-cat(paste(purity,"\n"))
+cat(paste0(purity,"\n"))
