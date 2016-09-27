@@ -45,11 +45,17 @@ def main():
     seg_file = args.seg_file
     use_abs_cn = args.use_abs_cn
     include_loh = args.include_loh
+    include_state = args.include_state
 
-    if mode in [ 'sequenza', 'titan' ] and include_loh:
-        print 'ID\tchrom\tstart\tend\tLOH_flag\tlog.ratio' 
+    print 'ID\tchrom\tstart\tend',
+
+    if mode in ['sequenza','titan'] and include_loh:
+        print '\tLOH_flag',
+
+    if include_state:
+        print '\tlog.ratio\tstate'
     else:
-        print 'ID\tchrom\tstart\tend\tlog.ratio'
+        print '\tlog.ratio'
 
     for seg in seg_file:
 
@@ -228,7 +234,9 @@ def parse_args():
                         depth ratio when '--mode' is set to 'sequenza'.")
     parser.add_argument('--include_loh', choices=['neutral', 'deletion', 'any'],
                         help="Include a column indicating whether the segment represents a loss \
-                        heterozygosity. Only works when '--mode' is set to 'sequenza or 'titan'.")
+                        heterozygosity. Only works when '--mode' is set to 'sequenza' or 'titan'.")
+    parser.add_argument('--include_state',action='store_true',
+                        help="Include a column indicating copy number state as a string.")
     parser.add_argument('--sample_col', type=int,
                         help='1-based index of sample name column in segmentation file.')
     parser.add_argument('--chrm_col', type=int,
