@@ -125,6 +125,10 @@ def main():
 
             vals = vals + [ log_ratio ]
 
+            if include_state:
+                state = map_cn(int(fields[MODES[mode]['abs_cn_col']]))
+                vals = vals + [state]
+
         elif mode == 'titan':
             vals = [ fields[ MODES[ mode ][ 'sample_col' ] ] ] + vals 
 
@@ -154,6 +158,9 @@ def main():
 
             vals = vals + [ fields[MODES[mode]['log_r_col'] ] ]
 
+            if include_state:
+                vals = vals + [fields[MODES[mode]['call_col']]]
+
         elif mode == 'other':
 
             if 'd_ratio_col' in MODES[mode]:
@@ -174,13 +181,34 @@ def main():
             elif 'log_r_col' in MODES[mode]:
                 vals = vals + [ fields[MODES[mode]['log_r_col'] ] ]
 
+        out_str = '{}\t{}\t{}\t{}'.format(vals[0],vals[1],vals[2],vals[3])
+
         if include_loh:
-            print '{}\t{}\t{}\t{}\t{}\t{}'.format(*vals)
+            out_str = out_str + '\t{}\t{}'.format(vals[4],vals[5])
         else:
-            print '{}\t{}\t{}\t{}\t{}'.format(*vals)
+            out_str = out_str + '\t{}'.format(vals[4])
+
+        if include_state:
+            out_str = out_str + '\t{}'.format(vals[-1])
+
+        print out_str
 
     return
 
+def map_cn(abs_cn):
+    state = ''
+    if abs_cn >= 4:
+        state = "AMP"
+    elif abs_cn == 3:
+        state = "GAIN"
+    elif abs_cn == 2:
+        state = "NEUT"
+    elif abs_cn == 1:
+        state = "HETD"
+    elif abs_cn == 0:
+        state = "HOMD"
+
+    return state
 
 def add_to_MODES(args):
     mode = args.mode
@@ -230,10 +258,10 @@ def parse_args():
     parser.add_argument('--sequenza_sample',
                         help='Specify sample name for Sequenza segmentation file.')
     parser.add_argument('--use_abs_cn', action='store_true',
-                        help="Use absolute copy number when calculating log2 value instead of \
+                        help="Use absolute copy number when calculating log2 value instead of\
                         depth ratio when '--mode' is set to 'sequenza'.")
     parser.add_argument('--include_loh', choices=['neutral', 'deletion', 'any'],
-                        help="Include a column indicating whether the segment represents a loss \
+                        help="Include a column indicating whether the segment represents a loss\
                         heterozygosity. Only works when '--mode' is set to 'sequenza' or 'titan'.")
     parser.add_argument('--include_state',action='store_true',
                         help="Include a column indicating copy number state as a string.")
