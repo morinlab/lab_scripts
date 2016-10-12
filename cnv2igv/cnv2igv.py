@@ -34,9 +34,7 @@ Outputs an IGV formatted segmentation file to standard output.
 
 def main():
     args = parse_args()
-
     check_arguments(args)
-
     args = add_to_MODES(args)
 
     header_checked = False
@@ -58,7 +56,6 @@ def main():
         print '\tlog.ratio'
 
     for seg in seg_file:
-
         if not header_checked:
             p = re.compile('start', re.I)
             m = re.search(p, seg)
@@ -71,50 +68,50 @@ def main():
         fields = seg.split('\t')
 
         vals = [ fields[MODES[mode]['chrm_col']], fields[MODES[mode]['start_col']],
-                 fields[MODES[mode]['end_col']] ]
+                 fields[MODES[mode]['end_col']]]
 
         if mode == 'sequenza':
             vals[0] = vals[0][1:-1]
-            vals = [ args.sequenza_sample ] + vals
+            vals = [args.sequenza_sample] + vals
 
             if include_loh == 'neutral':
-                a_allele = fields[ MODES[ mode ][ 'a_allele_col' ] ]
-                abs_cn = int(fields[ MODES[ mode ][ 'abs_cn_col' ] ])
+                a_allele = fields[MODES[mode]['a_allele_col']]
+                abs_cn = int(fields[MODES[mode]['abs_cn_col']])
 
                 if a_allele == 'NA': 
-                    vals = vals + [ 'NA' ]
+                    vals = vals + ['NA']
                 elif abs_cn == 2 and int(a_allele) == 2:
-                    vals = vals + [ '1' ]
+                    vals = vals + ['1']
                 else:
-                    vals = vals + [ '0' ]
+                    vals = vals + ['0']
 
             elif include_loh == 'deletion':
-                a_allele = fields[ MODES[ mode ][ 'a_allele_col' ] ]
-                b_allele = fields[ MODES[ mode ][ 'b_allele_col' ] ]
-                abs_cn = int(fields[ MODES[ mode ][ 'abs_cn_col' ] ])
+                a_allele = fields[MODES[mode]['a_allele_col']]
+                b_allele = fields[MODES[mode]['b_allele_col']]
+                abs_cn = int(fields[MODES[mode]['abs_cn_col']])
 
                 if a_allele == 'NA' or b_allele == 'NA':
-                    vals = vals + [ 'NA' ]
+                    vals = vals + ['NA']
                 elif abs_cn == 1 and (int(a_allele) + int(b_allele)) == 1:
-                    vals = vals + [ '1' ]
+                    vals = vals + ['1']
                 else:
-                    vals = vals + [ '0' ]
+                    vals = vals + ['0']
 
             elif include_loh == 'any':
-                b_allele = fields[ MODES[ mode ][ 'b_allele_col' ] ]
-                abs_cn = int(fields[ MODES[ mode ][ 'abs_cn_col' ] ])
+                b_allele = fields[MODES[mode]['b_allele_col']]
+                abs_cn = int(fields[MODES[mode]['abs_cn_col']])
 
                 if b_allele == 'NA':
-                    vals = vals + [ 'NA' ]
+                    vals = vals + ['NA']
                 elif abs_cn <= 2 and int(b_allele) == 0:
-                    vals = vals + [ '1' ]
+                    vals = vals + ['1']
                 else:
-                    vals = vals + [ '0' ]
+                    vals = vals + ['0']
 
             log_ratio = None
 
             if use_abs_cn:
-                abs_cn = int(fields[ MODES[ mode ][ 'abs_cn_col' ] ])
+                abs_cn = int(fields[MODES[mode]['abs_cn_col']])
 
                 if abs_cn == 0:
                     log_ratio = '-Inf'
@@ -123,51 +120,47 @@ def main():
             else:
                 log_ratio = math.log(float(fields[MODES[mode]['d_ratio_col']]),2)
 
-            vals = vals + [ log_ratio ]
+            vals = vals + [log_ratio]
 
             if include_state:
                 state = map_cn(int(fields[MODES[mode]['abs_cn_col']]))
                 vals = vals + [state]
 
         elif mode == 'titan':
-            vals = [ fields[ MODES[ mode ][ 'sample_col' ] ] ] + vals 
+            vals = [fields[MODES[mode]['sample_col']]] + vals 
 
             if include_loh:
-                loh_call = fields[ MODES[ mode ][ 'call_col' ] ]
+                loh_call = fields[MODES[mode]['call_col']]
 
                 if include_loh == 'neutral':
-
                     if loh_call == 'NLOH':
-                        vals = vals + [ '1' ]
+                        vals = vals + ['1']
                     else:
-                        vals = vals + [ '0' ]
+                        vals = vals + ['0']
 
                 elif include_loh == 'deletion':
-
                     if loh_call == 'DLOH':
-                        vals = vals + [ ' 1' ]
+                        vals = vals + ['1']
                     else:
-                        vals = vals + [ '0' ]
+                        vals = vals + ['0']
 
                 elif include_loh == 'any':
-
                     if 'LOH' in loh_call:
-                        vals = vals + [ '1' ]
+                        vals = vals + ['1']
                     else:
-                        vals = vals + [ '0' ]
+                        vals = vals + ['0']
 
-            vals = vals + [ fields[MODES[mode]['log_r_col'] ] ]
+            vals = vals + [fields[MODES[mode]['log_r_col']]]
 
             if include_state:
                 vals = vals + [fields[MODES[mode]['call_col']]]
 
         elif mode == 'other':
-
             if 'd_ratio_col' in MODES[mode]:
-                vals = vals + [ math.log(fields[MODES[mode]['d_ratio_col'] ],2) ]
+                vals = vals + [math.log(fields[MODES[mode]['d_ratio_col']],2)]
 
             elif 'abs_cn_col' in MODES[mode]:
-                abs_cn = int(fields[ MODES[ mode ][ 'abs_cn_col' ] ])
+                abs_cn = int(fields[MODES[mode]['abs_cn_col']])
 
                 log_ratio = None
 
@@ -176,10 +169,10 @@ def main():
                 else:
                     log_ratio = math.log(abs_cn, 2) - 1
 
-                vals = vals + [ log_ratio ]
+                vals = vals + [log_ratio]
 
             elif 'log_r_col' in MODES[mode]:
-                vals = vals + [ fields[MODES[mode]['log_r_col'] ] ]
+                vals = vals + [fields[MODES[mode]['log_r_col']]]
 
         out_str = '{}\t{}\t{}\t{}'.format(vals[0],vals[1],vals[2],vals[3])
 
