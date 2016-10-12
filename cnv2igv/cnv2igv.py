@@ -43,15 +43,15 @@ def main():
     seg_file = args.seg_file
     use_abs_cn = args.use_abs_cn
     include_loh = args.include_loh
-    include_state = args.include_state
+    oncocircos = args.oncocircos
 
     print 'ID\tchrom\tstart\tend',
 
     if mode in ['sequenza','titan'] and include_loh:
         print '\tLOH_flag',
 
-    if include_state:
-        print '\tlog.ratio\tstate'
+    if oncocircos:
+        print '\tnum.markers\tlog.ratio\tstate'
     else:
         print '\tlog.ratio'
 
@@ -120,9 +120,13 @@ def main():
             else:
                 log_ratio = math.log(float(fields[MODES[mode]['d_ratio_col']]),2)
 
+            if oncocircos:
+                Nbf = int(fields[MODES[mode]['Nbf']])
+                vals = vals + [Nbf]
+
             vals = vals + [log_ratio]
 
-            if include_state:
+            if oncocircos:
                 state = map_cn(int(fields[MODES[mode]['abs_cn_col']]))
                 vals = vals + [state]
 
@@ -150,9 +154,12 @@ def main():
                     else:
                         vals = vals + ['0']
 
+            if oncocircos:
+                vals = vals + [1]
+
             vals = vals + [fields[MODES[mode]['log_r_col']]]
 
-            if include_state:
+            if oncocircos:
                 vals = vals + [fields[MODES[mode]['call_col']]]
 
         elif mode == 'other':
@@ -177,12 +184,15 @@ def main():
         out_str = '{}\t{}\t{}\t{}'.format(vals[0],vals[1],vals[2],vals[3])
 
         if include_loh:
-            out_str = out_str + '\t{}\t{}'.format(vals[4],vals[5])
+            if oncocircos:
+                out_str = out_str + '\t{}\t{}\t{}\t{}'.format(vals[4],vals[5],vals[6],vals[7])
+            else:
+                out_str = out_str + '\t{}\t{}'.format(vals[4],vals[5])
         else:
-            out_str = out_str + '\t{}'.format(vals[4])
-
-        if include_state:
-            out_str = out_str + '\t{}'.format(vals[-1])
+            if oncocircos:
+                out_str = out_str + '\t{}\t{}\t{}'.format(vals[4],vals[5],vals[6])
+            else:
+                out_str = out_str + '\t{}'.format(vals[4])
 
         print out_str
 
@@ -256,8 +266,8 @@ def parse_args():
     parser.add_argument('--include_loh', choices=['neutral', 'deletion', 'any'],
                         help="Include a column indicating whether the segment represents a loss\
                         heterozygosity. Only works when '--mode' is set to 'sequenza' or 'titan'.")
-    parser.add_argument('--include_state',action='store_true',
-                        help="Include a column indicating copy number state as a string.")
+    parser.add_argument('--oncocircos',action='store_true',
+                        help="Include a column indicating copy number state as a string and column containing markers for oncocircos input.")
     parser.add_argument('--sample_col', type=int,
                         help='1-based index of sample name column in segmentation file.')
     parser.add_argument('--chrm_col', type=int,
@@ -292,6 +302,7 @@ MODES = {
                          'chrm_col': 0,
                          'start_col': 1,
                          'end_col': 2,
+                         'Nbf': 4,
                          'd_ratio_col': 6, # Depth Ratio
                          'abs_cn_col': 9, # Absolute copy number
                          'a_allele_col': 10,
