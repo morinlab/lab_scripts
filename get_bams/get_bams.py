@@ -3,9 +3,10 @@
 """
 This script uses the GSC's internal API to retrieve the file paths for given
 library IDs. Currently, this script handles the following library types:
-  - genome: Merged genome BAM files
-  - mrna: RNA-seq aligned BAM files (JaGUaR pipeline)
-  - mirna: miRNA BAM files
+
+    - genome: Merged genome BAM files
+    - mrna: RNA-seq aligned BAM files (JaGUaR pipeline)
+    - mirna: miRNA BAM files
 
 Exomes or other unmerged BAM files probably don't work. Once there is a
 need, I will look into adding support for these additional library types.
@@ -13,7 +14,7 @@ need, I will look into adding support for these additional library types.
 This script also needs your GSC GIN credentials. By default, it looks in
 your home directory. The format is shown below:
 
-    → cat ~/.gin_credentials.ini
+    $ cat ~/.gin_credentials.ini
     [credentials]
     username: bgrande
     password: (Re64(zuqN2.K23++A
