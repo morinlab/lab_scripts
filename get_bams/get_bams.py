@@ -134,6 +134,13 @@ def parse_date(s):
     return datetime.datetime.strptime(s, "%Y-%m-%d %H:%M")
 
 
+def date_key(key_name):
+    """Return function that uses key_name to order a
+    list of dictionaries
+    """
+    return lambda x: parse_date(x[key_name])
+
+
 def log(msg):
     """Prints a message to stderr.
 
@@ -227,7 +234,7 @@ def get_genome_bam(api, lib_id):
         return None
     libs = chain.from_iterable([x.values() for x in lib_info.values()])
     libs_success = [lib for lib in libs if lib["success"]]
-    libs_success = sorted(libs_success[::-1], key=lambda x: parse_date(x["process_complete"]))
+    libs_success = sorted(libs_success, key=date_key("process_complete"), reverse=True)
     if len(libs_success) == 0:
         return None
     log_api_results(lib_info)
@@ -254,7 +261,7 @@ def get_rnaseq_bam(api, lib_id):
         return None
     libs = chain.from_iterable(lib_info.values())
     libs_success = [lib for lib in libs if lib["successful"]]
-    libs_success = sorted(libs_success[::-1], key=lambda x: parse_date(x["created"]))
+    libs_success = sorted(libs_success, key=date_key("created"), reverse=True)
     if len(libs_success) == 0:
         return None
     log_api_results(lib_info)
@@ -280,7 +287,7 @@ def get_mirnaseq_bam(api, lib_id):
         return None
     libs = chain.from_iterable(lib_info.values())
     libs_success = [lib for lib in libs if lib["successful"]]
-    libs_success = sorted(libs_success[::-1], key=lambda x: parse_date(x["created"]))
+    libs_success = sorted(libs_success, key=date_key("created"), reverse=True)
     if len(libs_success) == 0:
         return None
     log_api_results(lib_info)
