@@ -96,7 +96,7 @@ def add_buffer_to_first_seg(parsed_seg):
         for chrm in make_chrm_list():
             if chrm in chrm_dict:
                 seg_start = int(chrm_dict[chrm][0][0])
-                chrm_dict[chrm].appendleft([seg_start - buffer, seg_start - buffer + buffer_length, 2])
+                chrm_dict[chrm].appendleft([seg_start - buffer, seg_start - buffer + buffer_length, 0])
 
     return parsed_seg
 
@@ -110,7 +110,7 @@ def add_buffer_to_last_seg(parsed_seg):
         for chrm in make_chrm_list():
             if chrm in chrm_dict:
                 seg_end = int(chrm_dict[chrm][-1][1])
-                chrm_dict[chrm].append([seg_end + buffer_length, seg_end + buffer, 2])
+                chrm_dict[chrm].append([seg_end + buffer_length, seg_end + buffer, 0])
 
     return parsed_seg
 
