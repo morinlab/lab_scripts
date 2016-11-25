@@ -44,12 +44,31 @@ def main():
     mode = args.mode
     seg_file = args.seg_file
     use_abs_cn = args.use_abs_cn
+    as_integer = args.as_integer
+    force_header = args.force_header
+    prepend_chr = args.prepend_chr
+    human_readable_state = False
+    drop_header = args.drop_header
+    if args.oncocircos:
+        use_abs_cn = True
+        human_readable_state = True
+        drop_header = True
+    if args.gistic:
+        #as_integer = True
+        use_abs_cn = True
+        prepend_chr = True
+        #drop_header = True
     include_loh = args.include_loh
-
-    if mode in [ 'sequenza', 'titan' ] and include_loh:
-        print 'ID\tchrom\tstart\tend\tLOH_flag\tlog.ratio' 
+    
+    if force_header:
+        print "Sample\tChromosome\tStart\tEnd\tNum_Probes\tSegment_Mean"
+    elif drop_header:
+        pass
     else:
-        print 'ID\tchrom\tstart\tend\tlog.ratio'
+        if mode in [ 'sequenza', 'titan' ] and include_loh:
+            print 'ID\tchrom\tstart\tend\tLOH_flag\tlog.ratio' 
+        else:
+            print 'ID\tchrom\tstart\tend\tlog.ratio'
 
     for seg in seg_file:
 
@@ -63,12 +82,22 @@ def main():
                 continue
 
         fields = seg.split('\t')
-
+        
+        string = fields[MODES[mode]['chrm_col']]
+        if string.startswith('"') and string.endswith('"'):
+            string = string[1:-1]
+        if prepend_chr:
+            if not string.startswith("chr"):
+                fields[MODES[mode]['chrm_col']] = "chr%s" % string
+            else:
+                fields[MODES[mode]['chrm_col']] = string
+        else:
+            fields[MODES[mode]['chrm_col']] = string
         vals = [ fields[MODES[mode]['chrm_col']], fields[MODES[mode]['start_col']],
                  fields[MODES[mode]['end_col']] ]
 
         if mode == 'sequenza':
-            vals[0] = vals[0][1:-1]
+            
             vals = [ args.sequenza_sample ] + vals
 
             if include_loh == 'neutral':
@@ -114,10 +143,16 @@ def main():
                     log_ratio = '-Inf'
                 else:
                     log_ratio = math.log(abs_cn, 2) - 1
+                if as_integer:
+                    vals = vals + [abs_cn]
+                else:
+                    vals = vals + [ log_ratio ]
             else:
                 log_ratio = math.log(float(fields[MODES[mode]['d_ratio_col']]),2)
+                vals = vals + [ log_ratio ]
 
-            vals = vals + [ log_ratio ]
+            if human_readable_state:
+                vals = vals + [ toState(fields[MODES[mode]['abs_cn_col'] ]) ]
 
         elif mode == 'titan':
             vals = [ fields[ MODES[ mode ][ 'sample_col' ] ] ] + vals 
@@ -145,9 +180,17 @@ def main():
                         vals = vals + [ '1' ]
                     else:
                         vals = vals + [ '0' ]
-
-            vals = vals + [ fields[MODES[mode]['log_r_col'] ] ]
-
+            if use_abs_cn:
+                abs_cn = int(fields[ MODES[ mode ][ 'abs_cn_col' ] ])
+                if abs_cn == 0:
+                    log_ratio = '-Inf'
+                else:
+                    log_ratio = math.log(abs_cn, 2) - 1
+                vals = vals + [log_ratio]
+            else:
+                vals = vals + [ fields[MODES[mode]['log_r_col'] ] ]
+            if human_readable_state:
+                vals = vals + [ toState(fields[MODES[mode]['abs_cn_col'] ]) ]
         elif mode == 'other':
 
             if 'd_ratio_col' in MODES[mode]:
@@ -162,8 +205,13 @@ def main():
                     log_ratio = '-Inf'
                 else:
                     log_ratio = math.log(abs_cn, 2) - 1
-
-                vals = vals + [ log_ratio ]
+                if as_integer:
+                    print "using INT: "
+                    print abs_cn
+                    print "\n"
+                    vals = vals + [abs_cn]
+                else:
+                    vals = vals + [ log_ratio ]
 
             elif 'log_r_col' in MODES[mode]:
                 vals = vals + [ fields[MODES[mode]['log_r_col'] ] ]
@@ -171,7 +219,11 @@ def main():
         if include_loh:
             print '{}\t{}\t{}\t{}\t{}\t{}'.format(*vals)
         else:
-            print '{}\t{}\t{}\t{}\t{}'.format(*vals)
+            
+            if human_readable_state:
+                print '{}\t{}\t{}\t{}\t10\t{}\t{}'.format(*vals)
+            else:
+                print '{}\t{}\t{}\t{}\t10\t{}'.format(*vals)
 
     return
 
@@ -198,6 +250,20 @@ def add_to_MODES(args):
 
     return args
 
+def toState(cns):
+    cns = int(cns)
+    cnstate = "NEUT"
+    if cns > 2:
+        if cns > 3:
+            cnstate = "AMP"
+        else:
+            cnstate = "GAIN"
+    elif cns == 1:
+        cnstate = "HETD"
+    elif cns == 0:
+        cnstate = "HOMD"
+    return cnstate
+    
 
 def check_arguments(args):
 
@@ -243,7 +309,14 @@ def parse_args():
                         help='1-based index of depth ratio column in segmentation file.')
     parser.add_argument('--abs_cn_col', type=int,
                         help='1-based index of absolute copy number column in segmentation file.')
-
+    parser.add_argument('--drop_header', action='store_true', help='Flag to force script to not write a header to the output')
+    parser.add_argument('--as_integer', action='store_true',
+                                                help='Flag to use untransformed value of absolute copy number instead of log2 ratio')
+    parser.add_argument('--prepend_chr', action='store_true', help='Flag to force a chr prefex be added to all rows (unless already present)')
+    parser.add_argument('--oncocircos',action='store_true',help='special mode to generate input for the Oncoricos tool')
+    parser.add_argument('--gistic',action='store_true',help='special mode to generate input for the GISTIC2.0 tool')
+    parser.add_argument('--force_header',action='store_true')
+    
     args = parser.parse_args()
 
     return args
@@ -256,7 +329,8 @@ MODES = {
                       'start_col': 2,
                       'end_col': 3,
                       'log_r_col': 6, # Log Ratio
-                      'call_col': 8
+                        'call_col': 8,
+                        'abs_cn_col': 9 #copy number based on state
                      },
           'sequenza' :
                        {
