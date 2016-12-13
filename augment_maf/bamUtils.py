@@ -343,16 +343,28 @@ def count_indels(samfile, reffile, chrom, pos, ref, alt, mode, min_mapq=20):
     return {ref: counts[0], alt: counts[1]}
 
 
-def count_bases_pileup(pileup, position, min_baseq=15, min_mapq=20):
+def count_bases_pileup(pileup, position, min_baseq=15, min_mapq=20, ref_base = None, ignore_overlap=False):
     """
     Count the number of times each nucleotide occurs at a given position in a
     pileup object, subject to minimum base quality and map quality constraints.
     Return a dictionary keyed by nucleotides.
+    Added feature: optionally ignore the second observation of a non-reference allele if on a read that was already used (i.e. same molecule, overlapping reads)
     """
+    
+    if ignore_overlap:
+        seen_reads = {}
+        if not ref_base:
+            print "Error: ref_base is required if ignore_overalp option is used"
+            exit()
     counts = dict.fromkeys(["A", "T", "C", "G"], 0)
     for x in pileup:
         if position == x.pos + 1:
             for read in x.pileups:
+                name = read.alignment.query_name
+                if ignore_overlap and seen_reads.has_key(name):
+                    #partner for read was already counted
+                    #print "skipping duplicate overlap read %s" % name
+                    continue
                 dup = read.alignment.is_duplicate
                 qc_fail = read.alignment.is_qcfail
                 low_mapq = read.alignment.mapq < min_mapq
@@ -362,22 +374,27 @@ def count_bases_pileup(pileup, position, min_baseq=15, min_mapq=20):
                         base = read.alignment.seq[read.query_position]
                         try:
                             counts[base] += 1
+                            if ignore_overlap:
+                                if not base == ref_base:
+                                    seen_reads[name] = True
                         except KeyError:
                             pass
 
     return counts
 
 
-def count_bases(samfile, reffile, chrom, pos):
+def count_bases(samfile, reffile, chrom, pos, ignore_overlap=False):
     """
     Count the number of times each nucleotide occurs at a given position in a
     bam file. Return a dictionary keyed by nucleotides.
     """
+    
+    refbase = None
     start = max(pos-200, 0)
     end = pos+200
-    reffile.fetch(reference=chrom, start=pos-1, end=pos)
+    refbase = reffile.fetch(reference=chrom, start=pos-1, end=pos)
     pileup = samfile.pileup(chrom, start, end, fastafile=reffile)
-    return count_bases_pileup(pileup, pos)
+    return count_bases_pileup(pileup, pos, ref_base = refbase, ignore_overlap=ignore_overlap)
 
 
 MODES = {

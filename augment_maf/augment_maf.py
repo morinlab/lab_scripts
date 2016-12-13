@@ -25,6 +25,7 @@ if __name__ == "__main__":
     parser.add_argument("--mode", default="hybrid", choices=bamUtils.MODES.keys())
     parser.add_argument("--log_lvl", type=str.upper, default="INFO")
     parser.add_argument("--log_file", type=argparse.FileType("w"), default=sys.stderr)
+    parser.add_argument("--ignore_overlap",action="store_true",default=False,help="mimic clipOverlap functionality on unclipped bams") 
     parser.add_argument("reference")
     parser.add_argument("outfile")
     args = parser.parse_args()
@@ -83,7 +84,7 @@ if __name__ == "__main__":
             alt_key = "{}_alt_count".format(sample[0])
             for samfile in sams:
                 if mafUtils.is_snv(row):
-                    counts = bamUtils.count_bases(samfile, reffile, chrom, pos)
+                    counts = bamUtils.count_bases(samfile, reffile, chrom, pos, ignore_overlap=args.ignore_overlap)
                 else:
                     counts = bamUtils.count_indels(samfile, reffile, chrom, pos, ref, alt, args.mode)
                 row[ref_key] += counts[ref]
