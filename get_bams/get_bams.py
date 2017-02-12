@@ -222,26 +222,67 @@ def get_bam_paths(api, lib_id, lib_type):
 
 
 def get_genome_bam(api, lib_id):
-    """Retrieve the path of a merged genome BAM file.
+    """Retrieve the path of a genome BAM file.
+
+    The list is sorted in order of creation (newest first).
+
+    Returns:
+        List of BAM file paths (strings), can be None.
+    """
+    lib_info = api.getLibraryInfo({"library": lib_id})
+    num_lanes = lib_info.values()[0]["target_number_of_lanes"]
+    if num_lanes == 1:
+        bam_paths = get_singlelane_genome_bam(api, lib_id)
+    elif num_lanes > 1:
+        bam_paths = get_multilane_genome_bam(api, lib_id)
+    return bam_paths
+
+
+def get_multilane_genome_bam(api, lib_id):
+    """Retrieve the path of a merged multi-lane genome BAM file.
 
     The list is sorted in order of creation (newest first).
 
     Returns:
         List of BAM file paths (strings), can be empty
     """
-    lib_info = api.getMetaInfo({"library": lib_id})
-    if not lib_info:
+    meta_info = api.getMetaInfo({"library": lib_id})
+    if not meta_info:
         return None
-    libs = chain.from_iterable([x.values() for x in lib_info.values()])
+    libs = chain.from_iterable([x.values() for x in meta_info.values()])
     libs_success = [lib for lib in libs if lib["success"]]
     libs_success = sorted(libs_success, key=date_key("process_complete"), reverse=True)
     if len(libs_success) == 0:
         return None
-    log_api_results(lib_info)
+    log_api_results(meta_info)
     bam_paths = []
     for lib in libs_success:
         lib_bam_dir = lib["data_path"]
         lib_bam_file = find_bam(lib_bam_dir, "*.bam")
+        if lib_bam_file:
+            bam_paths.append(lib_bam_file)
+    return bam_paths
+
+
+def get_singlelane_genome_bam(api, lib_id):
+    """Retrieve the path of a single-lane genome BAM file.
+
+    The list is sorted in order of creation (newest first).
+
+    Returns:
+        List of BAM file paths (strings), can be empty
+    """
+    meta_info = api.getAlignedLibcoreInfo({"library": lib_id})
+    libs = chain.from_iterable([x for x in meta_info.values()])
+    libs_success = [lib for lib in libs if lib["successful"]]
+    libs_success = sorted(libs_success, key=date_key("symlink_timestamp"), reverse=True)
+    if len(libs_success) == 0:
+        return None
+    log_api_results(meta_info)
+    bam_paths = []
+    for lib in libs_success:
+        lib_bam_dir = lib["bioapps_data_path"]
+        lib_bam_file = find_bam(lib_bam_dir, "*_dupsFlagged.bam")
         if lib_bam_file:
             bam_paths.append(lib_bam_file)
     return bam_paths
