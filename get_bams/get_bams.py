@@ -230,6 +230,8 @@ def get_genome_bam(api, lib_id):
         List of BAM file paths (strings), can be None.
     """
     lib_info = api.getLibraryInfo({"library": lib_id})
+    if not lib_info:
+        return None
     num_lanes = lib_info.values()[0]["target_number_of_lanes"]
     if num_lanes == 1:
         bam_paths = get_singlelane_genome_bam(api, lib_id)
