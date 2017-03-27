@@ -58,6 +58,8 @@ def main():
     """
     args = parse_args()
     api = config_api(args.credentials)
+	if args.debug:
+		import pdb; pdb.set_trace()
     for lib_id in args.library_id:
         bam_paths = get_bam_paths(api, lib_id, args.library_type)
         log_bam_paths(bam_paths)
@@ -96,6 +98,7 @@ def parse_args():
                         help="Increase the script's verbosity. Can use multiple times (-vv)")
     parser.add_argument("--quiet", "-q", action="store_true",
                         help="Mute multiple BAM file warning.")
+	parser.add_argument("--debug", "-d", action="store_true", help="Trigger API debugger")
     args = parser.parse_args()
     # Handle special arguments
     if not os.path.exists(args.credentials):
