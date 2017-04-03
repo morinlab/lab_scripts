@@ -31,6 +31,7 @@ import os.path
 import datetime
 import argparse
 from itertools import chain
+import pdb
 import ConfigParser
 import xmlrpclib
 import glob
@@ -38,7 +39,8 @@ import glob
 # Used to track is any library ID returned more than one BAM file path.
 # This is used to warn the user at the end about any omitted BAM file paths.
 is_multiple = False  # Global variable
-IS_MULTIPLE_MSG = ("WARNING: "
+IS_MULTIPLE_MSG = (
+    "WARNING: "
     "At least one library ID returned multiple BAM files. "
     "The most recent one was returned by default. "
     "To obtain all of the BAM file paths, enable -a. "
@@ -58,8 +60,8 @@ def main():
     """
     args = parse_args()
     api = config_api(args.credentials)
-	if args.debug:
-		import pdb; pdb.set_trace()
+    if args.debug:
+        pdb.set_trace()
     for lib_id in args.library_id:
         bam_paths = get_bam_paths(api, lib_id, args.library_type)
         log_bam_paths(bam_paths)
@@ -98,7 +100,7 @@ def parse_args():
                         help="Increase the script's verbosity. Can use multiple times (-vv)")
     parser.add_argument("--quiet", "-q", action="store_true",
                         help="Mute multiple BAM file warning.")
-	parser.add_argument("--debug", "-d", action="store_true", help="Trigger API debugger")
+    parser.add_argument("--debug", "-d", action="store_true", help="Trigger API debugger")
     args = parser.parse_args()
     # Handle special arguments
     if not os.path.exists(args.credentials):
