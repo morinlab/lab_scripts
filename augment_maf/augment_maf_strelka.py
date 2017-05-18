@@ -23,6 +23,7 @@ def main(args):
     for key in count_keys:
         if key not in fields:
             fields.append(key)
+    fields.append("strelka_qual")
 
     # Create MAF writer
     writer = csv.DictWriter(args.output, delimiter="\t", fieldnames=fields)
@@ -46,7 +47,7 @@ def main(args):
         row.update(dict(zip(count_keys, old_counts)))
         # Extract allele counts from Strelka index
         if idx_key in count_idx:
-            t_ref_count, t_alt_count, n_ref_count, n_alt_count = count_idx[idx_key]
+            t_ref_count, t_alt_count, n_ref_count, n_alt_count, strelka_qual = count_idx[idx_key]
         else:
             warnings.warn("Variant {} not found in Strelka VCF file".format(idx_key))
             continue
@@ -57,6 +58,8 @@ def main(args):
         row["n_ref_count"] += n_ref_count
         row["n_alt_count"] += n_alt_count
         row["n_depth"] = row["n_ref_count"] + row["n_alt_count"]
+        # Add Strelka quality information
+        row["strelka_qual"] = strelka_qual
         # Output updated row
         writer.writerow(row)
 

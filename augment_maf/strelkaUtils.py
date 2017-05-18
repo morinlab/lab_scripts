@@ -3,20 +3,19 @@
 import warnings
 
 NORMAL_IDX = 0
-TUMOR_IDX = 1
+TUMOR_IDX  = 1
 
 
 def generate_count_index(vcf_reader):
     count_idx = {}
     for record in vcf_reader:
         key = get_idx_key(record)
-        if record.is_snp:
-            t_ref_count, t_alt_count, n_ref_count, n_alt_count = calc_snv_counts(record)
-        elif record.is_indel:
-            t_ref_count, t_alt_count, n_ref_count, n_alt_count = calc_indel_counts(record)
+        t_ref_count, t_alt_count, n_ref_count, n_alt_count = calc_counts(record)
+        strelka_qual = get_strelka_qual(record)
+        if t_ref_count is None or strelka_qual is None:
+            continue
         else:
-            warnings.warn("Encountered variant that isn't a SNV or an indel.")
-        count_idx[key] = (t_ref_count, t_alt_count, n_ref_count, n_alt_count)
+            count_idx[key] = (t_ref_count, t_alt_count, n_ref_count, n_alt_count, strelka_qual)
     return count_idx
 
 
@@ -59,6 +58,19 @@ def fix_indel_alleles(chrom, pos, ref, alt):
     return chrom, pos, ref, alt
 
 
+def calc_counts(record):
+    """Extract the number of reads that support the reference and alternate
+    SNV alleles in the tumour and normal samples.
+    """
+    if record.is_snp:
+        return calc_snv_counts(record)
+    elif record.is_indel:
+        return calc_indel_counts(record)
+    else:
+        warnings.warn("Encountered variant that isn't a SNV or an indel.")
+        return None, None, None, None
+
+
 def calc_snv_counts(record):
     """Extract the number of reads that support the reference and alternate
     SNV alleles in the tumour and normal samples.
@@ -84,3 +96,15 @@ def calc_indel_counts(record):
     n_ref_count = record.samples[NORMAL_IDX]["TAR"][1]
     n_alt_count = record.samples[NORMAL_IDX]["TIR"][1]
     return t_ref_count, t_alt_count, n_ref_count, n_alt_count
+
+
+def get_strelka_qual(record):
+    """Extract Strelka quality score (QSS_NT or QSI_NT)."""
+    if record.is_snp:
+        qual = record.INFO["QSS_NT"]
+    elif record.is_indel:
+        qual = record.INFO["QSI_NT"]
+    else:
+        warnings.warn("Encountered variant that isn't a SNV or an indel.")
+        qual = None
+    return qual
