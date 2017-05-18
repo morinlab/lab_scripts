@@ -63,7 +63,7 @@ def main():
     if args.debug:
         pdb.set_trace()
     for lib_id in args.library_id:
-        bam_paths = get_bam_paths(api, lib_id, args.library_type)
+        bam_paths = get_bam_paths(api, lib_id, args.library_type, args.reference_id)
         log_bam_paths(bam_paths)
         if not args.all and len(bam_paths) > 1:
             global is_multiple
@@ -101,6 +101,7 @@ def parse_args():
     parser.add_argument("--quiet", "-q", action="store_true",
                         help="Mute multiple BAM file warning.")
     parser.add_argument("--debug", "-d", action="store_true", help="Trigger API debugger")
+    parser.add_argument("--reference_id", "-r", type=int, help="LIMS genome reference ID")
     args = parser.parse_args()
     # Handle special arguments
     if not os.path.exists(args.credentials):
@@ -205,7 +206,7 @@ def find_bam(dirname, file_glob):
     return bam_file[0]
 
 
-def get_bam_paths(api, lib_id, lib_type):
+def get_bam_paths(api, lib_id, lib_type, ref=None):
     """Retrieve all BAM file paths using API.
 
     The appropriate function will be used according to the
@@ -216,17 +217,17 @@ def get_bam_paths(api, lib_id, lib_type):
     """
     log_library_id(lib_id)
     if lib_type == "mirna":
-        bam_paths = get_mirnaseq_bam(api, lib_id)
+        bam_paths = get_mirnaseq_bam(api, lib_id, ref=ref)
     elif lib_type == "mrna":
-        bam_paths = get_rnaseq_bam(api, lib_id)
+        bam_paths = get_rnaseq_bam(api, lib_id, ref=ref)
     else:
-        bam_paths = get_genome_bam(api, lib_id)
+        bam_paths = get_genome_bam(api, lib_id, ref=ref)
     if bam_paths is None or len(bam_paths) == 0:
         bam_paths = ["N/A"]
     return bam_paths
 
 
-def get_genome_bam(api, lib_id):
+def get_genome_bam(api, lib_id, ref=None):
     """Retrieve the path of a genome BAM file.
 
     The list is sorted in order of creation (newest first).
@@ -234,18 +235,21 @@ def get_genome_bam(api, lib_id):
     Returns:
         List of BAM file paths (strings), can be None.
     """
-    lib_info = api.getLibraryInfo({"library": lib_id})
+    try:
+        lib_info = api.getLibraryInfo({"library": lib_id})
+    except xmlrpclib.ProtocolError:
+        return None
     if not lib_info:
         return None
     num_lanes = lib_info.values()[0]["target_number_of_lanes"]
     if num_lanes == 1:
-        bam_paths = get_singlelane_genome_bam(api, lib_id)
+        bam_paths = get_singlelane_genome_bam(api, lib_id, ref=ref)
     elif num_lanes > 1:
-        bam_paths = get_multilane_genome_bam(api, lib_id)
+        bam_paths = get_multilane_genome_bam(api, lib_id, ref=ref)
     return bam_paths
 
 
-def get_multilane_genome_bam(api, lib_id):
+def get_multilane_genome_bam(api, lib_id, ref=None):
     """Retrieve the path of a merged multi-lane genome BAM file.
 
     The list is sorted in order of creation (newest first).
@@ -258,6 +262,8 @@ def get_multilane_genome_bam(api, lib_id):
         return None
     libs = chain.from_iterable([x.values() for x in meta_info.values()])
     libs_success = [lib for lib in libs if lib["success"]]
+    if ref is not None:
+        libs_success = [lib for lib in libs_success if lib["lims_genome_reference_id"] == ref]
     libs_success = sorted(libs_success, key=date_key("process_complete"), reverse=True)
     if len(libs_success) == 0:
         return None
@@ -271,7 +277,7 @@ def get_multilane_genome_bam(api, lib_id):
     return bam_paths
 
 
-def get_singlelane_genome_bam(api, lib_id):
+def get_singlelane_genome_bam(api, lib_id, ref=None):
     """Retrieve the path of a single-lane genome BAM file.
 
     The list is sorted in order of creation (newest first).
@@ -282,6 +288,8 @@ def get_singlelane_genome_bam(api, lib_id):
     meta_info = api.getAlignedLibcoreInfo({"library": lib_id})
     libs = chain.from_iterable([x for x in meta_info.values()])
     libs_success = [lib for lib in libs if lib["successful"]]
+    if ref is not None:
+        libs_success = [lib for lib in libs_success if lib["lims_genome_reference_id"] == ref]
     libs_success = sorted(libs_success, key=date_key("symlink_timestamp"), reverse=True)
     if len(libs_success) == 0:
         return None
@@ -295,7 +303,7 @@ def get_singlelane_genome_bam(api, lib_id):
     return bam_paths
 
 
-def get_rnaseq_bam(api, lib_id):
+def get_rnaseq_bam(api, lib_id, ref=None):
     """Retrieve the path of a RNA-seq BAM file aligned using
     the JaGUaR pipeline.
 
@@ -309,6 +317,8 @@ def get_rnaseq_bam(api, lib_id):
         return None
     libs = chain.from_iterable(lib_info.values())
     libs_success = [lib for lib in libs if lib["successful"]]
+    if ref is not None:
+        libs_success = [lib for lib in libs_success if lib["lims_genome_reference_id"] == ref]
     libs_success = sorted(libs_success, key=date_key("created"), reverse=True)
     if len(libs_success) == 0:
         return None
@@ -322,7 +332,7 @@ def get_rnaseq_bam(api, lib_id):
     return bam_paths
 
 
-def get_mirnaseq_bam(api, lib_id):
+def get_mirnaseq_bam(api, lib_id, ref=None):
     """Retrieve the path of a miRNA-seq BAM file.
 
     The list is sorted in order of creation (newest first).
@@ -335,6 +345,8 @@ def get_mirnaseq_bam(api, lib_id):
         return None
     libs = chain.from_iterable(lib_info.values())
     libs_success = [lib for lib in libs if lib["successful"]]
+    if ref is not None:
+        libs_success = [lib for lib in libs_success if lib["lims_genome_reference_id"] == ref]
     libs_success = sorted(libs_success, key=date_key("created"), reverse=True)
     if len(libs_success) == 0:
         return None
