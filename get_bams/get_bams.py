@@ -257,14 +257,14 @@ def get_multilane_genome_bam(api, lib_id, ref=None):
     Returns:
         List of BAM file paths (strings), can be empty
     """
-    meta_info = api.getMetaInfo({"library": lib_id})
+    meta_info = api.getMergeAnalysis({"library": lib_id})
     if not meta_info:
         return None
     libs = chain.from_iterable([x.values() for x in meta_info.values()])
     libs_success = [lib for lib in libs if lib["success"]]
     if ref is not None:
         libs_success = [lib for lib in libs_success if lib["lims_genome_reference_id"] == ref]
-    libs_success = sorted(libs_success, key=date_key("process_complete"), reverse=True)
+    libs_success = sorted(libs_success, key=date_key("complete"), reverse=True)
     if len(libs_success) == 0:
         return None
     log_api_results(meta_info)
