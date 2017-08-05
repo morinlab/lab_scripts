@@ -1,0 +1,25 @@
+#!/bin/bash
+
+PROJECTS_DIR="/projects/rmorin"
+PUBLIC_DIR="${PROJECTS_DIR}/public"
+
+PREFIX_LEN="$(expr "${#PROJECTS_DIR}" + 1)"  # Include trailing slash in length
+
+# Iterate over every given file/directory
+for FILE; do
+    # Avoid iterating over nothing
+    [ -e "$FILE" ] || continue
+    # Extract the full path
+    FULLPATH="$(cd $(dirname "$FILE") && pwd -P)/$(basename "$FILE")"
+    # Check if file/directory in /projects/rmorin/
+    if [[ "${FULLPATH:0:${PREFIX_LEN}}" = "${PROJECTS_DIR}/" ]]; then
+        # Get the path relative to $PROJECTS_DIR
+        RELATIVE_PATH="${FULLPATH:${PREFIX_LEN}}"
+        # Extract the parent directories
+        DIRS="$(dirname "$RELATIVE_PATH")"
+        # Recreate parent directories in $PUBLIC_DIR
+        mkdir -p "${PUBLIC_DIR}/${DIRS}"
+        # Recursively copy file/directory as hard links into $PUBLIC_DIR
+        (cd "$PROJECTS_DIR"; cp -aln "${RELATIVE_PATH}" "${PUBLIC_DIR}/${DIRS}")
+    fi
+done
