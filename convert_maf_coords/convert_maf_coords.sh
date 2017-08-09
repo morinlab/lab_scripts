@@ -97,7 +97,7 @@ echo "[${DATE}] INFO: Converting output BED file (${OUTPUT_BED}) to MAF format."
 grep "^Hugo_Symbol" "${INPUT_MAF}" > "${OUTPUT_MAF}"
 awk 'BEGIN {FS=OFS="\t"} \
 		{chrom = $1; start = $2; end = $3} \
-		{row=gensub(/'"${MAFCOLSEP}"'/, "\t", "g", $4)} \
+		{row=gensub(/['"${MAFCOLSEP}"']/, "\t", "g", $4)} \
 		$13 = "SNP" {start = start + 1; end = end} \
 		$13 = "DEL" {start = start + 1; end = end} \
 		$13 = "INS" {start = start; end = end + 1} \
