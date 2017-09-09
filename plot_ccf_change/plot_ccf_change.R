@@ -106,14 +106,6 @@ for(mutation in mutations){
 
 rm(loci_file)
 
-# Combine filtered loci and filter MAF data frames
-loci_maf <- inner_join(maf_file, loci_filtered, by = "mutation_id") %>%
-#  separate(mutation_id, c("gene","start"), sep = "_") %>%
-  filter(varclass %in% effects) %>%
-  select(gene, sample_id, ccf, cluster_id) %>%
-  distinct()
-
-# new feature
 loci_maf <- inner_join(maf_file, loci_filtered, by = "mutation_id") %>%
   filter(varclass %in% effects)
 
