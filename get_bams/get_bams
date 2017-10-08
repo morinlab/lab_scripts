@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 This script uses the GSC's internal API to retrieve the file paths for given
@@ -25,15 +25,15 @@ For more information on the GSC's API, visit the following Wiki page:
 https://www.bcgsc.ca/wiki/display/bioapps/Bioapps+API+Documentation
 """
 
-from __future__ import print_function
+
 import sys
 import os.path
 import datetime
 import argparse
 from itertools import chain
 import pdb
-import ConfigParser
-import xmlrpclib
+import configparser
+import xmlrpc.client
 import glob
 
 # Used to track is any library ID returned more than one BAM file path.
@@ -96,7 +96,7 @@ def parse_args():
                         help="INI configuration with GIN credentials. See script header for "
                         "example. [{}]".format(default_config))
     parser.add_argument("--all", "-a", action="store_true", help="Output all BAM file paths.")
-    parser.add_argument("--verbose", "-v", action="count",
+    parser.add_argument("--verbose", "-v", action="count", default=0,
                         help="Increase the script's verbosity. Can use multiple times (-vv)")
     parser.add_argument("--quiet", "-q", action="store_true",
                         help="Mute multiple BAM file warning.")
@@ -120,14 +120,14 @@ def config_api(credentials_path):
         A xmlrpclib.ServerProxy instance
     """
     # Obtain GIN credentials from file
-    config = ConfigParser.ConfigParser()
+    config = configparser.ConfigParser()
     config.read(credentials_path)
     gin_username = config.get("credentials", "username")
     gin_password = config.get("credentials", "password")
     # Configure and create the API connection
     url_template = 'http://{}:{}@www.bcgsc.ca/data/sbs/viewer/api'
     url = url_template.format(gin_username, gin_password)
-    api = xmlrpclib.ServerProxy(url)
+    api = xmlrpc.client.ServerProxy(url)
     return api
 
 
@@ -241,7 +241,7 @@ def get_genome_bam(api, lib_id, ref=None):
         return None
     if not lib_info:
         return None
-    num_lanes = lib_info.values()[0]["target_number_of_lanes"]
+    num_lanes = list(lib_info.values())[0]["target_number_of_lanes"]
     if num_lanes == 1:
         bam_paths = get_singlelane_genome_bam(api, lib_id, ref=ref)
     elif num_lanes > 1:
@@ -260,7 +260,7 @@ def get_multilane_genome_bam(api, lib_id, ref=None):
     meta_info = api.getMergeAnalysis({"library": lib_id})
     if not meta_info:
         return None
-    libs = chain.from_iterable([x.values() for x in meta_info.values()])
+    libs = chain.from_iterable([list(x.values()) for x in list(meta_info.values())])
     libs_success = [lib for lib in libs if lib["success"]]
     if ref is not None:
         libs_success = [lib for lib in libs_success if lib["lims_genome_reference_id"] == ref]
@@ -286,7 +286,7 @@ def get_singlelane_genome_bam(api, lib_id, ref=None):
         List of BAM file paths (strings), can be empty
     """
     meta_info = api.getAlignedLibcoreInfo({"library": lib_id})
-    libs = chain.from_iterable([x for x in meta_info.values()])
+    libs = chain.from_iterable([x for x in list(meta_info.values())])
     libs_success = [lib for lib in libs if lib["successful"]]
     if ref is not None:
         libs_success = [lib for lib in libs_success if lib["lims_genome_reference_id"] == ref]
@@ -315,7 +315,7 @@ def get_rnaseq_bam(api, lib_id, ref=None):
     lib_info = api.getAlignedLibcoreInfo({"library": lib_id})
     if not lib_info:
         return None
-    libs = chain.from_iterable(lib_info.values())
+    libs = chain.from_iterable(list(lib_info.values()))
     libs_success = [lib for lib in libs if lib["successful"]]
     if ref is not None:
         libs_success = [lib for lib in libs_success if lib["lims_genome_reference_id"] == ref]
@@ -343,7 +343,7 @@ def get_mirnaseq_bam(api, lib_id, ref=None):
     lib_info = api.getAlignedLibcoreInfo({"library": lib_id})
     if not lib_info:
         return None
-    libs = chain.from_iterable(lib_info.values())
+    libs = chain.from_iterable(list(lib_info.values()))
     libs_success = [lib for lib in libs if lib["successful"]]
     if ref is not None:
         libs_success = [lib for lib in libs_success if lib["lims_genome_reference_id"] == ref]
