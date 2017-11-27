@@ -237,7 +237,7 @@ def get_genome_bam(api, lib_id, ref=None):
     """
     try:
         lib_info = api.getLibraryInfo({"library": lib_id})
-    except xmlrpclib.ProtocolError:
+    except xmlrpc.client.ProtocolError:
         return None
     if not lib_info:
         return None
@@ -312,7 +312,10 @@ def get_rnaseq_bam(api, lib_id, ref=None):
     Returns:
         List of BAM file paths (strings), can be empty
     """
-    lib_info = api.getAlignedLibcoreInfo({"library": lib_id})
+    try:
+        lib_info = api.getAlignedLibcoreInfo({"library": lib_id})
+    except xmlrpc.client.ProtocolError:
+        return None
     if not lib_info:
         return None
     libs = chain.from_iterable(list(lib_info.values()))
@@ -340,7 +343,10 @@ def get_mirnaseq_bam(api, lib_id, ref=None):
     Returns:
         List of BAM file paths (strings), can be empty
     """
-    lib_info = api.getAlignedLibcoreInfo({"library": lib_id})
+    try:
+        lib_info = api.getAlignedLibcoreInfo({"library": lib_id})
+    except xmlrpc.client.ProtocolError:
+        return None
     if not lib_info:
         return None
     libs = chain.from_iterable(list(lib_info.values()))
