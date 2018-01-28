@@ -34,6 +34,7 @@ OUTPUT_UNMAPPED="${OUTPUT_MAF%.*}.unmapped.bed"
 MODE="${4:-crossmap}"
 LOG_FILE="${OUTPUT_MAF%.*}.log.txt"
 MAFCOLSEP="${MAFCOLSEP:-|}"
+DEBUG="${DEBUG:-0}"
 
 # For colour
 RED='\033[0;31m'
@@ -55,12 +56,13 @@ DATE=$(date --rfc-3339 seconds | cut -c1-19)
 echo "[${DATE}] INFO: Creating temporary BED file (${INPUT_BED})" \
 	"from input MAF file." | tee -a "${LOG_FILE}" >&2
 awk 'BEGIN {FS=OFS="\t"} \
-	{chrom = $5; start = $6; end = $7} \
-	$10 == "SNP" {start = start - 1; end = end} \
-	$10 == "DEL" {start = start - 1; end = end} \
-	$10 == "INS" {start = start; end = end - 1} \
-	$0 !~ /^(#|Hugo_Symbol)/ {row=gensub(/\t/, "'"${MAFCOLSEP}"'", "g", $0); print chrom, start, end, row}' \
-	"${INPUT_MAF}" > "${INPUT_BED}"
+		{chrom = $5; start = $6; end = $7} \
+		$10 == "SNP" {start = start - 1; end = end} \
+		$10 == "DEL" {start = start - 1; end = end} \
+		$10 == "INS" {start = start; end = end - 1} \
+		$0 !~ /^(#|Hugo_Symbol)/ {row=gensub(/\t/, "'"${MAFCOLSEP}"'", "g", $0); print chrom, start, end, row}' \
+		"${INPUT_MAF}" | \
+	sed 's/ /_____/g' > "${INPUT_BED}"
 
 if [[ "${MODE}" == "crossmap" ]]; then
 	CROSSMAP="${CROSSMAP:-CrossMap.py}"
@@ -84,7 +86,7 @@ else
 		"${OUTPUT_BED}" "${OUTPUT_UNMAPPED}" 2>>"${LOG_FILE}"
 fi
 
-NUM_UNMAPPED=$(grep -cv "^#" "${OUTPUT_UNMAPPED}")
+NUM_UNMAPPED=$(wc -l < "${OUTPUT_UNMAPPED}")
 if [[ ${NUM_UNMAPPED} > 0 ]]; then
 	DATE=$(date --rfc-3339 seconds | cut -c1-19)
 	echo -e "${RED}[${DATE}] WARNING: ${NUM_UNMAPPED} variants were not properly mapped to the" \
@@ -96,19 +98,24 @@ echo "[${DATE}] INFO: Converting output BED file (${OUTPUT_BED}) to MAF format."
 	| tee -a "${LOG_FILE}" >&2
 grep "^Hugo_Symbol" "${INPUT_MAF}" > "${OUTPUT_MAF}"
 awk 'BEGIN {FS=OFS="\t"} \
-		{chrom = $1; start = $2; end = $3} \
-		{row=gensub(/['"${MAFCOLSEP}"']/, "\t", "g", $4)} \
-		$13 = "SNP" {start = start + 1; end = end} \
-		$13 = "DEL" {start = start + 1; end = end} \
-		$13 = "INS" {start = start; end = end + 1} \
-		{print chrom, start, end, row}' \
+		{row = gensub(/['"${MAFCOLSEP}"']/, "\t", "g", $4)} \
+		{print $1, $2, $3, row}' \
 		"${OUTPUT_BED}" \
-	| awk 'BEGIN {FS=OFS="\t"} {$8 = $1; $9 = $2; $10 = $3; print $0}' \
-	| cut -f4- >> "${OUTPUT_MAF}"
+	| awk 'BEGIN {FS=OFS="\t"} \
+		{chrom = $1; start = $2; end = $3} \
+		$13 == "SNP" {start = start + 1; end = end} \
+		$13 == "DEL" {start = start + 1; end = end} \
+		$13 == "INS" {start = start; end = end + 1} \
+		{$8 = chrom; $9 = start; $10 = end; print $0}' \
+	| cut -f4- \
+	| awk 'BEGIN {FS=OFS="\t"} {$4 = "GRCh37"; print $0}' \
+	| sed 's/_____/ /g' >> "${OUTPUT_MAF}"
 
-DATE=$(date --rfc-3339 seconds | cut -c1-19)
-echo "[${DATE}] INFO: Cleaning up temporary BED files." | tee -a "${LOG_FILE}" >&2
-rm -f "${INPUT_BED}" "${OUTPUT_BED}"
+if [[ ${DEBUG} == 0 ]]; then
+	DATE=$(date --rfc-3339 seconds | cut -c1-19)
+	echo "[${DATE}] INFO: Cleaning up temporary BED files." | tee -a "${LOG_FILE}" >&2
+	rm -f "${INPUT_BED}" "${OUTPUT_BED}"
+fi
 
 DATE=$(date --rfc-3339 seconds | cut -c1-19)
 echo -e "[${DATE}] INFO: Done! You can find the following output files:
