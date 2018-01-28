@@ -8,7 +8,7 @@
 # filter out synonymous variants and 
 # arrange columns in mutation mapper format
 cat $input | tee >(egrep -h "^(#|Hugo_Symbol)") \
-	| awk 'BEGIN {FS=OFS="\t"} $36 ~ /p\.[^=]/' \
+	| awk 'BEGIN {FS=OFS="\t"} $9 ~ /Splice_Site|Nonsense_Mutation|Frame_Shift_Del|Frame_Shift_Ins|Nonstop_Mutation|Translation_Start_Site|In_Frame_Ins|In_Frame_Del|Missense_Mutation/' \
 	| tail -n+3 \
 	| awk 'BEGIN {FS=OFS="\t"} {print $1,$16,$37,$9,$5,$6,$7,$11,$13}' \
 	| sort \
