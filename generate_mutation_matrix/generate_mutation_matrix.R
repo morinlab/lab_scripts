@@ -1,4 +1,5 @@
 #!/usr/bin/env Rscript
+# Author: Bruno Grande (bgrande@sfu.ca)
 
 
 # Load libraries ----------------------------------------------------------
@@ -11,15 +12,26 @@ suppressWarnings(suppressPackageStartupMessages({
 
 # Parse arguments ---------------------------------------------------------
 
-ui <- '
+ui <- "
 Usage: 
   generate_mutation_matrix.R [options] <maf> <output>
 
 Options:
-  -h <hotspots.tsv>, --hotspots <hotspots.tsv>  List of hotspots to consider separately.
-  -c <genes.txt>, --collapse <genes.txt>        List of genes for which all mutations
-                                                should be considered.
-  -r <regions.bed>, --regions <regions.bed>     List of regions to consider separately.'
+  -g <genes.txt>, --genes <genes.txt>             List of genes of interest (after considering 
+                                                  hotspots and regions).
+                                                  Format: Single column, no header.
+
+  -h <hotspots.tsv>, --hotspots <hotspots.tsv>    List of hotspots to consider separately.
+                                                  Format: Two columns (gene<tab>codon), no header.
+
+  -c <collapse.txt>, --collapse <collapse.txt>    List of genes for which all mutations should be 
+                                                  considered. If --genes is provided, --collapse 
+                                                  should represent a subset of --genes. 
+                                                  Format: single column, no header.
+
+  -r <regions.bed>, --regions <regions.bed>       List of regions to consider separately. Must use 
+                                                  same genome build as MAF file.
+                                                  Format: BED file, no header."
 
 args <- docopt(ui)
 
@@ -40,8 +52,13 @@ nonsyn <- setdiff(genic, silent)
 
 maf <- fread(args$maf)
 
+if (!is.null(args$genes)){
+  genes <- fread(args$genes, header = FALSE, col.names = "gene")$gene
+}
+
 if (!is.null(args$hotspots)) {
-  hotspots <- fread(args$hotspots, col.names = c("Hugo_Symbol", "Codon"))
+  hotspots <- fread(args$hotspots, col.names = c("Hugo_Symbol", "Codon"),
+                    header = FALSE)
 }
 
 if (!is.null(args$regions)) {
@@ -75,14 +92,20 @@ setkey(maf, Mutation_ID)
 
 annotated_mafs <- list()
 
+unannotated_maf <- maf
+
 maf_cols <- c(colnames(maf), "Feature_Name")
 
 # Annotate hotspots
 if (!is.null(args$hotspots)) {
   hotspots[, Codon := as.character(Codon)]
   hotspots[, Feature_Name := paste0(Hugo_Symbol, "_Codon", Codon)]
-  annotated_mafs$hotspots <- merge(maf, hotspots, by = c("Hugo_Symbol", "Codon"))
+  annotated_mafs$hotspots <- merge(unannotated_maf, hotspots, 
+                                   by = c("Hugo_Symbol", "Codon"))
   annotated_mafs$hotspots <- annotated_mafs$hotspots[, maf_cols, with = FALSE]
+  # Prevent hotspot mutations from being considered elsewhere
+  setkey(annotated_mafs$hotspots, Mutation_ID)
+  unannotated_maf <- unannotated_maf[!annotated_mafs$hotspots]
 }
 
 # Annotate custom regions
@@ -92,27 +115,31 @@ if (!is.null(args$regions)) {
   regions[, chrom := as.character(chrom)]
   setkey(regions, chrom, start, end)
   annotated_mafs$regions <- foverlaps(
-    maf, regions, nomatch = 0, 
+    unannotated_maf, regions, nomatch = 0, 
     by.x = c("Chromosome", "Start_Position", "End_Position"))
   annotated_mafs$regions <- annotated_mafs$regions[, maf_cols, with = FALSE]
+  # Prevent hotspot mutations from being considered elsewhere
+  setkey(annotated_mafs$regions, Mutation_ID)
+  unannotated_maf <- unannotated_maf[!annotated_mafs$regions]
+  # Ensure that mutations aren't being picked up more than once
+  if (annotated_mafs$regions[, any(duplicated(Mutation_ID))]) {
+    stop(paste0(
+      "Some mutations were captured by more than one region. Please ensure that ",
+      "your regions are disjoint (e.g., by merging them beforehand)."))
+  }
+}
+
+if (!is.null(args$genes)){
+  unannotated_maf <- unannotated_maf[Hugo_Symbol %in% genes]
 }
 
 # Annotate genes that should be collapsed
 if (!is.null(args$collapse)) {
-  maf[Hugo_Symbol %in% collapse, Collapse := TRUE]
+  unannotated_maf[Hugo_Symbol %in% collapse, Collapse := TRUE]
 }
 
 
 # Annotate remaining mutations --------------------------------------------
-
-unannotated_maf <- maf
-
-# Ignore already annotated mutations
-if (length(annotated_mafs) > 1) {
-  annotated_maf <- rbindlist(annotated_mafs)
-  setkey(annotated_maf, Mutation_ID)
-  unannotated_maf <- maf[!annotated_maf]
-}
 
 # Ignore silent mutations for genes not being collapsed
 unannotated_maf <- unannotated_maf[Collapse | Variant_Classification %in% nonsyn]
@@ -129,6 +156,11 @@ annotated_mafs$collapsed <- annotated_mafs$collapsed[, maf_cols, with = FALSE]
 
 # Merge everything once again (including collapsed and non-collapsed genes)
 annotated_maf <- rbindlist(annotated_mafs)
+
+# Check that each mutation only appears once
+if (any(annotated_maf[, duplicated(Mutation_ID)])) {
+  stop("This error shouldn't be happening. Please report this to the developer.")
+}
 
 
 # Output mutation matrix --------------------------------------------------
