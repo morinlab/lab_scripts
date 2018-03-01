@@ -16,7 +16,7 @@ Usage:
   generate_mutation_matrix.R [options] <maf> <output>
 
 Options:
-  -h <hotpots.tsv>, --hotspots <hotpots.tsv>    List of hotspots to consider separately.
+  -h <hotspots.tsv>, --hotspots <hotspots.tsv>  List of hotspots to consider separately.
   -c <genes.txt>, --collapse <genes.txt>        List of genes for which all mutations
                                                 should be considered.
   -r <regions.bed>, --regions <regions.bed>     List of regions to consider separately.'
