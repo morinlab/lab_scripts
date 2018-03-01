@@ -41,9 +41,10 @@ args <- docopt(ui)
 genic <- 
   c("Frame_Shift_Del", "Frame_Shift_Ins", "In_Frame_Del", "In_Frame_Ins", 
     "Missense_Mutation", "Nonsense_Mutation", "Silent", "Splice_Site", 
-    "Translation_Start_Site", "Nonstop_Mutation", "3'UTR", "5'UTR", "Intron")
+    "Translation_Start_Site", "Nonstop_Mutation", "3'UTR", "5'UTR", 
+    "3'Flank", "5'Flank", "Intron")
 
-silent <- c("3'UTR", "5'UTR", "Intron", "Silent")
+silent <- c("3'UTR", "5'UTR", "3'Flank", "5'Flank", "Intron", "Silent")
 
 nonsyn <- setdiff(genic, silent)
 
