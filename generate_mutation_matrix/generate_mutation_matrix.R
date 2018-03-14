@@ -17,21 +17,30 @@ Usage:
   generate_mutation_matrix.R [options] <maf> <output>
 
 Options:
-  -g <genes.txt>, --genes <genes.txt>             List of genes of interest (after considering 
-                                                  hotspots and regions).
-                                                  Format: Single column, no header.
-
-  -h <hotspots.tsv>, --hotspots <hotspots.tsv>    List of hotspots to consider separately.
+  -h <hotspots.tsv>, --hotspots <hotspots.tsv>    Mutation hotspots to output as separate rows in
+                                                  the generated mutation matrix.
                                                   Format: Two columns (gene<tab>codon), no header.
+                                                  Default: No hotspots.
+  
+  -r <regions.bed>, --regions <regions.bed>       Regions (using same genome build) to output as 
+                                                  separate rows in the generated mutation matrix.
+                                                  Format: BED file with name column, no header.
+                                                  Default: No regions.
 
-  -c <collapse.txt>, --collapse <collapse.txt>    List of genes for which all mutations should be 
-                                                  considered. If --genes is provided, --collapse 
-                                                  should represent a subset of --genes. 
-                                                  Format: single column, no header.
+  -n <nonsyn.txt>, --nonsyn <nonsyn.txt>          Genes of interest for which only nonsynonymous 
+                                                  mutations are considered (after removing any
+                                                  mutations in the specified hotspots or regions).
+                                                  Format: Single column, no header.
+                                                  Default: All genes listed in the input MAF file.
 
-  -r <regions.bed>, --regions <regions.bed>       List of regions to consider separately. Must use 
-                                                  same genome build as MAF file.
-                                                  Format: BED file, no header."
+  -a <all.txt>, --all <all.txt>                   Genes of interest for which all mutations are 
+                                                  considered (after removing any mutations in the 
+                                                  specified hotspots or regions), including
+                                                  synonymous, nonsynonymous and flanking variants.
+                                                  This option takes precedence for genes listed for
+                                                  both the --nonsyn and --all options.
+                                                  Format: Single column, no header.
+                                                  Default: No genes."
 
 args <- docopt(ui)
 
@@ -53,8 +62,8 @@ nonsyn <- setdiff(genic, silent)
 
 maf <- fread(args$maf)
 
-if (!is.null(args$genes)){
-  genes <- fread(args$genes, header = FALSE, col.names = "gene")$gene
+if (!is.null(args$nonsyn)){
+  nonsyn <- fread(args$nonsyn, header = FALSE, col.names = "gene")$gene
 }
 
 if (!is.null(args$hotspots)) {
@@ -67,8 +76,10 @@ if (!is.null(args$regions)) {
                    col.names = c("chrom", "start", "end", "Feature_Name"))
 }
 
-if (!is.null(args$collapse)){
-  collapse <- fread(args$collapse, header = FALSE, col.names = "gene")$gene
+if (!is.null(args$all)){
+  all <- fread(args$all, header = FALSE, col.names = "gene")$gene
+} else {
+  all <- vector("character")
 }
 
 
@@ -82,7 +93,7 @@ maf[Variant_Classification == "Missense_Mutation",
     Codon := sub("p[.][A-Z]+([0-9]+).*", "\\1", HGVSp_Short)]
 
 # Default to not collapsing any gene
-maf[, Collapse := FALSE]
+maf[, All := FALSE]
 
 # Set unique key for MAF file
 maf[, Mutation_ID := .I]
@@ -130,30 +141,30 @@ if (!is.null(args$regions)) {
   }
 }
 
-if (!is.null(args$genes)){
-  unannotated_maf <- unannotated_maf[Hugo_Symbol %in% genes]
+if (!is.null(args$nonsyn)){
+  unannotated_maf <- unannotated_maf[Hugo_Symbol %in% c(nonsyn, all)]
 }
 
 # Annotate genes that should be collapsed
-if (!is.null(args$collapse)) {
-  unannotated_maf[Hugo_Symbol %in% collapse, Collapse := TRUE]
+if (!is.null(args$all)) {
+  unannotated_maf[Hugo_Symbol %in% all, All := TRUE]
 }
 
 
 # Annotate remaining mutations --------------------------------------------
 
 # Ignore silent mutations for genes not being collapsed
-unannotated_maf <- unannotated_maf[Collapse | Variant_Classification %in% nonsyn]
+unannotated_maf <- unannotated_maf[All | Variant_Classification %in% nonsyn]
 
 # Create annotations for collapsed genes
-annotated_mafs$collapsed <- 
-  unannotated_maf[(Collapse)][, Feature_Name := paste0(Hugo_Symbol, "_All")]
-annotated_mafs$collapsed <- annotated_mafs$collapsed[, maf_cols, with = FALSE]
+annotated_mafs$all <- 
+  unannotated_maf[(All)][, Feature_Name := paste0(Hugo_Symbol, "_All")]
+annotated_mafs$all <- annotated_mafs$all[, maf_cols, with = FALSE]
 
 # Create annotations for uncollapsed genes (only nonsynonymous mutations)
-annotated_mafs$not_collapsed <- 
-  unannotated_maf[(!Collapse)][, Feature_Name := paste0(Hugo_Symbol, "_Nonsyn")]
-annotated_mafs$collapsed <- annotated_mafs$collapsed[, maf_cols, with = FALSE]
+annotated_mafs$nonsyn <- 
+  unannotated_maf[(!All)][, Feature_Name := paste0(Hugo_Symbol, "_Nonsyn")]
+annotated_mafs$nonsyn <- annotated_mafs$nonsyn[, maf_cols, with = FALSE]
 
 # Merge everything once again (including collapsed and non-collapsed genes)
 annotated_maf <- rbindlist(annotated_mafs)
