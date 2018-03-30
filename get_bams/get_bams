@@ -257,9 +257,11 @@ def get_genome_bam(api, lib_id, ref=None):
         return None
     if not lib_info:
         return None
-    libcore_passed = [k for k, v in lib_info.items() if v["bio_qc_status"] == "Passed"]
+    libcore_passed = [k for k, v in lib_info.items() if v["bio_qc_status"] == "Passed" or v["bio_qc_status"] is None]
     num_lanes = len(libcore_passed)
-    if num_lanes == 1:
+    if num_lanes == 0:
+        return None
+    elif num_lanes == 1:
         libcore_id = libcore_passed[0]
         bam_paths = get_singlelane_genome_bam(api, lib_id, libcore_id, ref=ref)
     elif num_lanes > 1:
