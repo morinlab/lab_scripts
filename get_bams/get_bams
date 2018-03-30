@@ -23,6 +23,19 @@ N.B. Don't forget to make the file read-only for just the owner (chmod 500).
 
 For more information on the GSC's API, visit the following Wiki page:
 https://www.bcgsc.ca/wiki/display/bioapps/Bioapps+API+Documentation
+
+Human Reference IDs:
+    13	   Homo sapiens hg18
+    17	   Homo sapiens hg19
+    18	   Homo sapiens hg19 1000genomes
+    77	   Homo sapiens hg19a JAGuaR 1.7.5 ens61
+    79	   Homo sapiens hg19a JAGuaR 1.7.5 ens59
+    80	   Homo sapiens hg19a JAGuaR 1.7.5 ens65only
+    106	   Homo sapiens hg38
+    121	   Homo sapiens hg19a STAR 2.5.2a ens69
+    122	   Homo sapiens 38_no_alt STAR 2.5.2a ens79
+    124	   Homo sapiens hg19a STAR 2.5.2b ens69
+    125	   Homo sapiens 38_no_alt STAR 2.5.2b ens79
 """
 
 
@@ -101,7 +114,8 @@ def parse_args():
     parser.add_argument("--quiet", "-q", action="store_true",
                         help="Mute multiple BAM file warning.")
     parser.add_argument("--debug", "-d", action="store_true", help="Trigger API debugger")
-    parser.add_argument("--reference_id", "-r", type=int, help="LIMS genome reference ID")
+    parser.add_argument("--reference_id", "-r", type=int,
+                        help="LIMS genome reference ID (see script header for examples)")
     args = parser.parse_args()
     # Handle special arguments
     if not os.path.exists(args.credentials):
@@ -202,6 +216,8 @@ def find_bam(dirname, file_glob):
     if len(bam_file) < 1:
         return None
     elif len(bam_file) > 1:
+        bam_file = [f for f in bam_file if "dupsFlagged" in f]
+    if len(bam_file) > 1:
         raise ValueError("More than one file matches the glob {}".format(full_glob))
     return bam_file[0]
 
@@ -236,14 +252,16 @@ def get_genome_bam(api, lib_id, ref=None):
         List of BAM file paths (strings), can be None.
     """
     try:
-        lib_info = api.getLibraryInfo({"library": lib_id})
+        lib_info = api.getLibcoreInfo({"library": lib_id})
     except xmlrpc.client.ProtocolError:
         return None
     if not lib_info:
         return None
-    num_lanes = list(lib_info.values())[0]["target_number_of_lanes"]
+    libcore_passed = [k for k, v in lib_info.items() if v["bio_qc_status"] == "Passed"]
+    num_lanes = len(libcore_passed)
     if num_lanes == 1:
-        bam_paths = get_singlelane_genome_bam(api, lib_id, ref=ref)
+        libcore_id = libcore_passed[0]
+        bam_paths = get_singlelane_genome_bam(api, lib_id, libcore_id, ref=ref)
     elif num_lanes > 1:
         bam_paths = get_multilane_genome_bam(api, lib_id, ref=ref)
     return bam_paths
@@ -277,7 +295,7 @@ def get_multilane_genome_bam(api, lib_id, ref=None):
     return bam_paths
 
 
-def get_singlelane_genome_bam(api, lib_id, ref=None):
+def get_singlelane_genome_bam(api, lib_id, libcore_id, ref=None):
     """Retrieve the path of a single-lane genome BAM file.
 
     The list is sorted in order of creation (newest first).
@@ -286,6 +304,7 @@ def get_singlelane_genome_bam(api, lib_id, ref=None):
         List of BAM file paths (strings), can be empty
     """
     meta_info = api.getAlignedLibcoreInfo({"library": lib_id})
+    meta_info = {k : v for k, v in meta_info.items() if k == libcore_id}
     libs = chain.from_iterable([x for x in list(meta_info.values())])
     libs_success = [lib for lib in libs if lib["successful"]]
     if ref is not None:
@@ -297,7 +316,7 @@ def get_singlelane_genome_bam(api, lib_id, ref=None):
     bam_paths = []
     for lib in libs_success:
         lib_bam_dir = lib["bioapps_data_path"]
-        lib_bam_file = find_bam(lib_bam_dir, "*_dupsFlagged.bam")
+        lib_bam_file = find_bam(lib_bam_dir, "*.bam")
         if lib_bam_file:
             bam_paths.append(lib_bam_file)
     return bam_paths
