@@ -435,7 +435,7 @@ def writeMutations(motifMut, siteMut, outFile, inFile, signature):
 
 		for line in f:  # Look at each mutation in the input file
 
-			oLine = line.rstrip()
+			oLine = line.rstrip("\n").rstrip("\r")
 			# Write the header to both output files
 			if line.startswith("#") or line.startswith("Hugo_Symbol"):
 				oLine = oLine + "\tMutation_Overlap_" + signature + os.linesep
