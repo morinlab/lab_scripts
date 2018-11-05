@@ -1,24 +1,32 @@
 # get_bams.py
 
-This script uses the GSC's internal API to retrieve the file paths for given
-library IDs. For more information, read the [script](get_bams.py) header. You may also get the command-line interface by running: 
+This script uses the GSC's internal REST API to retrieve the BAM file paths for given library IDs. 
+For more information, read the [script](get_bams.py) header. You may also get the command-line interface by running: 
 
+```console
+$ python ./get_bams --help
 ```
-python get_bams.py --help
-```
+
 
 ## Dependencies
 
-This script has no software dependencies other than Python 2. You will need to create an INI configuration file containing your GIN credentials. See the [script](get_bams.py) header for more details.
+This script has no software dependencies other than Python 3 and the requests HTTP package. 
+You will need to create an INI configuration file containing your GIN credentials. 
+See the [script](get_bams.py) header for more details.
+
 
 ## Usage
 
-This script is simple to use. Below is an example command, where I'm retrieving the paths for merged genome BAM files using the GSC API. The file paths are outputted to stdout by default in TSV format.
+This script is simple to use. 
+Below is an example command, where I'm retrieving the paths for merged genome BAM files using the GSC API. 
+The file paths are outputted to stdout by default in TSV format.
 
-Here, you can notice a warning on stderr that multiple BAM files were returned for at least one library ID. It turns out that these libraries were aligned to GRCh37 and GRCh38, causing the warning. By default, get_bams.py will return the latest BAM file using the timestamps returned by the API.
+Here, you can notice a warning on stderr that multiple BAM files were returned for at least one library ID. 
+It turns out that these libraries were aligned to GRCh37 and GRCh38, causing the warning. 
+By default, get_bams.py will return the latest BAM file using the timestamps returned by the API.
 
-```
-$ python get_bams.py -t genome A47817 A47818 A57139
+```console
+$ python ./get_bams -t genome A47817 A47818 A57139
 A47817  /path/to/A47817.bam
 A47818  /path/to/A47818.bam
 A57139  /path/to/A57139.bam

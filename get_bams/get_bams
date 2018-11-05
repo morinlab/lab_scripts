@@ -7,22 +7,25 @@ library IDs. Currently, this script handles the following library types:
     - genome: Merged genome BAM files
     - mrna: RNA-seq aligned BAM files (JaGUaR pipeline)
     - mirna: miRNA BAM files
+    - targeted: Hybridization capture sequencing BAM files
 
-Exomes or other unmerged BAM files probably don't work. Once there is a
-need, I will look into adding support for these additional library types.
+I haven't tried this script to obtain BAM file paths for exomes or other
+types of sequencing. You can try inputting the library ID with -t genome.
+If that doesn't work, I can look into adding support for these additional
+library types.
 
 This script also needs your GSC GIN credentials. By default, it looks in
 your home directory. The format is shown below:
 
     $ cat ~/.gin_credentials.ini
     [credentials]
-    username: bgrande
-    password: (Re64(zuqN2.K23++A
+    username: foobar
+    password: Re64zuqN2
 
 N.B. Don't forget to make the file read-only for just the owner (chmod 500).
 
-For more information on the GSC's API, visit the following Wiki page:
-https://www.bcgsc.ca/wiki/display/bioapps/Bioapps+API+Documentation
+For more information on the GSC's API, visit the following page:
+http://www.bcgsc.ca/data/bioapps-docs/bioapps.api/docs/
 
 Human Reference IDs:
     13	   Homo sapiens hg18
@@ -32,6 +35,7 @@ Human Reference IDs:
     79	   Homo sapiens hg19a JAGuaR 1.7.5 ens59
     80	   Homo sapiens hg19a JAGuaR 1.7.5 ens65only
     106	   Homo sapiens hg38
+    111	   Homo sapiens hg38 JAGuaR 1.7.5 ens79
     121	   Homo sapiens hg19a STAR 2.5.2a ens69
     122	   Homo sapiens 38_no_alt STAR 2.5.2a ens79
     124	   Homo sapiens hg19a STAR 2.5.2b ens69
@@ -43,11 +47,14 @@ import sys
 import os.path
 import datetime
 import argparse
-from itertools import chain
 import pdb
 import configparser
-import xmlrpc.client
+import requests
+import json
 import glob
+
+# Base URL for REST API
+BASE_URL = "http://sbs:8100"
 
 # Used to track is any library ID returned more than one BAM file path.
 # This is used to warn the user at the end about any omitted BAM file paths.
@@ -64,6 +71,9 @@ IS_MULTIPLE_MSG = (
 # Track verbosity at the global level
 verbosity = 0
 
+# Session web authentication token
+session_token = ""
+
 
 def main():
     """Main program.
@@ -75,6 +85,7 @@ def main():
     api = config_api(args.credentials)
     if args.debug:
         pdb.set_trace()
+        query_api("merge", {"library": "A82276"})
     for lib_id in args.library_id:
         bam_paths = get_bam_paths(api, lib_id, args.library_type, args.reference_id)
         log_bam_paths(bam_paths)
@@ -128,30 +139,51 @@ def parse_args():
 
 
 def config_api(credentials_path):
-    """Configure and create the API connection.
+    """Retrieve an authentication web token.
+    Sets global session token.
 
     Returns:
-        A xmlrpclib.ServerProxy instance
+        An authentication token (string)
     """
     # Obtain GIN credentials from file
     config = configparser.ConfigParser()
     config.read(credentials_path)
     gin_username = config.get("credentials", "username")
     gin_password = config.get("credentials", "password")
+    body =  {"username": gin_username, "password": gin_password}
     # Configure and create the API connection
-    url_template = 'http://{}:{}@www.bcgsc.ca/data/sbs/viewer/api'
-    url = url_template.format(gin_username, gin_password)
-    api = xmlrpc.client.ServerProxy(url)
-    return api
+    url = BASE_URL + "/session"
+    response = requests.post(url, json = body)
+    token = json.loads(response.text)["token"]
+    global session_token
+    session_token = token
+    return token
+
+
+def query_api(endpoint, params):
+    """Query specified endpoint.
+
+    Returns:
+        Deserialized JSON data (dict)
+    """
+    url = BASE_URL + "/" + endpoint
+    headers = {
+        "X-Token": session_token,
+        "Content-Type": "application/json",
+        "Accept": "application/json"}
+    response = requests.get(url, headers=headers, params=params)
+    data = json.loads(response.text)
+    return data
 
 
 def parse_date(s):
     """Parse timestamps as returned by the GSC API.
+    Example: 2015-11-05T01:41:29
 
     Returns:
         A datetime object
     """
-    return datetime.datetime.strptime(s, "%Y-%m-%d %H:%M")
+    return datetime.datetime.strptime(s[:16], "%Y-%m-%dT%H:%M")
 
 
 def date_key(key_name):
@@ -233,17 +265,17 @@ def get_bam_paths(api, lib_id, lib_type, ref=None):
     """
     log_library_id(lib_id)
     if lib_type == "mirna":
-        bam_paths = get_mirnaseq_bam(api, lib_id, ref=ref)
+        bam_paths = get_mirnaseq_bam(lib_id, ref=ref)
     elif lib_type == "mrna":
-        bam_paths = get_rnaseq_bam(api, lib_id, ref=ref)
+        bam_paths = get_rnaseq_bam(lib_id, ref=ref)
     else:
-        bam_paths = get_genome_bam(api, lib_id, ref=ref)
+        bam_paths = get_genome_bam(lib_id, ref=ref)
     if bam_paths is None or len(bam_paths) == 0:
         bam_paths = ["N/A"]
     return bam_paths
 
 
-def get_genome_bam(api, lib_id, ref=None):
+def get_genome_bam(lib_id, ref=None):
     """Retrieve the path of a genome BAM file.
 
     The list is sorted in order of creation (newest first).
@@ -251,112 +283,65 @@ def get_genome_bam(api, lib_id, ref=None):
     Returns:
         List of BAM file paths (strings), can be None.
     """
-    try:
-        lib_info = api.getLibcoreInfo({"library": lib_id})
-    except xmlrpc.client.ProtocolError:
-        return None
-    if not lib_info:
-        return None
-    libcore_passed = [k for k, v in lib_info.items() if v["bio_qc_status"] == "Passed" or v["bio_qc_status"] is None]
-    num_lanes = len(libcore_passed)
-    if num_lanes == 0:
-        return None
-    elif num_lanes == 1:
-        libcore_id = libcore_passed[0]
-        bam_paths = get_singlelane_genome_bam(api, lib_id, libcore_id, ref=ref)
-    elif num_lanes > 1:
-        bam_paths = get_multilane_genome_bam(api, lib_id, ref=ref)
-    return bam_paths
-
-
-def get_multilane_genome_bam(api, lib_id, ref=None):
-    """Retrieve the path of a merged multi-lane genome BAM file.
-
-    The list is sorted in order of creation (newest first).
-
-    Returns:
-        List of BAM file paths (strings), can be empty
-    """
-    meta_info = api.getMergeAnalysis({"library": lib_id})
-    if not meta_info:
-        return None
-    libs = chain.from_iterable([list(x.values()) for x in list(meta_info.values())])
-    libs_success = [lib for lib in libs if lib["success"]]
+    params = {"library": lib_id}
     if ref is not None:
-        libs_success = [lib for lib in libs_success if lib["lims_genome_reference_id"] == ref]
-    libs_success = sorted(libs_success, key=date_key("complete"), reverse=True)
-    if len(libs_success) == 0:
+        params["lims_genome_reference_id"] = ref
+    merges_raw = query_api("merge", params)
+    log_api_results(merges_raw)
+    merges = filter(lambda x: x["success"], merges_raw)
+    merges = filter(lambda x: x["status"] == "production", merges_raw)
+    merges = list(merges)
+    if len(merges) == 0:
         return None
-    log_api_results(meta_info)
+    merges = sorted(merges, key=date_key("complete"), reverse=True)
+    if all(m["merge_alignment_stats"] is not None for m in merges):
+        readcount_key = lambda x: x["merge_alignment_stats"]["total_reads"]
+        merges = sorted(merges, key=readcount_key, reverse=True)
     bam_paths = []
-    for lib in libs_success:
-        lib_bam_dir = lib["data_path"]
+    for merge in merges:
+        lib_bam_dir = merge["data_path"]
         lib_bam_file = find_bam(lib_bam_dir, "*.bam")
         if lib_bam_file:
             bam_paths.append(lib_bam_file)
     return bam_paths
 
 
-def get_singlelane_genome_bam(api, lib_id, libcore_id, ref=None):
-    """Retrieve the path of a single-lane genome BAM file.
-
-    The list is sorted in order of creation (newest first).
-
-    Returns:
-        List of BAM file paths (strings), can be empty
-    """
-    meta_info = api.getAlignedLibcoreInfo({"library": lib_id})
-    meta_info = {k : v for k, v in meta_info.items() if k == libcore_id}
-    libs = chain.from_iterable([x for x in list(meta_info.values())])
-    libs_success = [lib for lib in libs if lib["successful"]]
-    if ref is not None:
-        libs_success = [lib for lib in libs_success if lib["lims_genome_reference_id"] == ref]
-    libs_success = sorted(libs_success, key=date_key("symlink_timestamp"), reverse=True)
-    if len(libs_success) == 0:
-        return None
-    log_api_results(meta_info)
-    bam_paths = []
-    for lib in libs_success:
-        lib_bam_dir = lib["bioapps_data_path"]
-        lib_bam_file = find_bam(lib_bam_dir, "*.bam")
-        if lib_bam_file:
-            bam_paths.append(lib_bam_file)
-    return bam_paths
-
-
-def get_rnaseq_bam(api, lib_id, ref=None):
+def get_rnaseq_bam(lib_id, ref=None):
     """Retrieve the path of a RNA-seq BAM file aligned using
     the JaGUaR pipeline.
 
-    The list is sorted in order of creation (newest first).
+    The list is sorted in order of completion (newest first).
 
     Returns:
         List of BAM file paths (strings), can be empty
     """
-    try:
-        lib_info = api.getAlignedLibcoreInfo({"library": lib_id})
-    except xmlrpc.client.ProtocolError:
-        return None
-    if not lib_info:
-        return None
-    libs = chain.from_iterable(list(lib_info.values()))
-    libs_success = [lib for lib in libs if lib["successful"]]
+    params = {"library": lib_id}
+    analyses_raw = query_api("reposition", params)
+    log_api_results(analyses_raw)
+    # Ensure that repositioning worked
+    analyses = filter(lambda x: x["successful"], analyses_raw)
+    # Ensure that alignment worked
+    analyses = filter(lambda x: x["aligned_libcore"]["successful"], analyses)
+    # Ensure that sequencing QC passed
+    analyses = filter(
+        lambda x: x["aligned_libcore"]["libcore"]["bio_qc_status"] != "Failed", analyses)
     if ref is not None:
-        libs_success = [lib for lib in libs_success if lib["lims_genome_reference_id"] == ref]
-    libs_success = sorted(libs_success, key=date_key("created"), reverse=True)
-    if len(libs_success) == 0:
+        ref_filter = lambda x: x["aligned_libcore"]["lims_genome_reference_id"] == ref
+        analyses = filter(ref_filter, analyses)
+    analyses = list(analyses)
+    if len(analyses) == 0:
         return None
-    log_api_results(lib_info)
+    analyses = sorted(analyses, key=date_key("stop"), reverse=True)
     bam_paths = []
-    for lib in libs_success:
-        lib_bam_dir = lib["bioapps_data_path"]
+    for analysis in analyses:
+        lib_bam_dir = analysis["data_path"]
         lib_bam_file = find_bam(lib_bam_dir, "*withJunctionsOnGenome_dupsFlagged.bam")
         if lib_bam_file:
             bam_paths.append(lib_bam_file)
     return bam_paths
 
 
-def get_mirnaseq_bam(api, lib_id, ref=None):
+def get_mirnaseq_bam(lib_id, ref=None):
     """Retrieve the path of a miRNA-seq BAM file.
 
     The list is sorted in order of creation (newest first).
@@ -364,23 +349,24 @@ def get_mirnaseq_bam(api, lib_id, ref=None):
     Returns:
         List of BAM file paths (strings), can be empty
     """
-    try:
-        lib_info = api.getAlignedLibcoreInfo({"library": lib_id})
-    except xmlrpc.client.ProtocolError:
-        return None
-    if not lib_info:
-        return None
-    libs = chain.from_iterable(list(lib_info.values()))
-    libs_success = [lib for lib in libs if lib["successful"]]
+    params = {"library": lib_id}
+    # if ref is not None:
+    #     params["lims_genome_reference_id"] = ref
+    analyses_raw = query_api("micro_rna", params)
+    log_api_results(analyses_raw)
+    analyses = filter(lambda x: x["successful"], analyses_raw)
+    analyses = filter(lambda x: "custom" not in x["analysis_parameters"]["parameters"],
+                      analyses)
     if ref is not None:
-        libs_success = [lib for lib in libs_success if lib["lims_genome_reference_id"] == ref]
-    libs_success = sorted(libs_success, key=date_key("created"), reverse=True)
-    if len(libs_success) == 0:
+        ref_filter = lambda x: x["aligned_libcore"]["lims_genome_reference_id"] == ref
+        analyses = filter(ref_filter, analyses)
+    analyses = list(analyses)
+    if len(analyses) == 0:
         return None
-    log_api_results(lib_info)
+    analyses = sorted(analyses, key=date_key("stop"), reverse=True)
     bam_paths = []
-    for lib in libs_success:
-        lib_bam_dir = lib["bioapps_data_path"]
+    for analysis in analyses:
+        lib_bam_dir = analysis["aligned_libcore"]["data_path"]
         lib_bam_file = find_bam(lib_bam_dir, "*.bam")
         if lib_bam_file:
             bam_paths.append(lib_bam_file)
