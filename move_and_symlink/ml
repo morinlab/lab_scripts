@@ -1,0 +1,148 @@
+#!/usr/bin/env python3
+
+"""
+Move a file and create a symlink at its original location.
+The symlink will be made relative to maximize portability.
+"""
+
+import os
+import shutil
+import logging
+import argparse
+
+
+DEFAULT_LOG_LEVEL = logging.INFO
+
+logging.basicConfig(
+    level=DEFAULT_LOG_LEVEL,
+    format='%(levelname)-10s %(message)s')
+
+
+def main():
+    """Main program logic"""
+    args = parse_args()
+    args = validate_args(args)
+    adjust_logging(args.silent)
+    move_file(args.source, args.destination)
+    create_symlink(args.destination, args.source)
+
+
+def parse_args():
+    """Parse command-line arguments"""
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("source", help="A file to be moved (no symlinks)")
+    parser.add_argument("destination", help="Destination (file or directory)")
+    parser.add_argument("--silent", "-s", action="count", default=0,
+                        help="Silence logging (repeat to be more strict)")
+    parser.add_argument("--force", "-f", help="Overwrite destination file")
+    parser.add_argument("--create_dir", "-d",
+                        help="Create destination directories, if needed")
+    args = parser.parse_args()
+    return args
+
+
+def validate_args(args):
+    """Validate command-line arguments"""
+
+    # Ensure file paths are absolute
+    args.source = os.path.abspath(args.source)
+    args.destination = os.path.abspath(args.destination)
+
+    # Check if source file exists
+    if not os.path.exists(args.source):
+        raise Exception("Source file doesn't exist")
+
+    # Check if source is a file (not a link)
+    if not os.path.isfile(args.source):
+        raise Exception("Source is not a file")
+    if os.path.islink(args.source):
+        raise Exception("Source is a symlink, not a file")
+
+    # If destination is a directory, get destination file name
+    if os.path.isdir(args.destination):
+        args.destination = get_destination_file(args.source, args.destination)
+
+    # Ensure destination directory exists (unless --create_dir)
+    destination_dir = os.path.dirname(args.destination)
+    if not os.path.exists(destination_dir):
+        if args.create_dir:
+            os.makedirs(destination_dir)
+        else:
+            raise Exception("Destination directory doesn't exist. "
+                            "Try enabling --create_dir.")
+
+    # Ensure destination file doesn't exist (unless --force)
+    if os.path.exists(args.destination) and not args.force:
+        raise Exception("Destination file already exists. "
+                        " Try enabling --force.")
+
+    return args
+
+
+def adjust_logging(num_silence):
+    """Adjust logging verbosity"""
+    new_log_level = (num_silence * 10) + DEFAULT_LOG_LEVEL
+    logging.basicConfig(level=new_log_level)
+
+
+def get_destination_file(source, destination):
+    """Generate destination file name based on source file name"""
+    source_basename = os.path.basename(source)
+    destination = os.path.join(destination, source_basename)
+    return destination
+
+
+def move_file(source, destination):
+    """Move file"""
+    logging.info("Running: mv %s %s", source, destination)
+    shutil.move(source, destination)
+
+
+def split_all(path):
+    """Split file path into list of components (directories and basename)
+
+    Copied from: https://oreil.ly/2PGHA72
+    """
+    allparts = []
+    while 1:
+        parts = os.path.split(path)
+        if parts[0] == path:  # sentinel for absolute paths
+            allparts.insert(0, parts[0])
+            break
+        elif parts[1] == path: # sentinel for relative paths
+            allparts.insert(0, parts[1])
+            break
+        else:
+            path = parts[0]
+            allparts.insert(0, parts[1])
+    return allparts
+
+
+def create_symlink(source, destination):
+    """Create relative symbolic link
+
+    In order to maximize portability, a relative symbolic link is created.
+    Briefly, the 'deepest common parent directory' is determined and the
+    path from the source to the destination is built using '../' based on
+    how deeply destination is nested.
+    """
+    common_prefix = os.path.commonpath([source, destination])
+
+    # Ensure that trailing slash is included
+    common_prefix = common_prefix + "/"
+
+    source_rel = source.replace(common_prefix, "", 1)
+    destination_rel = destination.replace(common_prefix, "", 1)
+    destination_parents = split_all(destination_rel)
+
+    # You should ignore the basename, hence the minus one
+    num_parent_levels = len(destination_parents) - 1
+
+    source_rel = "../" * num_parent_levels + source_rel
+
+    logging.info("Running: ln -s %s %s", source_rel, destination)
+    os.symlink(source_rel, destination)
+
+
+if __name__ == "__main__":
+    main()
