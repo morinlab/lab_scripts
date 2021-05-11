@@ -82,6 +82,25 @@ class SampleCNVs:
         self.is_chr_prefixed = None
         self.ploidy = None
 
+    def output_seg_str(self, sample_name=None):
+        """
+        Summarize and return all CNV segments as strings, one segment per line
+        Format: sample_name(optional), chrom, start, end, CN
+        """
+
+        segs = []
+        for chrom in self.starts.keys():
+            for start, end, cn in zip(self.starts[chrom], self.ends[chrom], self.cn_states[chrom]):
+                if sample_name is not None:
+                    out_seg = [sample_name, chrom, str(start), str(end), str(cn)]
+                else:
+                    out_seg = [chrom, str(start), str(end), str(cn)]
+                segs.append("\t".join(out_seg))
+
+        return segs
+
+
+
     def merge_overlapping_cnvs(self, existStarts: iter, existEnds: iter, existCNs: iter, newStart: int, newEnd: int, newCN:int):
         """
         Handle overlapping copy number segments, merging and editing existing segments as necessary
@@ -206,6 +225,10 @@ class SampleCNVs:
 
         if isinstance(cn, float):
             cn = round(cn)
+
+        if start == end:
+            # This segment has a size of 1 (or 0). Ignore it
+            return
 
         assert start < end
         # Have we seen any events for this chromosome before?
@@ -565,6 +588,7 @@ def get_args():
     parser.add_argument("-o", "--output", metavar="TSV", default=None, required=True, type=str, help="Output file listing all genes and chromosomal arms affected by CNVs")
     parser.add_argument("--olap_threshold", metavar=0.7, default=0.7, type=float, help="--genes and --arms must have this fraction of their length affected by CNVs before they are called as deleted/gained")
     parser.add_argument("--focal_threshold", metavar="INT", default=30000000, type=int, help="CNVs overlapping --genes will only be counted if they are smaller than this [Default:30000000]")
+    parser.add_argument("--output_segfile", metavar="STR", default=None, type=str, help="Optional output seg file containing all merged and ploidy-adjusted segments")
 
     args = parser.parse_args()
 
@@ -769,7 +793,7 @@ def get_overlap_genes(chrom: str, start: int, end: int, copy_num: int, gene_cord
     return olap_genes
 """
 
-def generate_cnv_files(cnv_segs, gene_regions_bed, arm_regions, outfile, olap_threshold:float = 0.6, focal_cn_thresh:int = 30000000):
+def generate_cnv_files(cnv_segs, gene_regions_bed, arm_regions, outfile, olap_threshold:float = 0.6, focal_cn_thresh:int = 30000000, outseg=None):
     """
     Characterize focal and arm-level copy number events, and summarize them in the respective output files.
 
@@ -851,10 +875,19 @@ def generate_cnv_files(cnv_segs, gene_regions_bed, arm_regions, outfile, olap_th
             except ValueError as e:
                 raise TypeError("Unable to process line %s of \'%s\': start, end, and CN must be integers or floats" % (i, cnv_segs)) from e
 
-
     # Now adjust for ploidy of each case
     for sample, cnvs in sample_cnvs.items():
-        cnvs.adjust_ploidy(arm_coods, sample)
+         cnvs.adjust_ploidy(arm_coods, sample)
+
+    # If specified, write out a new seg file
+    if outseg:
+        with open(outseg, "w") as o:
+            o.write("\t".join(required_cols))
+            o.write(os.linesep)
+            for sample, cnvs in sample_cnvs.items():
+                for seg in cnvs.output_seg_str(sample):
+                    o.write(seg)
+                    o.write(os.linesep)
 
     # Now that we have processed all CNVs, lets see which genes have events, and write those out
     with open(outfile, "w") as o:
@@ -902,7 +935,7 @@ def main(args=None):
     if args is None:
         args = get_args()
 
-    generate_cnv_files(args.cnvs, args.genes, args.arms, args.output, args.olap_threshold, args.focal_threshold)
+    generate_cnv_files(args.cnvs, args.genes, args.arms, args.output, args.olap_threshold, args.focal_threshold, args.output_segfile)
 
 if __name__ == "__main__":
     main()
