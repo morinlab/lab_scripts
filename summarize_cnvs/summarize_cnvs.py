@@ -375,6 +375,25 @@ class SampleCNVs:
 
         return events
 
+    def check_all_autosomes(self, sample_name):
+        """
+        Check to ensure that all autosomes have at least one segment represented
+
+        While this won't be able to pick up minor problems with the input, this will at least be able
+        to determine if one of the input files are truncated
+        """
+
+        if self.is_chr_prefixed:
+            autosomes = tuple("chr" + str(x) for x in range(1,23))
+        else:
+            autosomes = tuple(str(x) for x in range(1,23))
+        
+        for chrom in autosomes:
+            if chrom not in self.starts:
+                raise AttributeError("Chromosome \'%s\' has no segments in sample \'%s\'" % (chrom, sample_name))
+
+        return None 
+
     def get_overlap_regions(self, gene_coords: dict, size_threshold = 20000000, olap_threshold = 0.6):
 
         olap_genes = {}
@@ -542,8 +561,8 @@ class SampleCNVs:
         av_ploidy = round(ploidy)
 
         # Sanity check
-        if av_ploidy < 1:
-            raise TypeError("Ploidy of sample \'%s\' was calculated to be below 1!" % sample_name)
+        if av_ploidy < 1 or av_ploidy > 6:
+            raise TypeError("Ploidy of sample \'%s\' was calculated to be %s!" % (sample_name, av_ploidy))
 
         # If this tumour is not diploid, adjust the ploidy
         if av_ploidy != 2:
@@ -875,9 +894,13 @@ def generate_cnv_files(cnv_segs, gene_regions_bed, arm_regions, outfile, olap_th
             except ValueError as e:
                 raise TypeError("Unable to process line %s of \'%s\': start, end, and CN must be integers or floats" % (i, cnv_segs)) from e
 
+    # SANITY CHECK: Now that we have processed all segments, make sure all autosomes have at least one segment in all sample
+    for sample, cnvs in sample_cnvs.items():
+        cnvs.check_all_autosomes(sample)
+
     # Now adjust for ploidy of each case
     for sample, cnvs in sample_cnvs.items():
-         cnvs.adjust_ploidy(arm_coods, sample)
+        cnvs.adjust_ploidy(arm_coods, sample)
 
     # If specified, write out a new seg file
     if outseg:
