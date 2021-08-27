@@ -1,0 +1,16 @@
+Sample.Name	Copy.Number	BCL2.Translocation	BCL6.Translocation	Model.Used	Confidence.BN2	Confidence.EZB	Confidence.MCD	Confidence.N1	Confidence.ST2	Confidence.A53	BN2.Feature.Count	EZB.Feature.Count	MCD.Feature.Count	N1.Feature.Count	ST2.Feature.Count	A53.Feature.Count	Subtype.Prediction
+Sample1	Not Available	no	yes	NOCGH	0.99	0.15	0.01	0.08	0.12		6	2	2	0	1		BN2
+Sample2	Available	no	no	Full	0.01	0.98	0	0.08	0.99	0	0	5	3	0	5	1	EZB/ST2
+Sample3	Available	no	no	Full	0.05	0	0.99	0.08	0.05	0	1	0	13	0	0	1	MCD
+Sample4	Available	no	no	Full	0.07	0.07	0.51	0.08	0.79	0.66	1	1	5	0	2	5	Other
+Sample5	Available	no	no	Full	0.01	0.07	0.99	0.08	0.05	0.99	0	1	8	0	0	14	MCD/A53
+Sample6	Available	Not Available	Not Available	NoFus	0.03	0	0	0.08	0.05	0.99	0	0	2	0	0	13	A53
+Sample7	Available	no	no	Full	0.41	0.01	0.99	0.08	0.93	0	3	1	14	0	2	2	MCD/ST2
+Sample8	Not Available	no	no	NOCGH	0.08	0.71	0	0.99	0.05		1	3	1	1	0		N1
+Sample9	Available	no	yes	Full	0.99	0.08	0.98	0.08	0.05	0	7	2	7	0	0	1	BN2/MCD
+Sample10	Available	no	yes	Full	0.99	0.02	0	0.08	0.05	0	7	1	0	0	0	2	BN2
+Sample11	Available	no	no	Full	0.01	0.03	0.62	0.08	0.99	0.03	0	2	6	0	9	3	ST2
+Sample12	Available	no	no	Full	0.06	0	0.92	0.08	0.05	0.99	1	0	6	0	0	15	MCD/A53
+Sample13	Available	Not Available	no	NoBCL2Fus	0.01	0.01	0.01	0.08	0.52	0	0	1	3	0	2	2	ST2
+Sample14	Available	yes	no	Full	0.01	0.99	0	0.08	0.31	0	0	8	1	0	1	0	EZB
+Sample15	Available	yes	no	Full	0.07	0.99	0.19	0.08	0.9	0	1	8	4	0	2	0	EZB/ST2

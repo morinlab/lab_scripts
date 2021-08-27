@@ -1,0 +1,575 @@
+DONOR.NAME	DONOR.IID	Study.order	SUBTYPE.GROUP	WES	Haloplex	CGH	CGH.exemplar	Imputation	Mode.score	NEJM.Genclass	CGH.Fus.type	CGH.Ave.chrom.ab	Tp53.category.2	BCL6.fus	BCL2.fus	Stage3.core	Stage3.genclass	Stage3.part1	Stage3.genclass.A53	Combined.group	Combined.group.full
+X	X	1	ABC	1	1	1	47	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	2	ABC	1	1	1	48	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	MCD	MCD
+X	X	3	ABC	1	1	1	50	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	4	ABC	1	1	1	51	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	5	ABC	1	1	1	52	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	6	ABC	1	1	1	53	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	7	ABC	1	1	1	54	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	8	ABC	1	1	1	56	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	A53	Other	A53	A53	A53
+X	X	9	ABC	1	1	1	2	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	MCD	MCD
+X	X	10	ABC	1	1	1	3	Unimputed RNAseq	X	MCD	1	X	HETLOSS.only	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	11	ABC	1	1	1	5	Unimputed RNAseq	X	NOTCH1	1	X	None	0	0	N1	N1	N1	Other	Double	Strong BN2/N1
+X	X	12	ABC	1	1	1	6	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	13	ABC	1	1	1	7	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	14	ABC	1	1	1	8	Unimputed RNAseq	X	Other	1	X	None	1	0	Other	Other	Other	Other	BN2	BN2
+X	X	15	ABC	1	1	1	9	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	16	ABC	1	1	1	10	Unimputed RNAseq	X	MCD	1	X	HETLOSS.only	1	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	17	ABC	1	1	1	11	Unimputed RNAseq	X	MCD	1	X	Mutation+HETLOSS	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	18	ABC	1	1	1	12	Unimputed RNAseq	X	Other	1	X	Mutation only	1	0	Other	Other	Other	Other	BN2	BN2
+X	X	19	ABC	1	1	1	13	Unimputed RNAseq	X	Other	1	X	HOMDEL	1	0	A53	BN2	BN2	Other	A53	A53
+X	X	20	ABC	1	1	1	14	Unimputed RNAseq	X	BN2	1	X	Mutation only	1	0	BN2	EZB	EZB	Other	Double	Strong BN2/EZB
+X	X	21	ABC	1	1	1	15	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	22	ABC	1	1	1	16	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	A53	Other	A53	A53	A53
+X	X	23	ABC	1	1	1	18	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	24	ABC	1	1	1	19	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	25	ABC	1	1	1	326	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	26	ABC	1	1	1	20	Unimputed RNAseq	X	NOTCH1	1	X	HETLOSS.only	0	0	N1	N1	N1	Other	N1	N1
+X	X	27	ABC	1	1	1	21	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	MCD	MCD	Other	MCD	MCD
+X	X	28	ABC	1	1	1	25	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	29	ABC	1	1	1	26	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	30	ABC	1	1	1	541	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	A53	Other	A53	A53	A53
+X	X	31	ABC	1	1	1	30	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	32	ABC	1	1	1	31	Unimputed RNAseq	X	Other	1	X	None	1	0	Other	Other	Other	Other	Other	Other
+X	X	33	ABC	1	1	1	32	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	34	ABC	1	1	1	35	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	35	ABC	1	1	1	36	Unimputed RNAseq	X	MCD	1	X	HOMDEL	0	0	MCD	MCD	MCD	Other	Double	Strong MCD/A53
+X	X	36	ABC	1	1	1	37	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	SDT	SDT	Other	SDT	SDT
+X	X	37	ABC	1	1	1	38	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	38	ABC	1	1	1	40	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	39	ABC	1	1	1	41	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	MCD	MCD
+X	X	40	ABC	1	1	1	42	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	41	ABC	1	1	1	43	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	42	ABC	1	1	1	544	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	43	ABC	1	1	1	546	Unimputed RNAseq	X	NOTCH1	1	X	None	0	0	N1	N1	N1	Other	N1	N1
+X	X	44	ABC	1	1	1	94	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	Other	Other	Other	BN2	BN2
+X	X	45	ABC	1	1	1	556	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	1	0	A53	Other	Other	Other	BN2	BN2
+X	X	46	ABC	1	1	1	96	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	A53	Other	A53	Double	Strong MCD/A53
+X	X	47	ABC	1	1	1	97	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	48	ABC	1	1	1	98	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	49	ABC	1	1	1	100	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	50	ABC	1	1	1	101	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	51	ABC	1	1	1	332	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	52	ABC	1	1	1	103	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	53	ABC	1	1	1	104	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	54	ABC	1	1	1	105	Unimputed RNAseq	X	NOTCH1	1	X	None	0	0	N1	N1	N1	Other	N1	N1
+X	X	55	ABC	1	1	1	106	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	A53	Other	A53	A53	A53
+X	X	56	ABC	1	1	1	107	Unimputed RNAseq	X	Other	1	X	HOMDEL	1	0	A53	Other	Other	Other	Other	Other
+X	X	57	ABC	1	1	1	108	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	58	ABC	1	1	1	109	Unimputed RNAseq	X	MCD	1	X	None	1	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	59	ABC	1	1	1	558	Unimputed RNAseq	X	NOTCH1	1	X	HETLOSS.only	0	0	N1	N1	N1	Other	N1	N1
+X	X	60	ABC	1	1	1	110	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	61	ABC	1	1	1	111	Unimputed RNAseq	X	Other	1	X	Mutation only	1	0	Other	A53	Other	A53	A53	A53
+X	X	62	ABC	1	1	1	112	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	A53	A53
+X	X	63	ABC	1	1	1	113	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	64	ABC	1	1	1	377	Unimputed RNAseq	X	NOTCH1	1	X	Mutation only	0	0	N1	N1	N1	Other	N1	N1
+X	X	65	ABC	1	1	1	114	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	66	ABC	1	1	1	115	Unimputed RNAseq	X	MCD	1	X	HOMDEL	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	67	ABC	1	1	1	116	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	Other	Other	Other	Other	Other	Other
+X	X	68	ABC	1	1	1	117	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	A53	Other	A53	A53	A53
+X	X	69	ABC	1	1	1	118	Unimputed RNAseq	X	MCD	1	X	HETLOSS.only	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	70	ABC	1	1	1	382	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	EZB	EZB	Other	Other	Other
+X	X	71	ABC	1	1	1	119	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	72	ABC	1	1	1	120	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	A53	Other	A53	A53	A53
+X	X	73	ABC	1	1	1	121	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	74	ABC	1	1	1	122	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	75	ABC	1	1	1	123	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	76	ABC	1	1	1	330	Unimputed RNAseq	X	MCD	1	X	HETLOSS.only	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	77	ABC	1	1	1	331	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	78	ABC	1	1	1	127	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	79	ABC	1	1	1	128	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	A53	Other	A53	A53	A53
+X	X	80	ABC	1	1	1	129	Unimputed RNAseq	X	MCD	1	X	HETLOSS.only	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	81	ABC	1	1	1	130	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	82	ABC	1	1	1	333	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	83	ABC	1	1	1	334	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	A53	Other	A53	A53	A53
+X	X	84	ABC	1	1	1	134	Unimputed RNAseq	X	NOTCH1	1	X	None	0	0	N1	N1	N1	Other	Double	Strong EZB/N1/SDT/A53
+X	X	85	ABC	1	1	1	135	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	A53	A53
+X	X	86	ABC	1	1	1	137	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	87	ABC	1	1	1	138	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	88	ABC	1	1	1	139	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	89	ABC	1	1	1	335	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	90	ABC	1	1	1	141	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	MCD	MCD
+X	X	91	ABC	1	1	1	142	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	92	ABC	1	1	1	144	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	93	ABC	1	1	1	145	Unimputed RNAseq	X	Other	1	X	None	1	0	Other	Other	Other	Other	Other	Other
+X	X	94	ABC	1	1	1	146	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	A53	A53
+X	X	95	ABC	1	1	1	389	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	96	ABC	1	1	1	148	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	97	ABC	1	1	1	149	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	98	ABC	1	1	1	150	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	99	ABC	1	1	1	151	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	Other	Other	Other	A53	A53
+X	X	100	ABC	1	1	1	152	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	101	ABC	1	1	1	153	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	102	ABC	1	1	1	154	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	Other	Other	Other	Other	Other	Other
+X	X	103	ABC	1	1	1	155	Unimputed RNAseq	X	BN2	1	X	Mutation+HETLOSS	1	0	BN2	BN2	BN2	Other	Other	Other
+X	X	104	ABC	1	1	1	156	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	105	ABC	1	1	1	158	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	106	ABC	1	1	1	159	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	107	ABC	1	1	1	160	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	Double	Strong MCD/A53
+X	X	108	ABC	1	1	1	161	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	109	ABC	1	1	1	162	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	110	ABC	1	1	1	163	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	111	ABC	1	1	1	164	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	112	ABC	1	1	1	165	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	A53	Other	A53	Double	Strong MCD/A53
+X	X	113	ABC	1	1	1	166	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	114	ABC	1	1	1	167	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	115	ABC	1	1	1	168	Unimputed RNAseq	X	BN2	1	X	Mutation+HETLOSS	1	0	BN2	BN2	BN2	Other	Double	Strong BN2/MCD
+X	X	116	ABC	1	1	1	170	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	Other	Other	Other	Other	Other	Other
+X	X	117	ABC	1	1	1	171	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	118	ABC	1	1	1	172	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	A53	Other	A53	A53	A53
+X	X	119	ABC	1	1	1	173	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	120	ABC	1	1	1	174	Unimputed RNAseq	X	BN2	1	X	Mutation only	1	0	BN2	Other	Other	Other	BN2	BN2
+X	X	121	ABC	1	1	1	175	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	122	ABC	1	1	1	176	Unimputed RNAseq	X	NOTCH1	1	X	HETLOSS.only	0	0	N1	N1	N1	Other	N1	N1
+X	X	123	ABC	1	1	1	177	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	124	ABC	1	1	1	178	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	A53	Other	A53	A53	A53
+X	X	125	ABC	1	1	1	179	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	126	ABC	1	1	1	180	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	127	ABC	1	1	1	400	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	Other	Other	Other	Other	Other	Other
+X	X	128	ABC	1	1	1	181	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	129	ABC	1	1	1	182	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	130	ABC	1	1	1	183	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	131	ABC	1	1	1	184	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	132	ABC	1	1	1	185	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	133	ABC	1	1	1	186	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	134	ABC	1	1	1	188	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	135	ABC	1	1	1	564	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	136	ABC	1	1	1	190	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	A53	Other	A53	A53	A53
+X	X	137	ABC	1	1	1	191	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	138	ABC	1	1	1	194	Unimputed RNAseq	X	BN2	1	X	Mutation only	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	139	ABC	1	1	1	484	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	140	ABC	1	1	1	198	Unimputed RNAseq	X	BN2	1	X	HOMDEL	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	141	ABC	1	1	1	336	Unimputed RNAseq	X	BN2	1	X	Mutation only	0	0	BN2	SDT	SDT	Other	SDT	SDT
+X	X	142	ABC	1	1	1	337	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	143	ABC	1	1	1	199	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	A53	Other	A53	A53	A53
+X	X	144	ABC	1	1	1	201	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	145	ABC	1	1	1	202	Unimputed RNAseq	X	Other	1	X	None	1	0	Other	Other	Other	Other	MCD	MCD
+X	X	146	ABC	1	1	1	204	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	MCD	MCD	Other	MCD	MCD
+X	X	147	ABC	1	1	1	205	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	148	ABC	1	1	1	206	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	A53	Other	A53	A53	A53
+X	X	149	ABC	1	1	1	340	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	150	ABC	1	1	1	207	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	151	ABC	1	1	1	208	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	A53	Other	A53	A53	A53
+X	X	152	ABC	1	1	1	342	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	153	ABC	1	1	1	210	Unimputed RNAseq	X	MCD	1	X	None	1	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	154	ABC	1	1	1	211	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	SDT	SDT
+X	X	155	ABC	1	1	1	212	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	156	ABC	1	1	1	213	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	157	ABC	1	1	1	490	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	158	ABC	1	1	1	220	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	1	0	Other	Other	Other	Other	Other	Other
+X	X	159	ABC	1	1	0		Unimputed RNAseq	X	BN2	0	X		0	0	BN2	BN2	BN2	NA	BN2	BN2
+X	X	160	ABC	1	1	1	224	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	161	ABC	1	1	1	225	Unimputed RNAseq	X	MCD	1	X	HETLOSS.only	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	162	ABC	1	1	1	226	Unimputed RNAseq	X	Other	1	X	None	1	0	Other	Other	Other	Other	Other	Other
+X	X	163	ABC	1	1	1	227	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	Other	Other
+X	X	164	ABC	1	1	1	228	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	165	ABC	1	1	1	229	Unimputed RNAseq	X	BN2	1	X	Mutation only	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	166	ABC	1	1	1	231	Unimputed RNAseq	X	NOTCH1	1	X	None	0	0	N1	N1	N1	Other	Double	Strong N1/SDT
+X	X	167	ABC	1	1	1	233	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	168	ABC	1	1	1	235	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	Double	Strong BN2/MCD
+X	X	169	ABC	1	1	1	236	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	170	ABC	1	1	1	238	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	171	ABC	1	1	1	239	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	172	ABC	1	1	1	240	Unimputed RNAseq	X	MCD	1	X	HETLOSS.only	0	0	MCD	Other	Other	Other	MCD	MCD
+X	X	173	ABC	1	1	1	428	Unimputed RNAseq	X	MCD	1	X	HETLOSS.only	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	174	ABC	1	1	0		Unimputed RNAseq	X	MCD	0	X		0	0	MCD	MCD	MCD	NA	MCD	MCD
+X	X	175	ABC	1	1	1	243	Unimputed RNAseq	X	BN2	1	X	Mutation only	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	176	ABC	1	1	1	244	Unimputed RNAseq	X	Other	1	X	None	1	0	Other	Other	Other	Other	Other	Other
+X	X	177	ABC	1	1	1	245	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	A53	Other	A53	A53	A53
+X	X	178	ABC	1	1	1	247	Unimputed RNAseq	X	Other	1	X	None	1	0	Other	Other	Other	Other	BN2	BN2
+X	X	179	ABC	1	1	1	604	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	A53	Other	A53	A53	A53
+X	X	180	ABC	1	1	1	248	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	181	ABC	1	1	1	251	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	A53	A53
+X	X	182	ABC	1	1	1	347	Unimputed RNAseq	X	MCD	1	X	HETLOSS.only	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	183	ABC	1	1	1	252	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	184	ABC	1	1	1	253	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	185	ABC	1	1	1	257	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	186	ABC	1	1	1	612	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	187	ABC	1	1	1	349	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	188	ABC	1	1	1	259	Unimputed RNAseq	X	Other	1	X	None	1	0	Other	Other	Other	Other	Other	Other
+X	X	189	ABC	1	1	1	261	Unimputed RNAseq	X	MCD	1	X	HETLOSS.only	0	0	MCD	MCD	MCD	Other	Double	Strong MCD/A53
+X	X	190	ABC	1	1	1	262	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	Other	Other	Other	Other	Other	Other
+X	X	191	ABC	1	1	1	263	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	192	ABC	1	1	1	264	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	Other	Other	Other	Other	A53	A53
+X	X	193	ABC	1	1	1	265	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	MCD	MCD
+X	X	194	ABC	1	1	1	266	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	195	ABC	1	1	1	622	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	Other	MCD	MCD	Other	MCD	MCD
+X	X	196	ABC	1	1	1	268	Unimputed RNAseq	X	NOTCH1	1	X	HETLOSS.only	0	0	N1	N1	N1	Other	N1	N1
+X	X	197	ABC	1	1	1	270	Unimputed RNAseq	X	BN2	1	X	HETLOSS.only	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	198	ABC	1	1	1	272	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	199	ABC	1	1	1	273	Unimputed RNAseq	X	Other	1	X	None	1	0	Other	Other	Other	Other	Other	Other
+X	X	200	ABC	1	1	1	274	Unimputed RNAseq	X	NOTCH1	1	X	None	0	0	N1	N1	N1	Other	N1	N1
+X	X	201	ABC	1	1	1	275	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	202	ABC	1	1	1	276	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	203	ABC	1	1	1	278	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	204	ABC	1	1	1	281	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	205	ABC	1	1	1	283	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	206	ABC	1	1	1	284	Unimputed RNAseq	X	MCD	1	X	Mutation+HETLOSS	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	207	ABC	1	1	1	285	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	Other	MCD	MCD	Other	MCD	MCD
+X	X	208	ABC	0	1	1	431	Unimputed RNAseq	X	Other	5	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	209	ABC	1	1	1	350	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	210	ABC	1	1	1	286	Unimputed RNAseq	X	NOTCH1	1	X	Mutation only	0	0	N1	N1	N1	Other	N1	N1
+X	X	211	ABC	1	1	1	288	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	212	ABC	1	1	1	289	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	A53	Other	A53	A53	A53
+X	X	213	ABC	1	1	1	290	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	A53	A53
+X	X	214	ABC	1	1	1	291	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	215	ABC	1	1	1	292	Unimputed RNAseq	X	BN2	1	X	Mutation only	1	0	BN2	BN2	BN2	Other	Double	Strong BN2/MCD
+X	X	216	ABC	1	1	1	293	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	217	ABC	1	1	1	294	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	218	ABC	1	1	1	351	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	Double	Strong MCD/A53
+X	X	219	ABC	1	1	1	432	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	220	ABC	1	1	1	296	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	221	ABC	1	1	1	297	Unimputed RNAseq	X	NOTCH1	1	X	None	0	0	N1	N1	N1	Other	N1	N1
+X	X	222	ABC	1	1	1	298	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	223	ABC	1	1	1	301	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	Other	Other	Other	Other	MCD	MCD
+X	X	224	ABC	1	1	1	302	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	225	ABC	1	1	1	304	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	226	ABC	1	1	1	305	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	A53	A53
+X	X	227	ABC	1	1	1	306	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	228	ABC	1	1	1	307	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	Other	Other	Other	Other	Other	Other
+X	X	229	ABC	1	1	1	308	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	230	ABC	1	1	1	353	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	231	ABC	1	1	1	309	Unimputed RNAseq	X	MCD	1	X	None	1	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	232	ABC	1	1	1	310	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	233	ABC	1	1	1	312	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	234	ABC	1	1	1	313	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	235	ABC	1	1	1	314	Unimputed RNAseq	X	BN2	1	X	Mutation only	1	0	BN2	BN2	BN2	Other	Double	Strong BN2/MCD
+X	X	236	ABC	1	1	1	315	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	237	ABC	1	1	1	672	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	BN2	BN2
+X	X	238	ABC	1	0	1	62	Unimputed RNAseq	X	MCD	1	X	None	1	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	239	ABC	1	1	1	63	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	Other	Other	Other	Other	Other	Other
+X	X	240	ABC	1	1	1	65	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	MCD	MCD
+X	X	241	ABC	0	1	1	67	Unimputed RNAseq	X	Other	5	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	242	ABC	0	1	1	68	Unimputed RNAseq	X	BN2	5	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	243	ABC	0	1	1	69	Unimputed RNAseq	X	Other	5	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	244	ABC	1	1	1	70	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	245	ABC	1	1	1	74	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	246	ABC	1	1	1	75	Unimputed RNAseq	X	MCD	1	X	Mutation+HETLOSS	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	247	ABC	0	1	1	77	Unimputed RNAseq	X	MCD	5	X	HOMDEL	0	0	MCD	MCD	MCD	Other	Double	Strong MCD/A53
+X	X	248	ABC	1	1	1	78	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	MCD	MCD	Other	MCD	MCD
+X	X	249	ABC	0	1	1	80	Unimputed RNAseq	X	MCD	5	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	250	ABC	1	1	1	82	Unimputed RNAseq	X	NOTCH1	1	X	Mutation only	0	0	N1	N1	N1	Other	N1	N1
+X	X	251	ABC	1	1	1	83	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	252	ABC	1	1	1	84	Unimputed RNAseq	X	Other	1	X	None	1	0	Other	Other	Other	Other	Other	Other
+X	X	253	ABC	1	0	0		Unimputed RNAseq	X	Other	0	X		0	0	Other	A53	Other	NA	Other	Other
+X	X	254	ABC	0	1	1	88	Unimputed RNAseq	X	BN2	5	X	Mutation only	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	255	ABC	0	1	1	89	Unimputed RNAseq	X	BN2	5	X	Mutation only	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	256	ABC	0	1	0		Unimputed RNAseq	X	BN2	4	X		0	0	BN2	BN2	BN2	NA	BN2	BN2
+X	X	257	ABC	0	1	0		Unimputed RNAseq	X	Other	4	X		1	0	Other	Other	Other	NA	Other	Other
+X	X	258	ABC	1	1	1	92	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	MCD	MCD
+X	X	259	ABC	1	1	1	316	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	260	ABC	1	1	1	319	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	261	ABC	1	1	1	321	Unimputed RNAseq	X	NOTCH1	1	X	HETLOSS.only	0	0	N1	N1	N1	Other	N1	N1
+X	X	262	ABC	1	1	1	354	Unimputed RNAseq	X	MCD	1	X	None	1	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	263	ABC	0	1	1	440	Unimputed RNAseq	X	Other	5	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	264	ABC	1	0	1	445	Unimputed RNAseq	X	NOTCH1	1	X	None	0	0	N1	N1	N1	Other	N1	N1
+X	X	265	ABC	1	0	1	467	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	EZB	EZB
+X	X	266	ABC	1	0	1	468	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	267	ABC	1	0	1	469	Unimputed RNAseq	X	MCD	1	X	HOMDEL	0	0	MCD	MCD	MCD	Other	Double	Strong MCD/A53
+X	X	268	ABC	1	0	1	471	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	A53	Other	A53	A53	A53
+X	X	269	ABC	1	0	1	473	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	270	ABC	1	0	1	474	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	271	ABC	1	0	1	475	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	272	ABC	1	0	1	476	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	SDT	SDT
+X	X	273	ABC	1	0	1	477	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	MCD	MCD
+X	X	274	ABC	1	1	1	355	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	275	ABC	1	1	1	459	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	1	0	Other	Other	Other	Other	BN2	BN2
+X	X	276	ABC	1	1	1	357	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	MCD	MCD
+X	X	277	ABC	1	1	1	358	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	278	ABC	1	1	1	359	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	MCD	MCD
+X	X	279	ABC	1	1	1	361	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	280	ABC	1	1	1	687	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	EZB	EZB
+X	X	281	ABC	1	1	1	688	Unimputed RNAseq	X	BN2	1	X	HOMDEL	1	0	BN2	A53	Other	A53	Double	Strong BN2/A53
+X	X	282	ABC	1	1	1	364	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	Other	Other	Other	Other	Other	Other
+X	X	283	ABC	1	1	1	365	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	284	ABC	1	1	1	366	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	1	0	A53	Other	Other	Other	Other	Other
+X	X	285	ABC	1	1	1	690	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	SDT	SDT	Other	SDT	SDT
+X	X	286	ABC	1	1	1	692	Unimputed RNAseq	X	NOTCH1	1	X	None	0	0	N1	N1	N1	Other	N1	N1
+X	X	287	GCB	1	1	1	370	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	288	GCB	1	1	1	379	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	289	GCB	1	1	1	383	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	290	GCB	1	1	1	390	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	291	GCB	1	1	1	393	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	292	GCB	1	1	1	397	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	293	GCB	1	1	1	404	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	294	GCB	1	1	1	405	Unimputed RNAseq	X	Other	1	X	None	0	0	SDT	Other	Other	Other	Other	Other
+X	X	295	GCB	1	1	1	563	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	296	GCB	1	1	1	409	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	SDT	SDT	SDT	Other	SDT	SDT
+X	X	297	GCB	1	1	1	567	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	298	GCB	1	1	1	411	Unimputed RNAseq	X	EZB	1	X	HETLOSS.only	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	299	GCB	1	1	1	569	Unimputed RNAseq	X	EZB	1	X	Mutation+HETLOSS	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	300	GCB	1	1	1	412	Unimputed RNAseq	X	EZB	1	X	HOMDEL	0	0	EZB	EZB	EZB	Other	EZB	EZB
+X	X	301	GCB	1	1	1	570	Unimputed RNAseq	X	Other	1	X	None	0	1	Other	Other	Other	Other	Other	Other
+X	X	302	GCB	1	1	1	414	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	303	GCB	1	1	1	415	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	304	GCB	1	1	1	571	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	Other	Other
+X	X	305	GCB	1	1	1	417	Unimputed RNAseq	X	Other	1	X	None	0	0	SDT	Other	Other	Other	Other	Other
+X	X	306	GCB	1	1	1	418	Unimputed RNAseq	X	EZB	1	X	HETLOSS.only	0	1	EZB	EZB	EZB	Other	Double	Strong EZB/A53
+X	X	307	GCB	1	1	1	419	Unimputed RNAseq	X	EZB	1	X	None	0	0	EZB	EZB	EZB	Other	EZB	EZB
+X	X	308	GCB	1	1	1	572	Unimputed RNAseq	X	EZB	1	X	None	1	0	EZB	EZB	EZB	Other	EZB	EZB
+X	X	309	GCB	1	1	1	420	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	SDT	Other	Other	Other	A53	A53
+X	X	310	GCB	1	1	1	573	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	SDT	SDT	Other	SDT	SDT
+X	X	311	GCB	1	1	0		Unimputed RNAseq	X	EZB	0	X		0	1	EZB	EZB	EZB	NA	EZB	EZB
+X	X	312	GCB	1	1	1	422	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	313	GCB	1	1	1	575	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	314	GCB	1	1	1	577	Unimputed RNAseq	X	EZB	1	X	Mutation only	0	0	EZB	SDT	SDT	Other	SDT	SDT
+X	X	315	GCB	1	1	1	578	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	316	GCB	1	1	1	579	Unimputed RNAseq	X	EZB	1	X	None	1	0	EZB	EZB	EZB	Other	EZB	EZB
+X	X	317	GCB	0	1	1	580	Unimputed RNAseq	X	Other	5	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	318	GCB	1	1	1	581	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	319	GCB	1	0	0		Unimputed RNAseq	X	EZB	0	X		0	1	EZB	EZB	EZB	NA	EZB	EZB
+X	X	320	GCB	1	1	1	582	Unimputed RNAseq	X	EZB	1	X	Mutation+HETLOSS	0	0	EZB	EZB	EZB	Other	EZB	EZB
+X	X	321	GCB	1	1	1	583	Unimputed RNAseq	X	Other	1	X	None	0	0	SDT	Other	Other	Other	Other	Other
+X	X	322	GCB	1	1	1	584	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	A53	A53
+X	X	323	GCB	1	1	1	585	Unimputed RNAseq	X	Other	1	X	None	0	0	SDT	SDT	SDT	Other	SDT	SDT
+X	X	324	GCB	1	1	1	586	Unimputed RNAseq	X	EZB	1	X	Mutation only	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	325	GCB	1	1	1	587	Unimputed RNAseq	X	Other	1	X	Mutation only	0	1	Other	Other	Other	Other	EZB	EZB
+X	X	326	GCB	1	1	1	588	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	327	GCB	1	1	1	589	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	EZB	EZB	Other	EZB	EZB
+X	X	328	GCB	1	1	1	425	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	329	GCB	1	1	1	590	Unimputed RNAseq	X	EZB	1	X	HOMDEL	0	1	EZB	EZB	EZB	Other	Double	Strong EZB/A53
+X	X	330	GCB	1	1	1	591	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	331	GCB	1	1	1	592	Unimputed RNAseq	X	Other	1	X	None	0	0	SDT	SDT	SDT	Other	SDT	SDT
+X	X	332	GCB	1	1	1	426	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	333	GCB	1	1	1	593	Unimputed RNAseq	X	EZB	1	X	HETLOSS.only	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	334	GCB	1	1	1	594	Unimputed RNAseq	X	Other	1	X	None	0	0	SDT	SDT	SDT	Other	SDT	SDT
+X	X	335	GCB	1	1	1	596	Unimputed RNAseq	X	EZB	1	X	HETLOSS.only	0	1	EZB	EZB	EZB	Other	Double	Strong EZB/A53
+X	X	336	GCB	1	1	1	597	Unimputed RNAseq	X	EZB	1	X	None	0	0	EZB	EZB	EZB	Other	EZB	EZB
+X	X	337	GCB	1	1	1	598	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	338	GCB	1	1	1	599	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	339	GCB	1	1	1	600	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	340	GCB	1	1	1	601	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	341	GCB	1	1	1	603	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	A53	Other	A53	A53	A53
+X	X	342	GCB	1	1	1	430	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	343	GCB	1	1	1	606	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	344	GCB	1	1	1	607	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	EZB	EZB
+X	X	345	GCB	1	1	1	608	Unimputed RNAseq	X	EZB	1	X	Mutation+HETLOSS	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	346	GCB	1	1	1	609	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	BN2	BN2
+X	X	347	GCB	1	1	1	610	Unimputed RNAseq	X	EZB	1	X	Mutation+HETLOSS	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	348	GCB	1	1	1	611	Unimputed RNAseq	X	Other	1	X	None	0	0	SDT	Other	Other	Other	Other	Other
+X	X	349	GCB	1	1	1	613	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	350	GCB	1	1	0		Unimputed RNAseq	X	EZB	0	X		0	0	EZB	EZB	EZB	NA	EZB	EZB
+X	X	351	GCB	1	1	1	614	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	1	A53	Other	Other	Other	EZB	EZB
+X	X	352	GCB	1	1	1	615	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	SDT	Other	Other	Other	A53	A53
+X	X	353	GCB	1	1	1	616	Unimputed RNAseq	X	EZB	1	X	None	0	0	EZB	EZB	EZB	Other	EZB	EZB
+X	X	354	GCB	1	1	1	618	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	355	GCB	1	1	1	619	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	356	GCB	1	1	1	620	Unimputed RNAseq	X	BN2	1	X	Mutation only	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	357	GCB	1	1	1	621	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	358	GCB	1	1	1	623	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	359	GCB	1	1	1	625	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	360	GCB	1	1	1	626	Unimputed RNAseq	X	Other	1	X	None	1	1	Other	EZB	EZB	Other	EZB	EZB
+X	X	361	GCB	1	1	1	627	Unimputed RNAseq	X	Other	1	X	None	1	0	Other	Other	Other	Other	Other	Other
+X	X	362	GCB	1	1	1	628	Unimputed RNAseq	X	Other	1	X	None	0	0	SDT	SDT	SDT	Other	SDT	SDT
+X	X	363	GCB	1	1	1	629	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	364	GCB	1	1	1	630	Unimputed RNAseq	X	EZB	1	X	Mutation only	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	365	GCB	1	1	1	631	Unimputed RNAseq	X	BN2	1	X	Mutation only	1	0	BN2	Other	Other	Other	BN2	BN2
+X	X	366	GCB	1	1	1	632	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	367	GCB	1	1	1	633	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	A53	Other	A53	A53	A53
+X	X	368	GCB	1	1	1	634	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	369	GCB	1	1	1	635	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	370	GCB	1	1	1	636	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	371	GCB	1	1	1	637	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	372	GCB	1	1	1	638	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	373	GCB	1	1	1	639	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	374	GCB	1	1	1	640	Unimputed RNAseq	X	EZB	1	X	None	0	0	EZB	EZB	EZB	Other	EZB	EZB
+X	X	375	GCB	1	1	1	641	Unimputed RNAseq	X	EZB	1	X	Mutation+HETLOSS	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	376	GCB	1	1	1	642	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	377	GCB	1	1	1	643	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	EZB	EZB	Other	Double	Strong EZB/A53
+X	X	378	GCB	1	1	1	644	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	379	GCB	1	1	1	645	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	EZB	EZB
+X	X	380	GCB	1	1	1	647	Unimputed RNAseq	X	Other	1	X	None	0	0	SDT	Other	Other	Other	Other	Other
+X	X	381	GCB	1	1	1	648	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	A53	Other	A53	A53	A53
+X	X	382	GCB	1	1	1	649	Unimputed RNAseq	X	Other	1	X	None	1	0	Other	Other	Other	Other	Other	Other
+X	X	383	GCB	1	1	1	650	Unimputed RNAseq	X	Other	1	X	None	0	0	SDT	Other	Other	Other	Other	Other
+X	X	384	GCB	1	1	1	651	Unimputed RNAseq	X	EZB	1	X	Mutation only	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	385	GCB	1	1	1	652	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	SDT	Other	Other	Other	Other	Other
+X	X	386	GCB	1	1	1	653	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	387	GCB	1	1	1	654	Unimputed RNAseq	X	BN2	1	X	Mutation only	1	0	BN2	BN2	BN2	Other	Double	Strong BN2/SDT
+X	X	388	GCB	1	1	1	655	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	SDT	Other	Other	Other	Other	Other
+X	X	389	GCB	1	1	1	436	Unimputed RNAseq	X	BN2	1	X	HETLOSS.only	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	390	GCB	1	1	1	437	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	391	GCB	1	1	1	656	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	392	GCB	1	1	1	657	Unimputed RNAseq	X	EZB	1	X	HETLOSS.only	0	0	EZB	Other	Other	Other	EZB	EZB
+X	X	393	GCB	1	1	1	658	Unimputed RNAseq	X	EZB	1	X	Mutation only	0	0	EZB	EZB	EZB	Other	EZB	EZB
+X	X	394	GCB	1	1	1	659	Unimputed RNAseq	X	MCD	1	X	None	0	0	MCD	SDT	SDT	Other	SDT	SDT
+X	X	395	GCB	1	1	1	660	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	396	GCB	1	1	1	661	Unimputed RNAseq	X	Other	1	X	None	0	0	SDT	Other	Other	Other	Other	Other
+X	X	397	GCB	1	1	1	662	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	SDT	SDT	SDT	Other	SDT	SDT
+X	X	398	GCB	1	1	1	663	Unimputed RNAseq	X	BN2	1	X	HOMDEL	1	0	BN2	BN2	BN2	Other	Double	Strong BN2/A53
+X	X	399	GCB	1	1	1	664	Unimputed RNAseq	X	Other	1	X	None	0	0	SDT	Other	Other	Other	SDT	SDT
+X	X	400	GCB	1	1	1	665	Unimputed RNAseq	X	EZB	1	X	None	1	0	EZB	Other	Other	Other	Other	Other
+X	X	401	GCB	1	1	1	666	Unimputed RNAseq	X	Other	1	X	None	0	0	SDT	SDT	SDT	Other	SDT	SDT
+X	X	402	GCB	1	1	1	667	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	403	GCB	1	1	1	668	Unimputed RNAseq	X	EZB	1	X	None	0	0	EZB	EZB	EZB	Other	EZB	EZB
+X	X	404	GCB	1	1	1	669	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	405	GCB	1	1	1	670	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	406	GCB	1	1	1	671	Unimputed RNAseq	X	Other	1	X	None	0	1	Other	EZB	EZB	Other	EZB	EZB
+X	X	407	GCB	1	1	1	73	Unimputed RNAseq	X	EZB	1	X	None	1	1	EZB	BN2	BN2	Other	Double	Strong EZB/SDT/A53
+X	X	408	GCB	1	1	1	676	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	409	GCB	1	1	1	677	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	410	GCB	1	1	1	678	Unimputed RNAseq	X	EZB	1	X	HETLOSS.only	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	411	GCB	1	1	1	679	Unimputed RNAseq	X	Other	1	X	None	0	1	SDT	Other	Other	Other	EZB	EZB
+X	X	412	GCB	1	1	1	680	Unimputed RNAseq	X	EZB	1	X	HETLOSS.only	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	413	GCB	1	1	1	681	Unimputed RNAseq	X	Other	1	X	None	0	1	Other	EZB	EZB	Other	EZB	EZB
+X	X	414	GCB	1	0	1	446	Unimputed RNAseq	X	Other	1	X	None	0	0	SDT	Other	Other	Other	Other	Other
+X	X	415	GCB	1	0	1	447	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	416	GCB	1	0	1	448	Unimputed RNAseq	X	Other	1	X	None	0	1	Other	EZB	EZB	Other	EZB	EZB
+X	X	417	GCB	1	0	1	449	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	418	GCB	1	0	1	450	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	Other	Other
+X	X	419	GCB	1	0	1	451	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	420	GCB	1	0	1	454	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	421	GCB	1	0	1	455	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	422	GCB	1	0	1	457	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	SDT	Other	Other	Other	Other	Other
+X	X	423	GCB	1	0	1	458	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	424	GCB	1	0	0		Unimputed RNAseq	X	Other	0	X		0	0	SDT	Other	Other	NA	SDT	SDT
+X	X	425	GCB	1	0	1	461	Unimputed RNAseq	X	Other	1	X	None	0	0	SDT	Other	Other	Other	Other	Other
+X	X	426	GCB	1	0	1	462	Unimputed RNAseq	X	Other	1	X	None	0	0	SDT	Other	Other	Other	SDT	SDT
+X	X	427	GCB	1	0	1	464	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	428	GCB	1	0	1	466	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	429	GCB	1	0	1	472	Unimputed RNAseq	X	EZB	1	X	None	0	0	EZB	EZB	EZB	Other	EZB	EZB
+X	X	430	GCB	1	0	1	478	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	BN2	BN2
+X	X	431	GCB	1	0	1	481	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	432	GCB	1	0	1	482	Unimputed RNAseq	X	EZB	1	X	HETLOSS.only	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	433	GCB	1	0	1	485	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	434	GCB	1	0	1	486	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	SDT	SDT	SDT	Other	SDT	SDT
+X	X	435	GCB	1	0	1	487	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	Other	Other	Other	Other	Other	Other
+X	X	436	GCB	1	0	1	489	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	SDT	SDT	Other	SDT	SDT
+X	X	437	GCB	1	0	1	492	Unimputed RNAseq	X	Other	1	X	HOMDEL	0	0	A53	Other	Other	Other	A53	A53
+X	X	438	GCB	1	1	1	682	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	439	GCB	1	1	1	683	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	440	GCB	1	1	1	684	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	441	GCB	1	1	1	685	Unimputed RNAseq	X	Other	1	X	None	0	0	SDT	Other	Other	Other	Other	Other
+X	X	442	GCB	1	1	0		Unimputed RNAseq	X	EZB	0	X		0	1	EZB	EZB	EZB	NA	EZB	EZB
+X	X	443	GCB	1	1	1	444	Unimputed RNAseq	X	Other	1	X	None	1	0	Other	Other	Other	Other	BN2	BN2
+X	X	444	GCB	1	1	1	686	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	EZB	EZB
+X	X	445	GCB	1	1	1	689	Unimputed RNAseq	X	EZB	1	X	HOMDEL	0	1	EZB	A53	Other	A53	Double	Strong EZB/A53
+X	X	446	GCB	1	1	1	691	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	Double	Strong BN2/SDT
+X	X	447	GCB	1	1	1	693	Unimputed RNAseq	X	EZB	1	X	None	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	448	GCB	1	1	1	694	Unimputed RNAseq	X	EZB	1	X	Mutation only	0	0	EZB	EZB	EZB	Other	EZB	EZB
+X	X	449	Unclass	1	1	1	543	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	450	Unclass	1	1	1	1	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	451	Unclass	1	1	1	17	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	452	Unclass	1	1	1	24	Unimputed RNAseq	X	EZB	1	X	HETLOSS.only	1	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	453	Unclass	1	1	1	28	Unimputed RNAseq	X	EZB	1	X	Mutation+HETLOSS	1	0	EZB	EZB	EZB	Other	EZB	EZB
+X	X	454	Unclass	1	1	1	29	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	455	Unclass	1	1	1	34	Unimputed RNAseq	X	MCD	1	X	Mutation only	0	0	MCD	SDT	SDT	Other	Double	Strong MCD/SDT
+X	X	456	Unclass	1	1	1	39	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	457	Unclass	1	1	1	328	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	458	Unclass	1	0	1	547	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	459	Unclass	1	1	1	369	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	460	Unclass	1	1	1	371	Unimputed RNAseq	X	Other	1	X	None	1	0	Other	EZB	EZB	Other	EZB	EZB
+X	X	461	Unclass	1	1	1	372	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	SDT	SDT
+X	X	462	Unclass	1	1	1	373	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	SDT	SDT	Other	SDT	SDT
+X	X	463	Unclass	1	1	1	374	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	464	Unclass	1	1	1	375	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	465	Unclass	1	1	1	376	Unimputed RNAseq	X	Other	1	X	None	1	0	Other	Other	Other	Other	BN2	BN2
+X	X	466	Unclass	1	1	1	557	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	467	Unclass	1	1	1	378	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	468	Unclass	1	1	1	380	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	469	Unclass	1	1	1	381	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	470	Unclass	1	1	1	559	Unimputed RNAseq	X	Other	1	X	None	0	1	Other	Other	Other	Other	Other	Other
+X	X	471	Unclass	1	1	1	126	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	Other	Other	Other	Other	Other	Other
+X	X	472	Unclass	1	1	1	384	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	473	Unclass	1	1	1	560	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	474	Unclass	1	1	1	136	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	Other	Other	Other	Other	Other	Other
+X	X	475	Unclass	1	1	1	385	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	476	Unclass	1	1	1	143	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	477	Unclass	1	1	1	387	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	478	Unclass	1	1	1	388	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	479	Unclass	1	1	1	157	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	480	Unclass	1	1	1	391	Unimputed RNAseq	X	BN2	1	X	HOMDEL	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	481	Unclass	1	1	1	392	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	482	Unclass	1	1	1	394	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	483	Unclass	1	1	1	169	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	484	Unclass	1	1	1	395	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	485	Unclass	1	1	1	396	Unimputed RNAseq	X	BN2	1	X	Mutation only	1	0	BN2	Other	Other	Other	BN2	BN2
+X	X	486	Unclass	1	1	1	561	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	487	Unclass	1	1	1	399	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	Other	Other	Other	Other	Other	Other
+X	X	488	Unclass	1	1	1	401	Unimputed RNAseq	X	Other	1	X	Mutation only	1	0	Other	Other	Other	Other	SDT	SDT
+X	X	489	Unclass	1	1	1	402	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	BN2	BN2	Other	BN2	BN2
+X	X	490	Unclass	1	1	1	403	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	491	Unclass	1	1	1	406	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	492	Unclass	1	1	1	407	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	493	Unclass	1	1	1	187	Unimputed RNAseq	X	BN2	1	X	None	1	1	BN2	BN2	BN2	Other	Double	Strong BN2/EZB
+X	X	494	Unclass	1	1	1	565	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	495	Unclass	1	1	1	192	Unimputed RNAseq	X	BN2	1	X	Mutation only	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	496	Unclass	1	1	1	193	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	497	Unclass	1	1	1	196	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	498	Unclass	1	1	1	410	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	499	Unclass	1	1	1	413	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	500	Unclass	1	1	1	200	Unimputed RNAseq	X	BN2	1	X	Mutation+HETLOSS	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	501	Unclass	1	1	1	203	Unimputed RNAseq	X	EZB	1	X	Mutation only	0	1	EZB	EZB	EZB	Other	EZB	EZB
+X	X	502	Unclass	1	1	1	338	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	A53	A53
+X	X	503	Unclass	1	1	1	341	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	504	Unclass	1	1	1	215	Unimputed RNAseq	X	BN2	1	X	Mutation only	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	505	Unclass	1	1	1	216	Unimputed RNAseq	X	EZB	1	X	HETLOSS.only	0	1	EZB	EZB	EZB	Other	Double	Strong EZB/A53
+X	X	506	Unclass	1	1	1	217	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	507	Unclass	1	1	1	423	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	1	0	A53	A53	Other	A53	A53	A53
+X	X	508	Unclass	1	1	1	219	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	509	Unclass	1	1	1	221	Unimputed RNAseq	X	BN2	1	X	HETLOSS.only	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	510	Unclass	1	1	1	424	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	511	Unclass	1	1	0		Unimputed RNAseq	X	EZB	0	X		0	1	EZB	EZB	EZB	NA	EZB	EZB
+X	X	512	Unclass	0	1	1	230	Unimputed RNAseq	X	Other	5	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	513	Unclass	1	1	1	232	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	514	Unclass	1	1	1	237	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	515	Unclass	1	1	1	345	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	516	Unclass	1	1	1	427	Unimputed RNAseq	X	BN2	1	X	Mutation only	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	517	Unclass	1	1	1	241	Unimputed RNAseq	X	MCD	1	X	None	1	0	MCD	MCD	MCD	Other	Double	Strong EZB/MCD
+X	X	518	Unclass	1	1	1	346	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	519	Unclass	1	1	1	246	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	MCD	MCD	Other	MCD	MCD
+X	X	520	Unclass	1	1	1	249	Unimputed RNAseq	X	NOTCH1	1	X	None	0	0	N1	N1	N1	Other	N1	N1
+X	X	521	Unclass	1	1	1	576	Unimputed RNAseq	X	BN2	1	X	Mutation only	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	522	Unclass	1	1	1	254	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	523	Unclass	1	1	1	255	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	524	Unclass	1	1	1	256	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	525	Unclass	0	1	1	617	Unimputed RNAseq	X	BN2	5	X	None	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	526	Unclass	1	1	1	260	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	527	Unclass	1	1	1	269	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	528	Unclass	0	1	1	624	Unimputed RNAseq	X	Other	5	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	529	Unclass	1	1	1	271	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	530	Unclass	1	1	1	279	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	SDT	SDT	Other	SDT	SDT
+X	X	531	Unclass	1	1	1	280	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	532	Unclass	1	1	1	282	Unimputed RNAseq	X	EZB	1	X	Mutation+HETLOSS	0	0	EZB	EZB	EZB	Other	EZB	EZB
+X	X	533	Unclass	1	1	1	287	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	534	Unclass	1	1	1	295	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	535	Unclass	1	1	1	433	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	536	Unclass	1	1	1	434	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	537	Unclass	1	1	1	299	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	538	Unclass	1	1	1	300	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	539	Unclass	0	1	1	646	Unimputed RNAseq	X	Other	5	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	540	Unclass	1	1	1	303	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	541	Unclass	1	1	1	435	Unimputed RNAseq	X	BN2	1	X	Mutation+HETLOSS	1	0	BN2	SDT	SDT	Other	Double	Strong BN2/SDT
+X	X	542	Unclass	1	1	1	311	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	543	Unclass	1	1	1	438	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	544	Unclass	1	1	1	64	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	545	Unclass	1	1	1	71	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Other	Other
+X	X	546	Unclass	1	1	1	72	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	547	Unclass	1	1	1	76	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	SDT	SDT
+X	X	548	Unclass	1	1	1	81	Unimputed RNAseq	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	EZB	EZB
+X	X	549	Unclass	1	1	1	85	Unimputed RNAseq	X	Other	1	X	HETLOSS.only	0	0	Other	Other	Other	Other	Other	Other
+X	X	550	Unclass	1	1	1	491	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	551	Unclass	1	1	1	317	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	552	Unclass	1	1	1	320	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	553	Unclass	1	1	1	439	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	554	Unclass	1	1	1	441	Unimputed RNAseq	X	BN2	1	X	None	1	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	555	Unclass	1	0	1	456	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	556	Unclass	1	0	1	463	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	557	Unclass	1	0	1	465	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	558	Unclass	1	0	1	470	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	SDT	SDT
+X	X	559	Unclass	1	0	1	479	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	A53	Other	A53	Double	Strong MCD/A53
+X	X	560	Unclass	1	0	1	480	Unimputed RNAseq	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	561	Unclass	1	1	1	442	Unimputed RNAseq	X	Other	1	X	Mutation+HETLOSS	0	0	A53	Other	Other	Other	Double	Strong MCD/SDT
+X	X	562	Unclass	1	1	1	443	Unimputed RNAseq	X	BN2	1	X	None	0	0	BN2	BN2	BN2	Other	BN2	BN2
+X	X	563	ABC	1	1	1	214	Impute AFFY/FFPE	X	Other	1	X	Mutation only	0	0	Other	Other	Other	Other	Other	Other
+X	X	564	Unclass	1	1	0		Impute AFFY/FFPE	X	Other	0	X		0	0	Other	A53	Other	NA	Other	Other
+X	X	565	ABC	0	1	1	22	Impute FFPE	X	Other	5	X	Mutation only	0	0	Other	A53	Other	A53	A53	A53
+X	X	566	ABC	1	1	1	23	Impute FFPE	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	567	ABC	1	1	1	33	Impute FFPE	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	568	ABC	1	1	1	421	Impute AFFY	X	NOTCH1	1	X	None	0	0	N1	N1	N1	Other	N1	N1
+X	X	569	ABC	1	1	1	223	Impute AFFY	X	Other	1	X	None	0	0	Other	MCD	MCD	Other	MCD	MCD
+X	X	570	ABC	1	1	1	429	Impute AFFY	X	MCD	1	X	None	0	0	MCD	MCD	MCD	Other	MCD	MCD
+X	X	571	ABC	1	1	1	318	Impute AFFY	X	Other	1	X	None	0	0	Other	Other	Other	Other	Other	Other
+X	X	572	GCB	1	1	0		Impute AFFY	X	EZB	0	X		0	1	EZB	EZB	EZB	NA	EZB	EZB
+X	X	573	GCB	0	1	0		Impute AFFY	X	Other	4	X		0	0	Other	Other	Other	NA	Other	Other
+X	X	574	ABC	1	1	1	327	No Expression avail	X	Other	1	X	Mutation+HETLOSS	0	0	A53	SDT	SDT	Other	SDT	SDT
