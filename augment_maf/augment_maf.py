@@ -84,11 +84,17 @@ if __name__ == "__main__":
             alt_key = "{}_alt_count".format(sample[0])
             for samfile in sams:
                 if mafUtils.is_snv(row):
-                    counts = bamUtils.count_bases(samfile, reffile, chrom, pos, ignore_overlap=args.ignore_overlap)
+                    counts = bamUtils.count_bases(samfile, reffile, chrom, pos, ignore_overlap=args.ignore_overlap, var_length=len(alt))
                 else:
                     counts = bamUtils.count_indels(samfile, reffile, chrom, pos, ref, alt, args.mode)
-                row[ref_key] += counts[ref]
-                row[alt_key] += counts[alt]
+                try:
+                    row[ref_key] += counts[ref]
+                except KeyError:  # i.e. There are no reads which support this allele
+                    pass
+                try:
+                    row[alt_key] += counts[alt]
+                except KeyError:
+                    pass
             # Update depth columns as well
             depth_key = "{}_depth".format(sample[0])
             row[depth_key] = row[ref_key] + row[alt_key]
