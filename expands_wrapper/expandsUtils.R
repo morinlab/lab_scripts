@@ -174,6 +174,47 @@ process_sequenza_seg <- function(seg, include_loh, cn_style) {
 
 }
 
+#ichorCNA
+process_ichor_seg <- function(seg, include_loh, cn_style) {
+
+  print(paste("Loading ichorCNA seg file ", seg))
+
+  # LOH events are not provided by ichor, and are thus ignored
+  # This needs to be the ichorCNA .seg.txt file
+  # example format: ID      chrom   start   end     num.mark        seg.median.logR copy.number     call    subclone.status logR_Copy_Number	Corrected_Copy_Number   Corrected_Call
+  seg1 <- read.csv(seg, stringsAsFactors = FALSE, sep = '\t')
+  test_chr <- seg1[1, "chrom"]
+  if (grepl("chr", test_chr)) {
+    # 'chr' prefix exists
+    seg1[, "chrom"] <- sub("^chr", "", seg1[, "chrom"])
+  }
+  chroms_a <- seg1[, "chrom"]
+  chroms <- as.numeric(chroms_a)
+  keep_chrom <- !is.na(chroms < 23)
+
+  loh_string = "no_LOH_"
+  loh_snv_data <- NULL
+  keep_seg <- seg1[, "end"] - seg1[, "start"] > 1
+  keep_both <- keep_chrom & keep_seg
+
+  # Make input CNV matrix for EXPANDS
+  seg2 <- matrix(nrow = dim(seg1[keep_both, ][1]), ncol = 4)
+  colnames(seg2) <- c("chr",  "startpos","endpos","CN_Estimate")
+
+  seg2[, "chr"]      <- as.numeric(seg1[keep_both, "chrom"])
+  seg2[, "startpos"] <- as.numeric(seg1[keep_both, "start"])
+  seg2[, "endpos"]   <- as.numeric(seg1[keep_both, "end"])
+
+  if(cn_style == 1) {
+    seg2[, 4] <- as.numeric(seg1[keep_both, "Corrected_Copy_Number"])
+  } else if (cn_style == 2) {
+    seg2[, 4] <- as.numeric(seg1[keep_both, "logR_Copy_Number"])
+  }
+
+  output <- list(seg2, loh_snv_data)
+  return(output)
+}
+
 # untested
 process_igv_seg <- function(seg, include_loh, cn_style) {
   
@@ -444,19 +485,25 @@ generate_pyclone_input <- function(seg, maf_keep, input_mode, male = FALSE) {
     colnames(seg1) <- c("sample", "chr", "startpos", "endpos", "segmentLength", "median.ratio", 
                         "median.log.ratio", "state", "call", "CN", "minor_cn", "major_cn", 
                         "clonal_cluster", "clonal_frequency")
+  } else if (input_mode == "C") {
+    colnames(seg1) <- c("sample", "chr", "startpos", "endpos", "numProbes", "median.log.ratio",
+                        "orig.CN", "call", "clonal_status", "log_CN", "CNt", "call_adj")
+    # As ichorCNA does not include BAF info, create a major and minor allele column
+    seg1$minor_cn <- round(seg1$CNt / 2 - 0.1)
+    seg1$major_cn <- seg1$CNt - seg1$minor_cn
   }
   
   seg1[, "chr"] <- sub("^chr", "", seg1[,"chr"])
   seg1[, "normal_cn"] <- 2
   seg1[, "segmentLength"] <- seg1[, "endpos"] - seg1[, "startpos"]
-  
+
   # If oncosnp, assign states by rank, otherwise, use general assign_states function
   if (input_mode == "O") {
     py_snv_data_assigned <- assign_states_to_mutation_by_rank(py_snv_data, seg1, c("minor_cn", "major_cn"), male)
   } else {
     py_snv_data_assigned <- assign_states_to_mutation(py_snv_data, seg1, c("minor_cn", "major_cn"), male)
   }
-  
+ 
   py_snv_data_assigned[, "gene"]        <- maf_keep[, "Hugo_Symbol"]
   py_snv_data_assigned[, "mutation_id"] <- paste(py_snv_data_assigned[, "gene"],
                                                  py_snv_data_assigned[, "startpos"], sep = "_")

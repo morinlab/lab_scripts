@@ -47,15 +47,17 @@ args <- docopt(ui)
 
 # Constants ---------------------------------------------------------------
 
-genic <- 
+vclass <- list()
+
+vclass$genic <- 
   c("Frame_Shift_Del", "Frame_Shift_Ins", "In_Frame_Del", "In_Frame_Ins", 
     "Missense_Mutation", "Nonsense_Mutation", "Silent", "Splice_Site", 
     "Translation_Start_Site", "Nonstop_Mutation", "3'UTR", "5'UTR", 
     "3'Flank", "5'Flank", "Intron")
 
-silent <- c("3'UTR", "5'UTR", "3'Flank", "5'Flank", "Intron", "Silent")
+vclass$silent <- c("3'UTR", "5'UTR", "3'Flank", "5'Flank", "Intron", "Silent")
 
-nonsyn <- setdiff(genic, silent)
+vclass$nonsyn <- setdiff(vclass$genic, vclass$silent)
 
 
 # Load data ---------------------------------------------------------------
@@ -63,7 +65,7 @@ nonsyn <- setdiff(genic, silent)
 maf <- fread(args$maf)
 
 if (!is.null(args$nonsyn)){
-  nonsyn <- fread(args$nonsyn, header = FALSE, col.names = "gene")$gene
+  nonsyn_genes <- fread(args$nonsyn, header = FALSE, col.names = "gene")$gene
 }
 
 if (!is.null(args$hotspots)) {
@@ -77,16 +79,16 @@ if (!is.null(args$regions)) {
 }
 
 if (!is.null(args$all)){
-  all <- fread(args$all, header = FALSE, col.names = "gene")$gene
+  all_genes <- fread(args$all, header = FALSE, col.names = "gene")$gene
 } else {
-  all <- vector("character")
+  all_genes <- vector("character")
 }
 
 
 # Tidy data ---------------------------------------------------------------
 
 # Restrict to genic mutations (within gene bodies)
-maf <- maf[Variant_Classification %in% genic]
+maf <- maf[Variant_Classification %in% vclass$genic]
 
 # Extract codon information
 maf[Variant_Classification == "Missense_Mutation", 
@@ -142,19 +144,19 @@ if (!is.null(args$regions)) {
 }
 
 if (!is.null(args$nonsyn)){
-  unannotated_maf <- unannotated_maf[Hugo_Symbol %in% c(nonsyn, all)]
+  unannotated_maf <- unannotated_maf[Hugo_Symbol %in% c(nonsyn_genes, all_genes)]
 }
 
 # Annotate genes that should be collapsed
 if (!is.null(args$all)) {
-  unannotated_maf[Hugo_Symbol %in% all, All := TRUE]
+  unannotated_maf[Hugo_Symbol %in% all_genes, All := TRUE]
 }
 
 
 # Annotate remaining mutations --------------------------------------------
 
 # Ignore silent mutations for genes not being collapsed
-unannotated_maf <- unannotated_maf[All | Variant_Classification %in% nonsyn]
+unannotated_maf <- unannotated_maf[All | Variant_Classification %in% vclass$nonsyn]
 
 # Create annotations for collapsed genes
 annotated_mafs$all <- 

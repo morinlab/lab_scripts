@@ -32,7 +32,7 @@ p <- arg_parser("PyClone Input Generator")
 p <- add_argument(p, "seg", help = "Input segments file")
 p <- add_argument(p, "input_mode",
                      help = "Type of seg file: S (Sequenza), I (IGV-friendly seg file), \
-                     T (Titan), O (augmented OncoSNP file)")
+                     T (Titan), O (augmented OncoSNP file), C (ichorCNA .seg.txt file)")
 p <- add_argument(p, "maf", help = "Input MAF file")
 p <- add_argument(p, "sample", help = "Sample ID")
 p <- add_argument(p, "output_dir",
@@ -82,8 +82,10 @@ if (input_mode == "T") {         # Titan
   processed_seg_output <- process_oncosnp_seg(seg, include_loh, cn_style)
 } else if (input_mode == "I") {  # IGV-friendly
   processed_seg_output <- process_igv_seg(seg, include_loh, cn_style)
+} else if (input_mode == "C") {  # ichorCNA segments
+  processed_seg_output <- process_ichor_seg(seg, include_loh, cn_style)
 } else {
-  print("Invalid input mode! Choose one of: S, T, I, O. Exiting script.")
+  print("Invalid input mode! Choose one of: S, T, I, O, C. Exiting script.")
   quit(status = 1)
 }
 
