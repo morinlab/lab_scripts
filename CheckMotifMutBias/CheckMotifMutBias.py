@@ -224,7 +224,10 @@ def compareMutRate(targetSeq, geneNames, signatures, siteRegex, baseIndexes, mut
 				totalSiteMut[chrom] = []
 
 			# What mutation overlap this gene
-			mutOnGene = list(x - geneStart for x in mutations[chrom] if geneStart <= x < geneEnd)
+			if chrom in mutations.keys(): 
+				mutOnGene = list(x - geneStart for x in mutations[chrom] if geneStart <= x < geneEnd)
+			else: 
+				mutOnGene = list()
 			mutNum = len(mutOnGene)
 			currentMut = 0
 			positions = sigLoc.keys()
@@ -388,16 +391,8 @@ def complimentSignature(sequence, index):
 	signatures.append("".join(forwardRegex))
 	indexes.append(index - 1)
 
-	# Second orientation: Reverse
-	signatures.append("".join(forwardRegex[::-1]))
-	indexes.append(len(forwardRegex) - index)
-
-	# Third orientation: Compliment
+	# Second orientation: Reverse compliment:
 	reverseRegex = list(IUPACCodeDict[x] for x in complimentSeq)
-	signatures.append("".join(reverseRegex))
-	indexes.append(index - 1)
-
-	# Fourth orientation: Reverse compliment:
 	signatures.append("".join(reverseRegex[::-1]))
 	indexes.append(len(reverseRegex) - index)
 
